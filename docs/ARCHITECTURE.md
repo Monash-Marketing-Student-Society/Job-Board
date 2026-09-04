@@ -66,29 +66,55 @@ before adding more listing features, or the drift will keep compounding.
 - **`.dark` theme tokens** (`app/globals.css`) ship with the shadcn template
   and are not activated anywhere — nothing in the app carries a literal
   `.dark` class, so `--background`/`--popover`/`--foreground`/etc. always
-  resolve to their light values. Briefly not true: the row overflow menus
-  in `components/admin/job-table.tsx` (`JobActionsMenu`) and
+  resolve to their light values. The row overflow menus in
+  `components/admin/job-table.tsx` (`JobActionsMenu`) and
   `components/admin/submissions-table.tsx` (`SubmissionActionsMenu`) each
-  carried `className="dark"` on their `DropdownMenuContent` for a short
-  stretch, opting those two panels into the dark palette. Reverted — both
-  are back to the light `--popover`/`--popover-foreground` every other
-  surface in the app uses — but not because the idea was dropped: the
-  panel that reuse produced (fill, radius, item padding, no selected-state
-  indicator) didn't match the actual visual reference for it, so it's
-  being rebuilt against that reference rather than kept as a near-miss.
-  This dormant `.dark` palette is the likely starting point again once
-  that rebuild lands. Until then, treat any `.dark` class showing up here
-  as that rebuild landing, not as an unrelated reintroduction to evaluate
-  from scratch.
+  carried `className="dark"` on their `DropdownMenuContent`, shipped in
+  PR #24 and reverted in PR #26. Both are back to the light
+  `--popover`/`--popover-foreground` every other surface in the app uses.
 
-  One related infra change from that stretch, kept rather than reverted:
-  `@custom-variant dark` (top of `globals.css`) was widened from
-  `&:is(.dark *)` (descendants only) to `&:is(.dark, .dark *)`
-  (self-inclusive) so a component can carry `className="dark"` on its own
-  root and have its own `dark:`-prefixed utilities apply, not only its
-  children's. Currently a no-op — nothing applies a literal `.dark`
-  anywhere — kept because it's the more standard form of the selector and
-  costs nothing while unused; revert alongside if it ever proves to matter.
+  **Root cause, not a styling mistake:** `components.json`'s `menuColor`
+  was `"inverted-translucent"` from this project's init — a real shadcn
+  CLI preset field (`ui.shadcn.com/schema.json`) that governs shadcn's
+  menu-family components generally. What's actually verified in this repo
+  is narrower than "the whole family": two components were observed
+  carrying the literal `dark` class it produces —
+  `components/shadcn/dropdown-menu.tsx` (activated via PR #24's call
+  sites) and `components/shadcn/select.tsx` (baked into `SelectContent`
+  itself, unwired, zero importers, so inert rather than exercised). No CLI
+  run was observed live and `context-menu`/`command`/`menubar`/
+  `navigation-menu` were never added to this repo, so whether they'd carry
+  the same thing is inferred from the schema's stated semantics, not
+  checked — treat that as the unconfirmed part of the blast radius, not a
+  verified one. `menuColor` is now `"default"` — confirmed CLI-only config
+  (nothing in `app/`, `components/`, or `lib/` reads `components.json`),
+  so this changes future `npx shadcn add` output only; it doesn't restyle
+  anything already on disk. `select.tsx`'s own `dark` class was stripped
+  directly and separately, since fixing the config doesn't touch a file
+  already generated with it — its translucent/backdrop-blur treatment
+  (`bg-popover/70` + `backdrop-blur-2xl`) is still there, untouched; only
+  the literal `dark` class came out. Anyone wiring `Select` up for a real
+  picker inherits frosted glass by default unless that's stripped too.
+
+  **Settled, not paused:** the two menus now match stock shadcn
+  deliberately — white popover, `border-border` hairline border,
+  `shadow-md`, and `DropdownMenuItem`'s own accent hover (it had been
+  silently shadowed by a `Content`-level wildcard, unrelated to `.dark`,
+  fixed alongside). See `/admin/style` (section 7) for the live example
+  and a short record of three other treatments compared before landing
+  here. No dark treatment is planned; a literal `.dark` class showing up
+  on a menu component again means `menuColor` reverted or a fresh,
+  deliberate decision — not this one resuming.
+
+  One related infra change, kept: `@custom-variant dark` (top of
+  `globals.css`) was widened from `&:is(.dark *)` (descendants only) to
+  `&:is(.dark, .dark *)` (self-inclusive). This is the actual mechanism
+  that made PR #24's two call sites work at all — without the
+  self-inclusive form, `className="dark"` on `DropdownMenuContent`'s own
+  root wouldn't have activated that root's own `dark:`-prefixed
+  utilities, only its children's. Live, not decorative: it's inert right
+  now only because nothing in the app applies a literal `.dark` class
+  anywhere, not because the mechanism itself does nothing.
 
 - **AI prefill tier** (`extractWithAI` in `app/api/prefill-job/route.ts`,
   Gemini 2.5 Flash) only runs when `GEMINI_API_KEY` is set and the

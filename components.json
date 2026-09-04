@@ -19,7 +19,7 @@
     "hooks": "@/hooks"
   },
   "rtl": false,
-  "menuColor": "inverted-translucent",
+  "menuColor": "default",
   "menuAccent": "subtle",
   "registries": {}
 }
