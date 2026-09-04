@@ -59,18 +59,34 @@ function DropdownMenuContent({
                                   // variant="destructive" was silently a no-op wherever it was used
                                   // inside this Content (found via job-table.tsx's Delete item
                                   // rendering black instead of red). The focus-background
-                                  // neutralization on the line below is intentional and stays — it's
-                                  // consistent with the hover-fill treatment every other item gets —
-                                  // only the text-color overrides were the bug.
+                                  // neutralization on the last line below
+                                  // (`**:data-[variant=destructive]:focus:bg-foreground/10!`) is a
+                                  // separate, still-intentional keep from that same fix — only the
+                                  // text-color overrides were the bug — now standing on its own since
+                                  // the general item hover just below no longer shares its value.
                                   //
-                                  // Opaque bg-popover, no border, no backdrop-blur layer: matches a
-                                  // plain reference screenshot of the stock shadcn panel exactly — a
-                                  // solid dark surface with only shadow-md for edge definition. The
-                                  // translucent bg-popover/70 + backdrop-blur "glass" treatment and
-                                  // the border-border ring this file carried before were both this
-                                  // app's own departures from that default, not things the reference
-                                  // has.
-                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-item]:focus:bg-foreground/10 **:data-[slot$=-item]:data-highlighted:bg-foreground/10 **:data-[slot$=-separator]:bg-foreground/5 **:data-[slot$=-trigger]:focus:bg-foreground/10 **:data-[slot$=-trigger]:aria-expanded:bg-foreground/10! **:data-[variant=destructive]:focus:bg-foreground/10!",
+                                  // border border-border restored (previously dropped): the earlier
+                                  // removal matched this to a "stock shadcn" reference that turned out
+                                  // not to be stock shadcn — real upstream DropdownMenuContent ships
+                                  // with a border. Correction, not a re-departure.
+                                  //
+                                  // **:data-[slot$=-item]:focus/data-highlighted:bg-foreground/10 —
+                                  // removed. DropdownMenuItem already carries its own
+                                  // focus:bg-accent focus:text-accent-foreground; this Content-level
+                                  // wildcard was silently shadowing it (confirmed via getComputedStyle
+                                  // on a real focused item, not assumed — the resolved background was
+                                  // --foreground/10, never --accent, regardless of theme). Checked
+                                  // before removing whether data-highlighted was covering a state
+                                  // :focus doesn't: on this Radix version, keyboard nav and pointer
+                                  // hover both move real DOM focus via roving tabindex (verified live,
+                                  // both paths), so data-highlighted and :focus always co-occur here —
+                                  // nothing was load-bearing. The separator and sub-trigger wildcards
+                                  // below are untouched: different components, not what was asked.
+                                  // DropdownMenuSubContent below carries the identical border/wildcard
+                                  // pattern and hasn't been touched either — it has zero call sites
+                                  // anywhere in the app, same as select.tsx before its own dark-class
+                                  // removal.
+                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-separator]:bg-foreground/5 **:data-[slot$=-trigger]:focus:bg-foreground/10 **:data-[slot$=-trigger]:aria-expanded:bg-foreground/10! **:data-[variant=destructive]:focus:bg-foreground/10!",
                                   className
                                 )}
         {...props}
