@@ -77,7 +77,7 @@ export function DropdownMenuSection() {
       <header>
         <h2 className="text-2xl font-semibold text-foreground">7. Dropdown menu</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          <code>DropdownMenuContent</code> as it ships — no call-site classes, this is the component's
+          <code>DropdownMenuContent</code> as it ships — no call-site classes, this is the component&apos;s
           own default. Two real, openable instances below with the actual content from the two call
           sites this affects: the row-actions list (<code>JobActionsMenu</code>) and the wider metadata
           panel (<code>SubmissionActionsMenu</code>). Click a ⋮ to open.
