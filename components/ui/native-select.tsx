@@ -55,18 +55,19 @@ const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
             // `focus-visible:border-ring` + `ring-ring/30` — so this reads as
             // the same control family even though the popup underneath is
             // still the platform's own, not Radix's. Background is
-            // `bg-background` rather than `SelectTrigger`'s `bg-input/50`:
-            // call sites (filter pills/fields) used to hardcode `bg-white` to
-            // read as solid against the page, and `bg-background` is the
-            // token that keeps that — solid white in light mode, flips with
-            // the theme in dark — without a call site having to say so.
+            // `bg-input` at full strength, not `SelectTrigger`'s `bg-input/50`:
+            // this and Input/Textarea share one dedicated form-field fill
+            // (see --input in globals.css) deliberately distinct from
+            // `bg-background` (the page fill) — the two used to coincide by
+            // accident, which meant "recolor form fields" and "recolor the
+            // page" were the same edit until they were split.
             //
             // Text color is `text-muted-foreground`, not `text-foreground`:
             // call sites used to hardcode `text-slate-600`, a secondary tone
             // against `bg-white`, and `muted-foreground` is the token pairing
             // that survives the switch to dark mode instead of leaving dark
-            // text stranded on a dark `bg-background`.
-            'flex h-10 w-full appearance-none rounded-md border border-transparent bg-background text-muted-foreground',
+            // text stranded on a dark `bg-input`.
+            'flex h-10 w-full appearance-none rounded-md border border-transparent bg-input text-muted-foreground',
             'py-2 pl-3 pr-9 text-sm transition-[color,box-shadow,background-color]',
             'focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30',
             'disabled:cursor-not-allowed disabled:opacity-50',

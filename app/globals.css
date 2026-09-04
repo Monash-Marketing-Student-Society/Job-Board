@@ -145,13 +145,21 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* The old flat border value — see the comment by --border above. Neither
-     --input nor --sidebar-border below is actually consumed anywhere in
-     the app today (no border-input or sidebar-border class in any
-     component); both just point here so they inherit something sane
-     rather than the stale page-blind value if they're ever wired up. */
+  /* The old flat border value — see the comment by --border above.
+     --sidebar-border isn't consumed anywhere in the app today (no
+     sidebar-border class in any component); it just points here so it
+     inherits something sane rather than the stale page-blind value if it's
+     ever wired up. */
   --border-light: oklch(0.922 0 0);
-  --input: var(--border-light);
+  /* Dedicated fill for text-entry form controls (Input/NativeSelect/
+     Textarea/RichTextEditor's frame — every `bg-input` consumer) —
+     deliberately its own token rather than reusing --background, even
+     though the two used to coincide (#e8e8e8 was both the page background
+     and, via bg-background on these same components, the field fill). A
+     shared token meant "make form fields this color" and "repaint the
+     page" were the same edit; splitting them here is what lets one change
+     without the other. */
+  --input: oklch(0.968 0.007 247.896);
 
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);

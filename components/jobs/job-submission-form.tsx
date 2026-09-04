@@ -12,6 +12,7 @@ import {
   type SelectOption,
 } from '@/components/ui'
 import { RichTextEditor, type RichTextEditorRef } from '@/components/admin/rich-text-editor'
+import { LogoUploadField } from '@/components/admin/logo-upload-field'
 import { isValidEmail } from '@/lib/utils'
 import type { JobSubmissionInsert, WorkMode, JobType } from '@/lib/types'
 
@@ -431,18 +432,18 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
               className="mt-1.5"
             />
           </div>
-          <div>
-            <Label htmlFor="company_logo_url">Company logo URL</Label>
-            <Input
-              id="company_logo_url"
-              name="company_logo_url"
-              type="url"
-              value={formData.company_logo_url}
-              onChange={handleChange}
-              placeholder="https://company.com/logo.png"
-              className="mt-1.5"
-            />
-          </div>
+          <LogoUploadField
+            id="company_logo_url"
+            name="company_logo_url"
+            label="Company logo URL"
+            value={formData.company_logo_url}
+            onChange={(url) => {
+              setFormData((prev) => ({ ...prev, company_logo_url: url }))
+              // Same as a manual edit via handleChange: clear the prefill
+              // badge once the user has touched what it filled in.
+              if (prefillStatus === 'success') setPrefillStatus('idle')
+            }}
+          />
           <div className="sm:col-span-2">
             <Label htmlFor="tags">Skills / tags</Label>
             <Input

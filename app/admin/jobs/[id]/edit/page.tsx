@@ -32,7 +32,7 @@ export default async function AdminEditJobPage({ params }: EditJobPageProps) {
   if (error || !job) notFound()
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-[22px] font-bold text-slate-800 font-heading">
           Edit Job

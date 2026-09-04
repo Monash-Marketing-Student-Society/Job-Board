@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T10:10:54.343Z",
+  "generatedAt": "2026-08-18T00:43:10.487Z",
   "rawPalette": {
     "files": [
       {
@@ -1037,7 +1037,7 @@
       "values": [
         {
           "value": "primary",
-          "count": 12,
+          "count": 13,
           "isDefault": true
         },
         {
@@ -1078,7 +1078,7 @@
         },
         {
           "value": "md",
-          "count": 17,
+          "count": 18,
           "isDefault": true
         },
         {

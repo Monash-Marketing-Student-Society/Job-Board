@@ -13,6 +13,7 @@ import {
   type SelectOption,
 } from '@/components/ui'
 import { RichTextEditor } from './rich-text-editor'
+import { LogoUploadField } from './logo-upload-field'
 import { createClient } from '@/lib/supabase/client'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
@@ -126,7 +127,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -160,29 +161,13 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
           />
         </div>
 
-        <div>
-          <Label htmlFor="company_logo_url">Company Logo URL</Label>
-          <Input
-            id="company_logo_url"
-            name="company_logo_url"
-            type="url"
-            value={formData.company_logo_url}
-            onChange={handleChange}
-            placeholder="https://company.com/logo.png"
-            className="mt-1.5"
-          />
-          {formData.company_logo_url && (
-            <div className="mt-2 flex items-center gap-2">
-              <img
-                src={formData.company_logo_url}
-                alt="Logo preview"
-                className="w-10 h-10 rounded-lg object-contain border border-border bg-white"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <span className="text-xs text-muted-foreground">Preview</span>
-            </div>
-          )}
-        </div>
+        <LogoUploadField
+          id="company_logo_url"
+          name="company_logo_url"
+          label="Company Logo URL"
+          value={formData.company_logo_url}
+          onChange={(url) => setFormData((prev) => ({ ...prev, company_logo_url: url }))}
+        />
 
         <div>
           <Label htmlFor="location">Location</Label>

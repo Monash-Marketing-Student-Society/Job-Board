@@ -73,7 +73,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
   if (!editor) return null
 
   return (
-    <div className="border border-border rounded-md overflow-hidden bg-background">
+    <div className="border border-input rounded-md overflow-hidden bg-input">
       {/* Toolbar */}
       <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border bg-muted/30 flex-wrap">
         <ToolbarButton

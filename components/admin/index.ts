@@ -1,5 +1,6 @@
 export { AdminNavDesktop, AdminNavMobile } from './admin-nav'
 export { JobForm } from './job-form'
+export { LogoUploadField } from './logo-upload-field'
 export { JobTable } from './job-table'
 export { BulkImport } from './bulk-import'
 export { RangeTabs } from './analytics/range-tabs'

@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function AdminNewJobPage() {
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-[22px] font-bold text-slate-800 font-heading">
           Add New Job
