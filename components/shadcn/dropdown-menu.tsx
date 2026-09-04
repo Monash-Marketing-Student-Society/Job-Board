@@ -80,13 +80,31 @@ function DropdownMenuContent({
                                   // :focus doesn't: on this Radix version, keyboard nav and pointer
                                   // hover both move real DOM focus via roving tabindex (verified live,
                                   // both paths), so data-highlighted and :focus always co-occur here —
-                                  // nothing was load-bearing. The separator and sub-trigger wildcards
-                                  // below are untouched: different components, not what was asked.
-                                  // DropdownMenuSubContent below carries the identical border/wildcard
-                                  // pattern and hasn't been touched either — it has zero call sites
-                                  // anywhere in the app, same as select.tsx before its own dark-class
-                                  // removal.
-                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-separator]:bg-foreground/5 **:data-[slot$=-trigger]:focus:bg-foreground/10 **:data-[slot$=-trigger]:aria-expanded:bg-foreground/10! **:data-[variant=destructive]:focus:bg-foreground/10!",
+                                  // nothing was load-bearing.
+                                  //
+                                  // **:data-[slot$=-trigger]:focus/aria-expanded:bg-foreground/10 —
+                                  // also removed, same shape as the item fix: DropdownMenuSubTrigger
+                                  // already carries its own focus:bg-accent (for plain focus) and
+                                  // data-open:bg-accent (for "my submenu is open", independent of
+                                  // where focus currently is — data-open resolves via
+                                  // [data-state='open'], see the @custom-variant in globals.css). This
+                                  // one couldn't be verified live the same way — DropdownMenuSubTrigger
+                                  // has zero call sites anywhere in the app, so there's no real submenu
+                                  // to open and inspect. Checked what it rests on instead, from source:
+                                  // the [data-state='open'] mapping is real (globals.css), SubTrigger's
+                                  // own data-open:bg-accent is unconditional and not itself shadowed by
+                                  // anything else in this file. aria-expanded persisting while :focus
+                                  // sits on a child item inside the open submenu (the case that would
+                                  // make this unsafe) is exactly the state data-open:bg-accent exists
+                                  // to cover independently of :focus — removing the wildcard doesn't
+                                  // leave that state unpainted, it just stops it being painted wrong.
+                                  //
+                                  // The separator wildcard below is untouched: different component,
+                                  // not what was asked. DropdownMenuSubContent below carries the
+                                  // identical border/item-wildcard/trigger-wildcard pattern and hasn't
+                                  // been touched either — it has zero call sites anywhere in the app,
+                                  // same as select.tsx before its own dark-class removal.
+                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-separator]:bg-foreground/5 **:data-[variant=destructive]:focus:bg-foreground/10!",
                                   className
                                 )}
         {...props}
