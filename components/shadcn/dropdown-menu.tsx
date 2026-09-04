@@ -316,13 +316,25 @@ function DropdownMenuSubContent({
                         // the divergence was identical and there's no reason for
                         // this one to stay wrong just because it's unused.
                         //
-                        // The item/trigger hover wildcards below are NOT mirrored
-                        // from DropdownMenuContent's fix — left exactly as they
-                        // were. That fix was scoped to DropdownMenuContent only;
-                        // this function's wildcards still shadow DropdownMenuItem/
-                        // DropdownMenuSubTrigger's own accent classes the same way
-                        // DropdownMenuContent's used to.
-                        "z-50 min-w-36 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-item]:focus:bg-foreground/10 **:data-[slot$=-item]:data-highlighted:bg-foreground/10 **:data-[slot$=-separator]:bg-foreground/5 **:data-[slot$=-trigger]:focus:bg-foreground/10 **:data-[slot$=-trigger]:aria-expanded:bg-foreground/10! **:data-[variant=destructive]:focus:bg-foreground/10!",
+                        // Update: the item/trigger hover wildcards below are now
+                        // also removed, mirroring DropdownMenuContent's fix
+                        // (2969fb8, e84f165) — this function was left out of
+                        // scope the first two times, not because the pattern was
+                        // different. DropdownMenuItem already carries its own
+                        // focus:bg-accent focus:text-accent-foreground, and
+                        // DropdownMenuSubTrigger already carries its own
+                        // focus:bg-accent and data-open:bg-accent (the latter via
+                        // [data-state='open'], see the @custom-variant in
+                        // globals.css) — both were being shadowed here the same
+                        // way DropdownMenuContent's copies were. Source-verified
+                        // only, not live: this function has zero call sites
+                        // anywhere in the app, so there's nothing to open and
+                        // inspect with getComputedStyle the way the Content fixes
+                        // were confirmed. What was checked is that nothing else in
+                        // this file shadows DropdownMenuItem's or
+                        // DropdownMenuSubTrigger's own accent classes besides the
+                        // wildcard just removed.
+                        "z-50 min-w-36 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 animate-none! **:data-[slot$=-separator]:bg-foreground/5 **:data-[variant=destructive]:focus:bg-foreground/10!",
                         className
                       )}
       {...props}
