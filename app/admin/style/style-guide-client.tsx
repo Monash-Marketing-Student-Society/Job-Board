@@ -7,6 +7,7 @@ import { TypeSection } from './components/type-section'
 import { RadiusSection } from './components/radius-section'
 import { ShadowSection } from './components/shadow-section'
 import { ComponentsSection } from './components/components-section'
+import { DropdownMenuSection } from './components/dropdown-menu-section'
 
 export function StyleGuideClient({
   rawPalette,
@@ -37,6 +38,7 @@ export function StyleGuideClient({
       <RadiusSection />
       <ShadowSection />
       <ComponentsSection variantReports={variantReports} />
+      <DropdownMenuSection />
     </div>
   )
 }

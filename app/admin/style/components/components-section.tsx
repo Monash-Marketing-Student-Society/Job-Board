@@ -165,22 +165,18 @@ export function ComponentsSection({ variantReports }: { variantReports: VariantU
         </Modal>
       </div>
 
-      {/* DropdownMenu / Tooltip — documented gap, not rendered */}
+      {/* DropdownMenu / Tooltip */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           DropdownMenu &amp; Tooltip
         </h3>
-        <div className="rounded-md border border-dashed border-accent/50 bg-accent/10 p-4 text-sm text-foreground">
-          <p>
-            Not shown — <code>components/shadcn/dropdown-menu.tsx</code> and{' '}
-            <code>components/shadcn/tooltip.tsx</code> don&apos;t exist on this branch. Both currently
-            live only on <code>redesign/admin-submissions-table</code> (added there for the
-            submissions-table row actions/tooltips) and haven&apos;t landed in the shared component
-            layer yet. This is a real gap in what&apos;s importable from{' '}
-            <code>components/</code> today, not a page bug — it&apos;s left unfilled rather than
-            recreated so the page doesn&apos;t claim a component exists here when it doesn&apos;t.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground/80">
+          Both now live in <code>components/shadcn/</code> — this note is stale, the gap it described
+          landed. <code>Tooltip</code> is used throughout this page&apos;s own action buttons (see any{' '}
+          <code>IconActionButton</code> above); <code>DropdownMenu</code> gets its own comparison
+          below (section 7) rather than a single instance here, since the PR #24 treatment question
+          is exactly what that section exists to show.
+        </p>
       </div>
     </section>
   )
