@@ -475,13 +475,12 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages }: JobTableP
  * handleActivate's own comment for why — Deactivate and Delete both keep
  * theirs, carried over unchanged from the table's pre-redesign behavior.
  *
- * `dark` on DropdownMenuContent is a deliberate, scoped reuse of the app's
- * existing (otherwise-dormant) dark palette — not app-wide dark mode. See
- * docs/ARCHITECTURE.md ("Deliberately dormant"). The shared shadcn
- * DropdownMenuContent/DropdownMenuItem were already dark-mode-aware out of
- * the box; this just opts this one instance in via the token cascade
- * (--popover/--foreground/etc. flip under `.dark`), same as
- * submissions-table.tsx's row menu — no new colors introduced here.
+ * No `dark` class on DropdownMenuContent (reverted) — it briefly opted this
+ * menu into the app's otherwise-dormant dark palette (see
+ * docs/ARCHITECTURE.md's "Deliberately dormant" entry, itself now stale on
+ * this point), matching submissions-table.tsx's row menu. Dropped back to
+ * the light `--popover`/`--popover-foreground` both menus, and every other
+ * surface in this app, actually use.
  */
 function JobActionsMenu({
   job,
@@ -501,7 +500,7 @@ function JobActionsMenu({
           <DotsThreeVerticalIcon weight="bold" className="size-4" />
         </IconActionButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="dark w-40">
+      <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuItem asChild>
           <Link href={`/admin/jobs/${job.id}/edit`}>Edit</Link>
         </DropdownMenuItem>

@@ -64,32 +64,31 @@ before adding more listing features, or the drift will keep compounding.
 ### Deliberately dormant
 
 - **`.dark` theme tokens** (`app/globals.css`) ship with the shadcn template
-  and were never activated — nothing toggles a `.dark` class anywhere in
-  the app, so `--background`/`--popover`/`--foreground`/etc. always
-  resolve to their light values everywhere except two places: the row
-  overflow menus in `components/admin/job-table.tsx` (`JobActionsMenu`)
-  and `components/admin/submissions-table.tsx` (`SubmissionActionsMenu`),
-  each of which carries a literal `className="dark"` on its
-  `DropdownMenuContent`. This is a scoped, deliberate reuse of the
-  already-dormant dark palette for those two components specifically — the
-  shared shadcn `DropdownMenuContent`/`DropdownMenuItem` were already
-  dark-mode-aware out of the box (translucent dark popover fill, an
-  inset `bg-foreground/10` highlight on the hovered/keyboard-highlighted
-  item, `dark:`-refined destructive-item contrast), so this just switches
-  which token values those two instances resolve against, via the normal
-  `--token` cascade — no new colors were introduced, and no other
-  component opts into `.dark`. It is **not** the start of app-wide dark
-  mode; if a third instance of `.dark` shows up anywhere else, that's
-  either a deliberate expansion of this pattern or a mistake, not an
-  extension of it by default.
+  and are not activated anywhere — nothing in the app carries a literal
+  `.dark` class, so `--background`/`--popover`/`--foreground`/etc. always
+  resolve to their light values. Briefly not true: the row overflow menus
+  in `components/admin/job-table.tsx` (`JobActionsMenu`) and
+  `components/admin/submissions-table.tsx` (`SubmissionActionsMenu`) each
+  carried `className="dark"` on their `DropdownMenuContent` for a short
+  stretch, opting those two panels into the dark palette. Reverted — both
+  are back to the light `--popover`/`--popover-foreground` every other
+  surface in the app uses — but not because the idea was dropped: the
+  panel that reuse produced (fill, radius, item padding, no selected-state
+  indicator) didn't match the actual visual reference for it, so it's
+  being rebuilt against that reference rather than kept as a near-miss.
+  This dormant `.dark` palette is the likely starting point again once
+  that rebuild lands. Until then, treat any `.dark` class showing up here
+  as that rebuild landing, not as an unrelated reintroduction to evaluate
+  from scratch.
 
-  One related infra change: `@custom-variant dark` (top of `globals.css`)
-  was widened from `&:is(.dark *)` (descendants only) to
-  `&:is(.dark, .dark *)` (self-inclusive) so a component can carry
-  `className="dark"` on its own root and have its own `dark:`-prefixed
-  utilities apply, not only its children's. This was a no-op everywhere
-  else at the time it was made, since nothing applied a literal `.dark`
-  class anywhere in the app before these two instances.
+  One related infra change from that stretch, kept rather than reverted:
+  `@custom-variant dark` (top of `globals.css`) was widened from
+  `&:is(.dark *)` (descendants only) to `&:is(.dark, .dark *)`
+  (self-inclusive) so a component can carry `className="dark"` on its own
+  root and have its own `dark:`-prefixed utilities apply, not only its
+  children's. Currently a no-op — nothing applies a literal `.dark`
+  anywhere — kept because it's the more standard form of the selector and
+  costs nothing while unused; revert alongside if it ever proves to matter.
 
 - **AI prefill tier** (`extractWithAI` in `app/api/prefill-job/route.ts`,
   Gemini 2.5 Flash) only runs when `GEMINI_API_KEY` is set and the
