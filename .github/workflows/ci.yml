@@ -1,0 +1,50 @@
+name: CI
+
+# Runs on every PR into main, and on main itself so the branch always has a
+# recent green (or red) result rather than only being verified at review time.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Ordered cheapest-first so an obvious failure reports in seconds rather
+      # than after a full build.
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      # `next build` runs `prebuild` (scripts/audit-style-usage.mjs) first.
+      # No secrets needed: every public page tolerates an unreachable database
+      # and renders empty, so the build completes with no Supabase env vars at
+      # all. Verified against a clean checkout with no .env.local.
+      - name: Build
+        run: npm run build
