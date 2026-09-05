@@ -73,3 +73,31 @@ export const getSubmissionStatusCounts = unstable_cache(
   ['submission-status-counts'],
   { tags: [SUBMISSIONS_TAG], revalidate: 300 }
 )
+
+/**
+ * Active/inactive totals for the Manage Jobs page's filter tabs — true
+ * counts over the whole table, not just the current (paginated) page, same
+ * role as getSubmissionStatusCounts above.
+ *
+ * Deliberately NOT unstable_cache'd, unlike every other query in this file:
+ * job mutations (deactivate/activate/delete) go straight from the browser
+ * client to Supabase — job-table.tsx calls supabase.from('jobs').update(...)
+ * directly, there is no API route in the loop — so there is no server-side
+ * mutation point left to call revalidateTag from. A cached count here would
+ * only ever refresh on its TTL, not on the job-table.tsx `router.refresh()`
+ * that already runs after every mutation and is what these counts actually
+ * need to respond to. A plain query re-runs fresh on every request instead.
+ */
+export async function getJobStatusCounts() {
+  const client = createAdminClient()
+
+  const countFor = (isActive: boolean) =>
+    client.from('jobs').select('*', { count: 'exact', head: true }).eq('is_active', isActive)
+
+  const [active, inactive] = await Promise.all([countFor(true), countFor(false)])
+
+  return {
+    active: active.count ?? 0,
+    inactive: inactive.count ?? 0,
+  }
+}

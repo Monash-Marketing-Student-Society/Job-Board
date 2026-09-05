@@ -8,6 +8,7 @@ import { Search } from 'lucide-react'
 import { CurrencyCircleDollarIcon, DotsThreeVerticalIcon, PlusIcon } from '@phosphor-icons/react'
 import { Button, Badge, Input, useConfirmDialog } from '@/components/ui'
 import { Pagination } from '@/components/ui/pagination'
+import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip'
 import {
   DropdownMenu,
@@ -32,7 +33,17 @@ interface JobTableProps {
   totalJobs: number
   currentPage: number
   totalPages: number
+  /**
+   * True active/inactive totals for the filter tabs (not just this page).
+   * Undefined — not zeros — means the count query failed; the tabs render
+   * without numbers rather than showing zeros that would read as "nothing
+   * here." Same contract as SubmissionsTable's `counts` prop.
+   */
+  counts?: { active: number; inactive: number }
 }
+
+const STATUS_FILTERS = ['all', 'active', 'inactive'] as const
+type StatusFilter = (typeof STATUS_FILTERS)[number]
 
 /** Optimistic edits applied on top of the server-rendered rows. */
 type JobAction =
@@ -53,10 +64,11 @@ function applyJobAction(rows: AdminJobRow[], action: JobAction): AdminJobRow[] {
   )
 }
 
-export function JobTable({ jobs, totalJobs, currentPage, totalPages }: JobTableProps) {
+export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: JobTableProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set())
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [bulkDays, setBulkDays] = useState('30')
@@ -67,11 +79,14 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages }: JobTableP
   // mutation restores the real row on its own — we only surface the error.
   const [optimisticJobs, applyOptimistic] = useOptimistic(jobs, applyJobAction)
 
-  const filteredJobs = optimisticJobs.filter(
-    (job) =>
+  const filteredJobs = optimisticJobs.filter((job) => {
+    const matchesSearch =
       job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase())
-  )
+    const matchesStatus =
+      statusFilter === 'all' || job.is_active === (statusFilter === 'active')
+    return matchesSearch && matchesStatus
+  })
 
   const handleToggleSelect = (jobId: string) => {
     setSelectedJobs((prev) => {
@@ -227,6 +242,31 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages }: JobTableP
 
   return (
     <>
+      {/* Status filter tabs — same segmented-tabs visual language as the
+          submissions queue (components/ui/segmented-tabs.tsx), scoped to
+          this page's own 25 rows the same way that one is: switching tabs
+          filters what's already loaded, it doesn't refetch other pages. */}
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100">
+        <div className={`${segmentedTabsListClassName} overflow-x-auto min-w-0`}>
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={segmentedTabsTriggerClassName(statusFilter === f, 'inline-flex items-center gap-1.5 font-heading')}
+            >
+              {f}
+              {counts && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium normal-case rounded-full bg-slate-200 text-slate-600 leading-none">
+                  {f === 'all'
+                    ? totalJobs > 99 ? '99+' : totalJobs
+                    : counts[f] > 99 ? '99+' : counts[f]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 justify-between">
         <div className="relative w-full sm:w-64">
