@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { sendEmail } from '@/lib/email'
 import { submissionConfirmationEmail } from '@/lib/email-templates'
+import { toJobFunctions } from '@/lib/tags'
 import type { JobSubmissionInsert, JobSubmission } from '@/lib/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -20,9 +21,20 @@ export async function POST(request: Request) {
 
   const adminClient = createAdminClient()
 
+  // The combobox on /submit can only produce vocabulary values, but it is a UI
+  // affordance and this endpoint is public and unauthenticated — anything can
+  // POST here. Tags are canonicalised and capped server-side so the guarantee
+  // does not depend on which client called.
+  //
+  // Note this only constrains `tags`. The rest of `body` is still inserted as
+  // received through a service-role client that bypasses RLS; that broader
+  // mass-assignment problem is tracked separately and deliberately not folded
+  // in here.
+  const tags = toJobFunctions(body.tags)
+
   const { data, error } = await adminClient
     .from('job_submissions')
-    .insert(body)
+    .insert({ ...body, tags: tags.length > 0 ? tags : null })
     .select()
     .single() as { data: JobSubmission | null; error: Error | null }
 
