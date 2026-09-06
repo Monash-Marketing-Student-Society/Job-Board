@@ -9,6 +9,7 @@ export {
   type SelectOption,
 } from './native-select'
 export { Badge, type BadgeProps } from './badge'
+export { TagCombobox, type TagComboboxProps } from './tag-combobox'
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
 export { Pagination, type PaginationProps } from './pagination'
 export { Label, type LabelProps } from './label'
