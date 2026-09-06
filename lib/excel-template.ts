@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx'
 
+import { JOB_FUNCTIONS } from '@/lib/tags'
+
 /**
  * Matches the real uploaded template exactly (verified byte-for-byte against
  * a live file on chore/deprecate-is-featured): single "Job Data" sheet, this
@@ -48,26 +50,6 @@ const SAMPLE_ROW = [
 ]
 
 /**
- * Tags dropdown, carried forward from the real template's data validation
- * list (read directly out of its dataValidation XML), trimmed. This can't
- * be written as an actual Excel dropdown with the installed library — see
- * the module comment in generateTemplate — so it's documented as plain
- * text instead. One tag per row, matching the source list's single-select
- * validation.
- */
-const TAG_OPTIONS = [
-  'Strategy',
-  'Sales',
-  'Creative',
-  'Events',
-  'Communications',
-  'Analytics',
-  'Social Media',
-  'Digital',
-  'Brand',
-]
-
-/**
  * Rows 3 through this stay blank for real data entry. Nothing is written
  * into them (no dragged-down values, unlike the old Featured/Sponsored
  * "False" filler) — they simply don't exist in the sheet's cell map, which
@@ -95,7 +77,7 @@ const INSTRUCTIONS: string[] = [
   'INSTRUCTIONS',
   '1. Each row = one job posting. Row 2 is a sample — delete it before uploading, or leave it: it is skipped automatically.',
   '2. Required columns: Title, Company, Application URL. Everything else is optional.',
-  `3. Tags (column H): one tag per row, no dropdown in this file — pick one of: ${TAG_OPTIONS.join(', ')}.`,
+  `3. Tags (column H): one tag per row, no dropdown in this file — pick one of: ${JOB_FUNCTIONS.join(', ')}.`,
   '4. Post Date and Close Date use YYYY-MM-DD format.',
   '5. Save the file and upload it back on the admin page.',
 ]
