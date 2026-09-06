@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import dns from 'dns/promises'
 import { normalizeJobType, truncateText } from '@/lib/utils'
+import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
 
 interface PrefillData {
   title?: string
@@ -12,7 +13,13 @@ interface PrefillData {
   location?: string
   job_type?: string
   closing_at?: string
-  tags?: string
+  /**
+   * Always canonical. Every tier that can produce tags is filtered through
+   * toJobFunctions before it reaches this shape, so nothing outside the
+   * vocabulary can leave this route — the combobox is a UI affordance, not
+   * the guarantee.
+   */
+  tags?: JobFunction[]
 }
 
 // ─── SSRF guard ─────────────────────────────────────────────────────────────
@@ -238,6 +245,7 @@ function mapJobPostingToData(job: Record<string, unknown>): Partial<PrefillData>
   const uniqueTags = [...new Set(allTags)]
 
   const rawDesc = job.description as string | undefined
+  const jobFunctions = toJobFunctions(uniqueTags)
 
   return {
     title: (job.title as string) || undefined,
@@ -247,7 +255,7 @@ function mapJobPostingToData(job: Record<string, unknown>): Partial<PrefillData>
     location: extractLocation(job.jobLocation) || undefined,
     job_type: mapEmploymentType(job.employmentType) || undefined,
     closing_at: closingAt || undefined,
-    tags: uniqueTags.length > 0 ? uniqueTags.join(', ') : undefined,
+    tags: jobFunctions.length > 0 ? jobFunctions : undefined,
   }
 }
 
@@ -327,7 +335,7 @@ function buildAIPrompt(text: string): string {
 Extract the following fields and return ONLY a valid JSON object with no markdown, no code fences, no explanation:
 - "title": the job title (e.g. "Marketing Coordinator")
 - "company": the hiring company name — must be the specific employer, NOT a job board or recruitment agency
-- "tags": array of up to 4 short skill or work-area phrases (e.g. ["marketing", "social media", "Excel", "data analysis"]). 1–3 words each. Return an empty array if unclear.
+- "tags": array of up to 3 job functions, chosen ONLY from this exact list: ${JOB_FUNCTIONS.join(', ')}. Copy the spelling exactly. Do not invent values, do not return skills, tools or seniority. Return an empty array if none clearly apply — an empty array is better than a wrong guess, since anything not on the list is discarded.
 - "description": the full job description as clean HTML using only <p> <ul> <ol> <li> <strong> <em> <br> tags. Preserve all substantive content including responsibilities, requirements, and about-the-company sections.
 - "summary": ONE plain-text sentence, no more than 140 characters, no HTML or markdown, capturing the core responsibility or opportunity in plain language. This is shown as a 1-2 line preview on a small card, not the full posting — be concrete and specific, not a generic restatement of the job title.
 
@@ -371,13 +379,10 @@ function parseAIResponse(raw: string): Partial<PrefillData> {
     // card's own fallback truncation (see truncateText in lib/utils.ts).
     result.summary = truncateText(parsed.summary.trim(), 140)
   }
-  if (Array.isArray(parsed.tags)) {
-    const tags = (parsed.tags as unknown[])
-      .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-      .map(t => t.trim())
-      .slice(0, 4) // hard cap — always max 4
-    if (tags.length > 0) result.tags = tags.join(', ')
-  }
+  // The prompt names the vocabulary, but a model instruction is a request, not
+  // a constraint — anything off-list is dropped here rather than trusted.
+  const tags = toJobFunctions(parsed.tags)
+  if (tags.length > 0) result.tags = tags
 
   return result
 }
@@ -534,14 +539,28 @@ export async function GET(request: Request) {
     extractClosingDateFromHtml(html) ||
     undefined
 
-  // Tags: structured → AI → meta keywords → description heuristic
-  const tags =
-    jsonLd.tags ||
-    embedded.tags ||
-    ai.tags ||
-    metaKeywords ||
-    (description ? extractTagsFromDescriptionHtml(description) : null) ||
-    undefined
+  // Tags: structured → AI → meta keywords → description heuristic.
+  //
+  // Each candidate is canonicalised before it is considered, and the first one
+  // that yields anything wins. The old `||` chain took the first *truthy* tier,
+  // which meant a tier full of unusable free text (a <meta name="keywords">
+  // stuffed with SEO terms, say) beat a later tier that had real matches.
+  //
+  // metaKeywords and the description heuristic are raw third-party text and
+  // never had any filtering at all before this.
+  const tagCandidates: unknown[] = [
+    jsonLd.tags,
+    embedded.tags,
+    ai.tags,
+    metaKeywords,
+    description ? extractTagsFromDescriptionHtml(description) : null,
+  ]
+
+  let tags: JobFunction[] = []
+  for (const candidate of tagCandidates) {
+    tags = toJobFunctions(candidate)
+    if (tags.length > 0) break
+  }
 
   const rawLogoUrl =
     jsonLd.company_logo_url || embedded.company_logo_url || og.image || undefined
@@ -561,7 +580,9 @@ export async function GET(request: Request) {
     location: jsonLd.location || embedded.location || undefined,
     job_type: jsonLd.job_type || embedded.job_type || undefined,
     closing_at: closingAt,
-    tags,
+    // Undefined rather than [] so the key is stripped below with every other
+    // empty field, instead of the response carrying a meaningless empty array.
+    tags: tags.length > 0 ? tags : undefined,
   }
 
   // Strip undefined/empty keys
