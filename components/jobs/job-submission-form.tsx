@@ -9,11 +9,13 @@ import {
   Label,
   Alert,
   AlertDescription,
+  TagCombobox,
   type SelectOption,
 } from '@/components/ui'
 import { RichTextEditor, type RichTextEditorRef } from '@/components/admin/rich-text-editor'
 import { LogoUploadField } from '@/components/admin/logo-upload-field'
 import { isValidEmail } from '@/lib/utils'
+import { MAX_JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { JobSubmissionInsert, WorkMode, JobType } from '@/lib/types'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
@@ -71,7 +73,9 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
     company_logo_url: existingSubmission?.company_logo_url || '',
     description: existingSubmission?.description || '',
     summary: existingSubmission?.summary || '',
-    tags: existingSubmission?.tags?.join(', ') || '',
+    // A submission saved before the fixed vocabulary may hold values that are
+    // no longer selectable; those are dropped rather than shown as dead chips.
+    tags: toJobFunctions(existingSubmission?.tags ?? []),
     closing_at: existingSubmission?.closing_at
       ? existingSubmission.closing_at.split('T')[0]
       : '',
@@ -100,9 +104,11 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
     if (!url || isPrefilling || isEditing) return
     try { new URL(url) } catch { return }
 
+    // `tags` is handled separately below, like `description` — it is the only
+    // other prefillable field that is not a plain string.
     const PREFILLABLE_FIELDS = [
       'title', 'company', 'company_logo_url',
-      'location', 'job_type', 'closing_at', 'tags', 'summary',
+      'location', 'job_type', 'closing_at', 'summary',
     ] as const
 
     setIsPrefilling(true)
@@ -114,6 +120,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
       const next = { ...prev }
       for (const field of PREFILLABLE_FIELDS) next[field] = ''
       next.description = ''
+      next.tags = []
       return next
     })
     // Remount the editor so it visually clears too
@@ -124,21 +131,30 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
       if (!res.ok) return
 
       const body = await res.json()
-      const data: Record<string, string> = body.data ?? {}
+      const data: Record<string, unknown> = body.data ?? {}
 
       let filled = 0
 
       setFormData(prev => {
         const next = { ...prev }
         for (const field of PREFILLABLE_FIELDS) {
-          let value = data[field]
+          let value = typeof data[field] === 'string' ? (data[field] as string) : ''
           // Only accept absolute URLs for the logo field to avoid browser URL validation errors
           if (field === 'company_logo_url' && value && !/^https?:\/\//i.test(value)) {
             value = ''
           }
           if (value) { next[field] = value; filled++ }
         }
-        if (data.description) { next.description = data.description; filled++ }
+        if (typeof data.description === 'string' && data.description) {
+          next.description = data.description
+          filled++
+        }
+        // Anything the extractor produced that is not in the vocabulary is
+        // dropped here. toJobFunctions takes both the comma string the route
+        // returns today and the array it will return once the AI boundary is
+        // constrained, so this stays correct across that change.
+        const tags = toJobFunctions(data.tags)
+        if (tags.length > 0) { next.tags = tags; filled++ }
         return next
       })
 
@@ -167,9 +183,6 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
     }
 
     const tags = formData.tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(Boolean)
 
     const submission: JobSubmissionInsert = {
       submitter_name: formData.submitter_name,
@@ -445,15 +458,21 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             }}
           />
           <div className="sm:col-span-2">
-            <Label htmlFor="tags">Skills / tags</Label>
-            <Input
+            <Label htmlFor="tags">Job function</Label>
+            <TagCombobox
               id="tags"
-              name="tags"
               value={formData.tags}
-              onChange={handleChange}
-              placeholder="marketing, social media, Excel (comma-separated)"
+              onChange={(tags: JobFunction[]) => {
+                setFormData(prev => ({ ...prev, tags }))
+                // Same as a manual edit via handleChange: clear the prefill
+                // badge once the user has touched what it filled in.
+                if (prefillStatus === 'success') setPrefillStatus('idle')
+              }}
               className="mt-1.5"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose up to {MAX_JOB_FUNCTIONS} from the set list
+            </p>
           </div>
           <div className="sm:col-span-2">
             <Label>Job description</Label>

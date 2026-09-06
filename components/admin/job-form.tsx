@@ -10,11 +10,13 @@ import {
   Label,
   Alert,
   AlertDescription,
+  TagCombobox,
   type SelectOption,
 } from '@/components/ui'
 import { RichTextEditor } from './rich-text-editor'
 import { LogoUploadField } from './logo-upload-field'
 import { createClient } from '@/lib/supabase/client'
+import { MAX_JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
@@ -54,7 +56,9 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
     url: job?.url || '',
     description: job?.description || '',
     summary: job?.summary || '',
-    tags: job?.tags?.join(', ') || '',
+    // Existing rows predate the fixed vocabulary, so anything that no longer
+    // matches is dropped here rather than shown as an unselectable chip.
+    tags: toJobFunctions(job?.tags ?? []),
     posted_at: job?.posted_at ? job.posted_at.split('T')[0] : '',
     closing_at: job?.closing_at ? job.closing_at.split('T')[0] : '',
     is_active: job?.is_active ?? true,
@@ -80,9 +84,6 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
       const supabase = createClient()
 
       const tags = formData.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
 
       const jobData: JobInsert | JobUpdate = {
         title: formData.title,
@@ -264,17 +265,17 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </div>
 
         <div className="md:col-span-2">
-          <Label htmlFor="tags">Tags</Label>
-          <Input
+          <Label htmlFor="tags">Job function</Label>
+          <TagCombobox
             id="tags"
-            name="tags"
             value={formData.tags}
-            onChange={handleChange}
-            placeholder="marketing, social media, content (comma-separated)"
+            onChange={(tags: JobFunction[]) =>
+              setFormData((prev) => ({ ...prev, tags }))
+            }
             className="mt-1.5"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Separate tags with commas
+            Choose up to {MAX_JOB_FUNCTIONS} from the set list
           </p>
         </div>
 
