@@ -6,6 +6,12 @@ import * as XLSX from 'xlsx'
 import { Button, Alert, AlertDescription } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
 import { generateTemplate, SAMPLE_ROW_TITLE } from '@/lib/excel-template'
+import {
+  JOB_FUNCTIONS,
+  MAX_JOB_FUNCTIONS,
+  toJobFunction,
+  toJobFunctions,
+} from '@/lib/tags'
 import type { JobInsert, WorkMode, JobType } from '@/lib/types'
 
 const VALID_WORK_MODES = ['remote', 'hybrid', 'onsite']
@@ -140,9 +146,30 @@ function parseExcelRows(data: ArrayBuffer): { rows: ParsedRow[]; errors: ParseEr
       warnings.push(`Invalid job type "${jobTypeRaw}" — ignored`)
     }
 
-    const tags = tagsRaw
+    // Tags are a fixed vocabulary (lib/tags.ts). Anything outside it is named
+    // in a warning and dropped, matching how work mode and job type above
+    // report a bad value rather than silently writing whatever was typed.
+    // The template's own instruction sheet lists the accepted values.
+    const tagsGiven = tagsRaw
       ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
-      : null
+      : []
+    const validTags = toJobFunctions(tagsRaw, JOB_FUNCTIONS.length)
+    const rejectedTags = tagsGiven.filter((t) => toJobFunction(t) === null)
+
+    if (rejectedTags.length > 0) {
+      warnings.push(
+        `Invalid tag${rejectedTags.length > 1 ? 's' : ''} ${rejectedTags
+          .map((t) => `"${t}"`)
+          .join(', ')} — ignored`
+      )
+    }
+
+    const tags = validTags.slice(0, MAX_JOB_FUNCTIONS)
+    if (validTags.length > MAX_JOB_FUNCTIONS) {
+      warnings.push(
+        `More than ${MAX_JOB_FUNCTIONS} tags — kept ${tags.join(', ')}`
+      )
+    }
 
     if (row[9] && !postedAt) warnings.push('Could not parse posted date')
     if (row[10] && !closingAt) warnings.push('Could not parse closing date')
@@ -158,7 +185,7 @@ function parseExcelRows(data: ArrayBuffer): { rows: ParsedRow[]; errors: ParseEr
         work_mode: workMode,
         job_type: jobType,
         description,
-        tags: tags && tags.length > 0 ? tags : null,
+        tags: tags.length > 0 ? tags : null,
         company_logo_url: logoUrl,
         posted_at: postedAt,
         closing_at: closingAt,
