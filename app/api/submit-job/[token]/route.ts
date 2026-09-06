@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { toJobFunctions } from '@/lib/tags'
 import type { JobSubmissionInsert } from '@/lib/types'
 
 export async function PATCH(
@@ -35,6 +36,8 @@ export async function PATCH(
     )
   }
 
+  const editedTags = toJobFunctions(body.tags)
+
   const { error: updateError } = await adminClient
     .from('job_submissions')
     .update({
@@ -50,7 +53,9 @@ export async function PATCH(
       description: body.description ?? null,
       summary: body.summary ?? null,
       company_logo_url: body.company_logo_url ?? null,
-      tags: body.tags ?? null,
+      // Same reasoning as the POST route: the edit link is public, so the
+      // vocabulary is enforced here rather than trusted from the client.
+      tags: editedTags.length > 0 ? editedTags : null,
       closing_at: body.closing_at ?? null,
     })
     .eq('edit_token', token)
