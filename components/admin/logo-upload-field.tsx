@@ -19,11 +19,14 @@ import { createClient } from '@/lib/supabase/client'
  * is_admin() policy.
  */
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
+// No SVG: the bucket is public and anon can upload to it, so accepting an
+// executable document format would let anyone host script at a URL on the
+// project's own Supabase origin. See the note in 0014 for the full reasoning.
+// An employer with an SVG logo can still paste its URL into the same field.
 const LOGO_MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
 }
 
 interface LogoUploadFieldProps {
@@ -52,7 +55,7 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
 
     const ext = LOGO_MIME_TO_EXT[file.type]
     if (!ext) {
-      setUploadError('Unsupported file type. Use PNG, JPEG, WebP, or SVG.')
+      setUploadError('Unsupported file type. Use PNG, JPEG or WebP — or paste a URL instead.')
       return
     }
     if (file.size > LOGO_MAX_BYTES) {
@@ -112,7 +115,7 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
         </Button>
       </div>
       <p className="text-xs text-muted-foreground mt-1">
-        Paste a URL, or upload a PNG, JPEG, WebP, or SVG (max 2MB).
+        Paste a URL, or upload a PNG, JPEG or WebP (max 2MB).
       </p>
       {uploadError && (
         <p className="text-xs text-destructive mt-1">{uploadError}</p>
