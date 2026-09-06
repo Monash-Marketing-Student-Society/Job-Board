@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { sanitizeDescription } from '@/lib/sanitize'
 import { trackEvent } from '@/lib/analytics/track'
 import { handleApplyClick } from './apply-link'
 import type { Job } from '@/lib/types'
@@ -20,6 +21,14 @@ const pillVariants = {
 
 export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPanelProps) {
   const [copied, setCopied] = useState(false)
+
+  // Memoised on the description itself: this panel re-renders on every
+  // selection change and animation tick, and re-parsing the HTML each time
+  // would be wasted work.
+  const safeDescription = useMemo(
+    () => sanitizeDescription(job.description),
+    [job.description]
+  )
 
   const getInitials = (company: string) => {
     return company
@@ -133,7 +142,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
               <h2 className="text-sm font-semibold text-slate-800 mb-2">Job Description</h2>
               <div
                 className="prose prose-sm max-w-none text-slate-600 prose-headings:text-slate-800 prose-a:text-primary prose-img:rounded-lg"
-                dangerouslySetInnerHTML={{ __html: job.description }}
+                dangerouslySetInnerHTML={{ __html: safeDescription }}
               />
             </motion.div>
           ) : (
