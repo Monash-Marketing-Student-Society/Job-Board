@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { toJobFunctions } from '@/lib/tags'
+import { sanitizeDescription } from '@/lib/sanitize'
 import type { JobSubmissionInsert } from '@/lib/types'
 
 export async function PATCH(
@@ -50,7 +51,8 @@ export async function PATCH(
       work_mode: body.work_mode ?? null,
       job_type: body.job_type ?? null,
       url: body.url,
-      description: body.description ?? null,
+      // Same reasoning as the POST route — the edit link is public.
+      description: sanitizeDescription(body.description) || null,
       summary: body.summary ?? null,
       company_logo_url: body.company_logo_url ?? null,
       // Same reasoning as the POST route: the edit link is public, so the
