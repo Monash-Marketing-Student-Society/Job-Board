@@ -6,6 +6,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { approvalEmail } from '@/lib/email-templates'
+import { sanitizeDescription } from '@/lib/sanitize'
 
 export async function POST(
   _request: Request,
@@ -42,7 +43,10 @@ export async function POST(
     work_mode: submission.work_mode,
     job_type: submission.job_type,
     url: submission.url,
-    description: submission.description,
+    // Last gate before this becomes a public job. Submissions stored before
+    // the submit routes sanitised are still in the queue, and an admin
+    // approving one reviews the rendered output, where a payload is invisible.
+    description: sanitizeDescription(submission.description) || null,
     summary: submission.summary,
     company_logo_url: submission.company_logo_url,
     tags: submission.tags,

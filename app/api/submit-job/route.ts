@@ -5,6 +5,7 @@ import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { sendEmail } from '@/lib/email'
 import { submissionConfirmationEmail } from '@/lib/email-templates'
 import { toJobFunctions } from '@/lib/tags'
+import { sanitizeDescription } from '@/lib/sanitize'
 import type { JobSubmissionInsert, JobSubmission } from '@/lib/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -32,9 +33,16 @@ export async function POST(request: Request) {
   // in here.
   const tags = toJobFunctions(body.tags)
 
+  // Description is rich-text HTML and is rendered with dangerouslySetInnerHTML.
+  // The render site sanitises too, which is what actually closes the hole for
+  // rows already stored — this keeps what lands in the database clean in the
+  // first place, so every other consumer (the admin queue, the email templates,
+  // anything added later) inherits the guarantee instead of re-deriving it.
+  const description = sanitizeDescription(body.description) || null
+
   const { data, error } = await adminClient
     .from('job_submissions')
-    .insert({ ...body, tags: tags.length > 0 ? tags : null })
+    .insert({ ...body, tags: tags.length > 0 ? tags : null, description })
     .select()
     .single() as { data: JobSubmission | null; error: Error | null }
 
