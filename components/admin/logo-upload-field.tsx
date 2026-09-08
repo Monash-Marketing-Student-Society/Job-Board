@@ -43,6 +43,15 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Which URL failed to load, not a boolean "did something fail".
+  //
+  // Storing the value means the check below (`failedSrc !== value`) corrects
+  // itself the moment `value` changes — no reset needed in the URL input's
+  // onChange, none after a successful upload, and no path that can be missed
+  // when a future field starts writing to `value`. Re-entering a known-bad URL
+  // also stays hidden without a second round trip.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     // Let the same input be used again for a second attempt after an
@@ -120,13 +129,16 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
       {uploadError && (
         <p className="text-xs text-destructive mt-1">{uploadError}</p>
       )}
-      {value && (
+      {/* Hiding the whole block, not just the image: the old handler set
+          display:none on the <img> alone and left the "Preview" caption
+          sitting next to nothing. */}
+      {value && failedSrc !== value && (
         <div className="mt-2 flex items-center gap-2">
           <img
             src={value}
             alt="Logo preview"
             className="w-10 h-10 rounded-lg object-contain border border-border bg-white"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            onError={() => setFailedSrc(value)}
           />
           <span className="text-xs text-muted-foreground">Preview</span>
         </div>
