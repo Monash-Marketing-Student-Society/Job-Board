@@ -20,24 +20,42 @@ export async function POST(
   const body = await request.json().catch(() => ({}))
   const supabase = await createServerClient()
 
-  // Fetch submission details before updating (needed for the email)
-  const { data: submission, error: fetchError } = await supabase
-    .from('job_submissions')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (fetchError || !submission) {
-    return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
-  }
-
-  const { error } = await supabase
+  // Reject only what is still pending, in a single guarded write.
+  //
+  // The fetch this replaces matched on `id` alone, so an already-approved
+  // submission could be rejected: the submitter received a rejection email
+  // while the job stayed live on the public board, because rejection never
+  // touches the `jobs` table. Two admins working the queue at once, or one
+  // click on a page whose data had gone stale, was enough to produce it.
+  //
+  // `WHERE status = 'pending'` is evaluated against the committed row, so the
+  // approve/reject race resolves to whichever lands first and the loser comes
+  // back empty rather than acting on a decision already made. Same guard, same
+  // reasoning as the approve route.
+  //
+  // RETURNING also supplies the row the email needs, so the separate fetch is
+  // gone — there is no longer a window between reading the status and acting
+  // on it.
+  const { data: submission, error } = await supabase
     .from('job_submissions')
     .update({ status: 'rejected', admin_note: body.admin_note || null })
     .eq('id', id)
+    .eq('status', 'pending')
+    .select()
+    .maybeSingle()
 
   if (error) {
+    console.error('Failed to reject submission:', error)
     return NextResponse.json({ error: 'Failed to reject submission' }, { status: 500 })
+  }
+
+  if (!submission) {
+    // Unknown id, or already approved/rejected. 409 rather than 404: the row
+    // usually does exist, it just is not pending any more.
+    return NextResponse.json(
+      { error: 'Submission not found or already actioned' },
+      { status: 409 }
+    )
   }
 
   // The pending count in the admin nav is cached — drop it now that this

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import dns from 'dns/promises'
 import { normalizeJobType, truncateText } from '@/lib/utils'
 import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
+import { fetchPublicUrl } from '@/lib/ssrf'
 
 interface PrefillData {
   title?: string
@@ -20,21 +20,6 @@ interface PrefillData {
    * the guarantee.
    */
   tags?: JobFunction[]
-}
-
-// ─── SSRF guard ─────────────────────────────────────────────────────────────
-
-function isPrivateIp(ip: string): boolean {
-  if (ip === '::1' || ip === '127.0.0.1') return true
-  const parts = ip.split('.').map(Number)
-  if (parts.length !== 4) return false
-  const [a, b] = parts
-  if (a === 127) return true
-  if (a === 10) return true
-  if (a === 192 && b === 168) return true
-  if (a === 172 && b >= 16 && b <= 31) return true
-  if (a === 169 && b === 254) return true
-  return false
 }
 
 // ─── Extraction helpers ──────────────────────────────────────────────────────
@@ -453,31 +438,32 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'URL not allowed' }, { status: 400 })
   }
 
-  // SSRF guard
-  try {
-    const { address } = await dns.lookup(target.hostname)
-    if (isPrivateIp(address)) {
-      return NextResponse.json({ error: 'URL not allowed' }, { status: 400 })
-    }
-  } catch {
+  // Fetch the page.
+  //
+  // fetchPublicUrl re-checks the host at every redirect hop. The previous code
+  // validated only this first hostname and then let fetch follow redirects
+  // itself, so a page on a public host could reply
+  // `302 -> http://169.254.169.254/...` and be followed unchecked — and since
+  // extracted fields are echoed back in the response, that read internal data
+  // out, not just reached it.
+  //
+  // A blocked target returns the same empty payload as a fetch failure, so this
+  // endpoint cannot be used to probe which internal hosts exist.
+  let html: string
+  const res = await fetchPublicUrl(target, {
+    timeoutMs: 5000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)',
+      Accept: 'text/html,application/xhtml+xml',
+      'Accept-Language': 'en-AU,en;q=0.9',
+    },
+  })
+
+  if (!res) {
     return NextResponse.json({ data: {} })
   }
 
-  // Fetch the page
-  let html: string
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-    const res = await fetch(target.toString(), {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)',
-        Accept: 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-AU,en;q=0.9',
-      },
-      redirect: 'follow',
-    })
-    clearTimeout(timeoutId)
     html = (await res.text()).slice(0, 512_000)
   } catch {
     return NextResponse.json({ data: {} })
