@@ -21,16 +21,42 @@ export async function POST(
 
   const supabase = await createServerClient()
 
-  // Fetch the pending submission
-  const { data: submission, error: fetchError } = await supabase
+  // Claim the submission BEFORE publishing anything.
+  //
+  // `UPDATE ... WHERE status = 'pending'` is the concurrency guard. Postgres
+  // re-evaluates that predicate against the committed row, so of two callers
+  // racing — two admins working the queue, or one double-click on a stale page
+  // — exactly one matches a pending row and the other comes back empty. A plain
+  // SELECT could not do this: both callers would see 'pending' and both would
+  // go on to publish.
+  //
+  // The previous order was fetch → insert → update-and-ignore-the-result. If
+  // that final update failed the job was already live while the submission
+  // stayed pending, so it reappeared in the queue and the next approval
+  // published a second copy. Nothing downstream would have caught it: the only
+  // unique constraint on `jobs` is (source, external_id), and external_id is
+  // null for every submission.
+  const { data: submission, error: claimError } = await supabase
     .from('job_submissions')
-    .select('*')
+    .update({ status: 'approved' })
     .eq('id', id)
     .eq('status', 'pending')
-    .single()
+    .select()
+    .maybeSingle()
 
-  if (fetchError || !submission) {
-    return NextResponse.json({ error: 'Submission not found or already actioned' }, { status: 404 })
+  if (claimError) {
+    console.error('Failed to claim submission for approval:', claimError)
+    return NextResponse.json({ error: 'Failed to approve submission' }, { status: 500 })
+  }
+
+  if (!submission) {
+    // Either the id is unknown or someone else already actioned it. 409 rather
+    // than 404: for the racing admin the row exists, it just is not theirs to
+    // approve any more.
+    return NextResponse.json(
+      { error: 'Submission not found or already actioned' },
+      { status: 409 }
+    )
   }
 
   // Insert into live jobs table using service-role client (bypasses RLS)
@@ -57,14 +83,33 @@ export async function POST(
   })
 
   if (insertError) {
+    console.error('Failed to publish job from submission:', insertError)
+
+    // Release the claim so the submission goes back in the queue rather than
+    // sitting 'approved' with nothing published. Checked, not fire-and-forget:
+    // if this fails too the row is stranded, and the admin needs to be told
+    // that rather than shown a generic retryable error.
+    const { error: releaseError } = await supabase
+      .from('job_submissions')
+      .update({ status: 'pending' })
+      .eq('id', id)
+
+    revalidateTag(SUBMISSIONS_TAG)
+
+    if (releaseError) {
+      console.error('Failed to release claim after publish failure:', releaseError)
+      return NextResponse.json(
+        {
+          error:
+            'Could not publish the job, and could not return the submission to the queue. ' +
+            'It is now marked approved with nothing on the board — set it back to pending before retrying.',
+        },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json({ error: 'Failed to publish job' }, { status: 500 })
   }
-
-  // Mark submission as approved
-  await supabase
-    .from('job_submissions')
-    .update({ status: 'approved' })
-    .eq('id', id)
 
   // The pending count in the admin nav is cached — drop it now that this
   // submission has left the pending set.
