@@ -80,7 +80,10 @@ export async function POST(request: Request) {
           '',
           `Edit your submission: ${editLink}`,
           `Questions? Email ${ADMIN_EMAIL}`,
-        ].filter(Boolean).join('\n'),
+          // Drops the optional null lines above while keeping the '' entries,
+          // which are deliberate paragraph breaks. filter(Boolean) removed both
+          // and collapsed the whole email into one unbroken block.
+        ].filter(l => l !== null).join('\n'),
       },
       'submission confirmation'
     ),

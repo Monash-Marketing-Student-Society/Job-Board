@@ -74,7 +74,11 @@ export async function POST(
         '',
         `Thank you for submitting "${submission.title}" at ${submission.company}.`,
         "Unfortunately we weren't able to feature this listing on the MMSS Job Board at this time.",
-        body.admin_note ? `\nNote from our team: ${body.admin_note}\n` : '',
+        // null, not '' — the filter below drops null so this line disappears
+        // entirely when there is no note. An '' would survive the filter and
+        // ship as a stray blank line, while '' entries elsewhere in this array
+        // are deliberate paragraph breaks that must survive.
+        body.admin_note ? `\nNote from our team: ${body.admin_note}\n` : null,
         'Have another role? Submit again at:',
         `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/submit`,
         '',
