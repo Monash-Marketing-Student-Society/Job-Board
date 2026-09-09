@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
-import { MagnifyingGlassIcon } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
@@ -19,6 +18,18 @@ import { cn } from "@/lib/utils"
  * DropdownMenuItem exactly. The panel chrome (rounded-md, border, bg-popover,
  * p-1, shadow) lives on PopoverContent, not here, so Command stays transparent
  * and composes inside any surface.
+ *
+ * CommandInput is unwrapped, a second deliberate deviation from the registry
+ * template. The template nests the input in a search-row div carrying
+ * `border-b border-border px-2` and a MagnifyingGlassIcon — chrome that belongs
+ * to a command palette sitting at the top of its own panel. This app's only
+ * consumer (components/ui/tag-combobox.tsx) renders the input inline among the
+ * selected chips inside the control itself, where a bottom border and a
+ * magnifier would both be wrong and neither could be removed via className,
+ * since they live on the wrapper rather than the input. Sizing left off for the
+ * same reason: the template's `h-9 py-2` sized a standalone row, and an inline
+ * input is sized by whatever encloses it. Restore the wrapper here if a real
+ * command palette ever lands, rather than making this branch on a prop.
  */
 function Command({
   className,
@@ -38,20 +49,14 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div
-      data-slot="command-input-wrapper"
-      className="flex items-center gap-2 border-b border-border px-2"
-    >
-      <MagnifyingGlassIcon className="size-4 shrink-0 text-muted-foreground" />
-      <CommandPrimitive.Input
-        data-slot="command-input"
-        className={cn(
-          "flex h-9 w-full bg-transparent py-2 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        {...props}
-      />
-    </div>
+    <CommandPrimitive.Input
+      data-slot="command-input"
+      className={cn(
+        "flex w-full bg-transparent text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
+    />
   )
 }
 
