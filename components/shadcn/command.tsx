@@ -121,7 +121,14 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm font-medium outline-hidden select-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // data-[disabled=true], not data-disabled. Tailwind compiles the
+        // bare form to `[data-disabled]`, which matches on attribute
+        // *presence* — and cmdk renders data-disabled="false" on every
+        // enabled item, so the bare variant put pointer-events:none and
+        // opacity-50 on all of them and no row could be clicked at all.
+        // dropdown-menu.tsx keeps the bare form correctly: Radix omits the
+        // attribute entirely when the item is enabled.
+        "relative flex cursor-default items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm font-medium outline-hidden select-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
