@@ -122,9 +122,16 @@ export function TagCombobox({
               // which is NativeSelect's convention: a ring hugging the border
               // rather than Input's older offset ring, so the halo reads as part
               // of the pill instead of a second outline floating off it.
+              //
+              // Keyed on the input specifically, not focus-within. The chips'
+              // remove buttons are focusable and live inside this element too,
+              // so focus-within lit the whole field up behind whichever small
+              // button had focus — two rings at once, and the field claiming a
+              // focus it did not have. `input` matches only the one child that
+              // can be an input here.
               'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-full border border-transparent bg-input px-3 py-1.5 text-sm',
               'transition-[color,box-shadow,background-color]',
-              'focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30',
+              'has-[input:focus]:border-ring has-[input:focus]:ring-3 has-[input:focus]:ring-ring/30',
               disabled && 'cursor-not-allowed opacity-50'
             )}
           >
