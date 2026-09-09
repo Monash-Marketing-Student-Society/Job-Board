@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { UploadSimpleIcon } from '@phosphor-icons/react'
 import { Button, Input, Label } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client'
  * is_admin() policy.
  */
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
+const PREVIEW_DEBOUNCE_MS = 400
 // No SVG: the bucket is public and anon can upload to it, so accepting an
 // executable document format would let anyone host script at a URL on the
 // project's own Supabase origin. See the note in 0014 for the full reasoning.
@@ -51,6 +52,24 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
   // when a future field starts writing to `value`. Re-entering a known-bad URL
   // also stays hidden without a second round trip.
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
+  // The URL the preview is actually pointed at, trailing `value` by a beat.
+  //
+  // `value` changes on every keystroke, and the preview is rendered only while
+  // it has not failed — so previewing `value` directly meant every partial URL
+  // ("h", "ht", "htt"…) mounted an <img>, failed, and unmounted it again. The
+  // block strobed the whole time the user was typing, and each keystroke fired
+  // a request for a string that could not possibly resolve.
+  //
+  // Settling first means one attempt per URL the user actually meant. An
+  // upload's public URL lands here a beat late too, which is unnoticeable next
+  // to the upload it follows.
+  const [previewSrc, setPreviewSrc] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPreviewSrc(value), PREVIEW_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [value])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -132,13 +151,13 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
       {/* Hiding the whole block, not just the image: the old handler set
           display:none on the <img> alone and left the "Preview" caption
           sitting next to nothing. */}
-      {value && failedSrc !== value && (
+      {previewSrc && failedSrc !== previewSrc && (
         <div className="mt-2 flex items-center gap-2">
           <img
-            src={value}
+            src={previewSrc}
             alt="Logo preview"
             className="w-10 h-10 rounded-lg object-contain border border-border bg-white"
-            onError={() => setFailedSrc(value)}
+            onError={() => setFailedSrc(previewSrc)}
           />
           <span className="text-xs text-muted-foreground">Preview</span>
         </div>
