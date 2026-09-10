@@ -116,11 +116,16 @@ export function TagCombobox({
             ref={triggerRef}
             onMouseDown={focusInput}
             className={cn(
-              // Variant XA from app/combobox-proto: bg-input/50 — the same token
-              // Input/Textarea/NativeSelect use, at half strength so the grey
-              // page tint shows through rather than sitting on top of it. XB
-              // held the identical shape at full opacity; the fill is the whole
-              // difference between them.
+              // bg-input at full strength — oklch(0.968 0.007 247.896), the
+              // same token and the same value Input/Textarea/NativeSelect
+              // resolve to, so this field matches every other field on both the
+              // admin job form and the public submission form.
+              //
+              // This was bg-input/50 when XA was adopted. At half strength the
+              // grey page (--mmss-background, oklch L 0.931) showed through and
+              // the field separated from it less than any other control did.
+              // Solid is the fill; the /50 was the one thing XA carried over
+              // from upstream that did not survive contact with a grey page.
               //
               // rounded-md, not the pill this carried before: every other
               // control on both forms — Button, Input, NativeSelect, Badge,
@@ -140,7 +145,7 @@ export function TagCombobox({
               // button had focus — two rings at once, and the field claiming a
               // focus it did not have. `input` matches only the one child that
               // can be an input here.
-              'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-md border border-transparent bg-input/50 px-3 py-1.5 text-sm',
+              'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-md border border-transparent bg-input px-3 py-1.5 text-sm',
               'transition-[color,box-shadow,background-color]',
               // Halo only on focus — the border stays transparent throughout.
               // Colouring it as well made the field's edge sharpen at the same
