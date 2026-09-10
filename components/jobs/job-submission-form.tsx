@@ -353,7 +353,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
           <div className="sm:col-span-2">
             <Label htmlFor="url" required>Application URL</Label>
             <p className="text-xs text-slate-400 mt-0.5 mb-1.5">
-              Paste the link and tab away — we&apos;ll try to fill in the details automatically.
+              Insert the link to prefill.
             </p>
             <div className="relative">
               <Input
