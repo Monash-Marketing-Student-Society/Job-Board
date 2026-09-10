@@ -243,9 +243,6 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
               onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Use the toolbar to format text, add links, and insert images by URL.
-          </p>
         </div>
 
         <div className="md:col-span-2">
@@ -260,7 +257,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
             className="mt-1.5"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            One sentence shown on the job card in place of a truncated description. Optional — falls back automatically if left blank.
+            Automatically generated if left blank.
           </p>
         </div>
 
