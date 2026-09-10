@@ -6,43 +6,53 @@ import { sendEmail } from '@/lib/email'
 import { submissionConfirmationEmail } from '@/lib/email-templates'
 import { toJobFunctions } from '@/lib/tags'
 import { sanitizeDescription } from '@/lib/sanitize'
-import type { JobSubmissionInsert, JobSubmission } from '@/lib/types'
+import { jobSubmissionSchema } from '@/lib/job-submission-schema'
+import type { JobSubmission } from '@/lib/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 const ADMIN_EMAIL = 'partnerships@monashmss.com'
 const ADMIN_BCC = ['mmss@monashclubs.org', 'club.mmss@monsu.org']
 
 export async function POST(request: Request) {
-  let body: JobSubmissionInsert
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
+  // This endpoint is public and unauthenticated and inserts through a
+  // service-role client that bypasses RLS, so the body is the whole trust
+  // boundary. The schema is the field allowlist: it keeps only what a submitter
+  // owns, so `status`, `edit_token`, `admin_note`, `id` and the timestamps
+  // cannot ride in on the spread below.
+  const parsed = jobSubmissionSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid submission', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    )
+  }
+  const fields = parsed.data
+
   const adminClient = createAdminClient()
 
-  // The combobox on /submit can only produce vocabulary values, but it is a UI
-  // affordance and this endpoint is public and unauthenticated — anything can
-  // POST here. Tags are canonicalised and capped server-side so the guarantee
-  // does not depend on which client called.
-  //
-  // Note this only constrains `tags`. The rest of `body` is still inserted as
-  // received through a service-role client that bypasses RLS; that broader
-  // mass-assignment problem is tracked separately and deliberately not folded
-  // in here.
-  const tags = toJobFunctions(body.tags)
+  // The combobox on /submit can only produce vocabulary values, but the schema
+  // deliberately checks only the outer shape of `tags` — canonicalisation and
+  // the count cap are re-applied here so the guarantee does not depend on which
+  // client called.
+  const tags = toJobFunctions(fields.tags)
 
   // Description is rich-text HTML and is rendered with dangerouslySetInnerHTML.
   // The render site sanitises too, which is what actually closes the hole for
   // rows already stored — this keeps what lands in the database clean in the
   // first place, so every other consumer (the admin queue, the email templates,
   // anything added later) inherits the guarantee instead of re-deriving it.
-  const description = sanitizeDescription(body.description) || null
+  const description = sanitizeDescription(fields.description) || null
 
   const { data, error } = await adminClient
     .from('job_submissions')
-    .insert({ ...body, tags: tags.length > 0 ? tags : null, description })
+    .insert({ ...fields, tags: tags.length > 0 ? tags : null, description })
     .select()
     .single() as { data: JobSubmission | null; error: Error | null }
 

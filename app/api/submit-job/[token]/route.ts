@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { toJobFunctions } from '@/lib/tags'
 import { sanitizeDescription } from '@/lib/sanitize'
-import type { JobSubmissionInsert } from '@/lib/types'
+import { jobSubmissionSchema } from '@/lib/job-submission-schema'
 
 export async function PATCH(
   request: Request,
@@ -10,12 +10,26 @@ export async function PATCH(
 ) {
   const { token } = await params
 
-  let body: JobSubmissionInsert
+  let raw: unknown
   try {
-    body = await request.json()
+    raw = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
+
+  // Same trust model as the POST route — the edit link is public and this
+  // writes through the service-role client. The route already enumerates the
+  // columns it updates, so the schema is not load-bearing against
+  // mass-assignment here, but it still rejects a malformed email, a
+  // non-http(s) URL or a bad enum before any of it reaches the row.
+  const parsed = jobSubmissionSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid submission', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    )
+  }
+  const body = parsed.data
 
   const adminClient = createAdminClient()
 
