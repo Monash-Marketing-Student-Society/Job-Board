@@ -98,6 +98,8 @@ export interface JobSubmission {
   company_logo_url: string | null
   tags: string[] | null
   closing_at: string | null
+  /** Submitter asked for a sponsored/pinned placement. A request only — approval does not set jobs.is_sponsored. */
+  is_sponsored: boolean
   status: SubmissionStatus
   admin_note: string | null
   edit_token: string
@@ -122,6 +124,7 @@ export interface JobSubmissionInsert {
   company_logo_url?: string | null
   tags?: string[] | null
   closing_at?: string | null
+  is_sponsored?: boolean
 }
 
 export interface JobSubmissionUpdate {
@@ -136,6 +139,7 @@ export interface JobSubmissionUpdate {
   company_logo_url?: string | null
   tags?: string[] | null
   closing_at?: string | null
+  is_sponsored?: boolean
   status?: SubmissionStatus
   admin_note?: string | null
   archived_at?: string | null

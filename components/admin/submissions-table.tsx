@@ -342,6 +342,11 @@ export function SubmissionsTable({
                     >
                       <ArrowSquareOutIcon className="size-3.5" />
                     </a>
+                    {submission.is_sponsored && (
+                      <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
+                        Sponsor requested
+                      </Badge>
+                    )}
                   </div>
                   {secondaryLine && (
                     <p className="text-xs text-muted-foreground truncate">{secondaryLine}</p>
@@ -438,7 +443,14 @@ export function SubmissionsTable({
 
             {/* Job title + company */}
             <div>
-              <p className="text-sm font-medium text-slate-700 leading-tight">{decodeHtmlEntities(submission.title)}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-slate-700 leading-tight">{decodeHtmlEntities(submission.title)}</p>
+                {submission.is_sponsored && (
+                  <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
+                    Sponsor requested
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-slate-400 mt-0.5">{submission.company}</p>
             </div>
 
@@ -583,6 +595,12 @@ function SubmissionActionsMenu({
             {jobMeta && <span className="capitalize">{jobMeta} · </span>}
             Submitted {formatDate(submission.created_at)}
           </div>
+
+          {submission.is_sponsored && (
+            <p className="px-3 pb-2 -mt-1 text-xs text-primary">
+              Submitter requested a sponsored placement. Approval publishes it unsponsored — set that on the live job.
+            </p>
+          )}
 
           {submission.admin_note && (
             <>

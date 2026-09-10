@@ -51,6 +51,7 @@ interface JobSubmissionFormProps {
     summary: string | null
     tags: string[] | null
     closing_at: string | null
+    is_sponsored: boolean
   }
   editToken?: string
 }
@@ -79,6 +80,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
     closing_at: existingSubmission?.closing_at
       ? existingSubmission.closing_at.split('T')[0]
       : '',
+    is_sponsored: existingSubmission?.is_sponsored ?? false,
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -201,6 +203,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
       closing_at: formData.closing_at
         ? new Date(formData.closing_at).toISOString()
         : null,
+      is_sponsored: formData.is_sponsored,
     }
 
     try {
@@ -283,7 +286,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="submitter_company_name" required>Company name (confirmation)</Label>
+            <Label htmlFor="submitter_company_name" required>Company name</Label>
             <Input
               id="submitter_company_name"
               name="submitter_company_name"
@@ -335,9 +338,6 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
                 {formData.summary.length}/{SUMMARY_MAX_LENGTH}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 mb-1.5">
-              One sentence shown on the job card — auto-filled from the URL below, editable.
-            </p>
             <Input
               id="summary"
               name="summary"
@@ -347,15 +347,15 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
               maxLength={SUMMARY_MAX_LENGTH}
               className="mt-1.5"
             />
+            <p className="text-xs text-slate-400 mt-1.5">
+              Automatically generated if left blank
+            </p>
           </div>
 
           {/* Application URL — triggers prefill on blur */}
           <div className="sm:col-span-2">
             <Label htmlFor="url" required>Application URL</Label>
-            <p className="text-xs text-slate-400 mt-0.5 mb-1.5">
-              Insert the link to prefill.
-            </p>
-            <div className="relative">
+            <div className="relative mt-1.5">
               <Input
                 id="url"
                 name="url"
@@ -376,6 +376,9 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
                 </div>
               )}
             </div>
+            <p className="text-xs text-slate-400 mt-1.5">
+              Insert the link to prefill.
+            </p>
             {prefillStatus === 'success' && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs text-green-600">
                 <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -483,6 +486,26 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="border-t pt-6">
+        <label className="flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            name="is_sponsored"
+            checked={formData.is_sponsored}
+            onChange={e =>
+              setFormData(prev => ({ ...prev, is_sponsored: e.target.checked }))
+            }
+            className="mt-0.5 rounded border-border accent-primary"
+          />
+          <span>
+            <span className="text-sm font-medium text-slate-700">Request sponsored placement</span>
+            <span className="block text-xs text-slate-400 mt-0.5">
+              Pin this role to the top of the board — we&apos;ll be in touch about sponsorship.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="pt-6">

@@ -59,6 +59,7 @@ export async function PATCH(
       // vocabulary is enforced here rather than trusted from the client.
       tags: editedTags.length > 0 ? editedTags : null,
       closing_at: body.closing_at ?? null,
+      is_sponsored: body.is_sponsored ?? false,
     })
     .eq('edit_token', token)
 

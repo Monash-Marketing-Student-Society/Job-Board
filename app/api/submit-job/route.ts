@@ -100,6 +100,7 @@ export async function POST(request: Request) {
           `Submitted by: ${data.submitter_name} (${data.submitter_email})`,
           `Company:      ${data.submitter_company_name}`,
           `Apply URL:    ${data.url}`,
+          ...(data.is_sponsored ? ['Sponsored:    requested by the submitter'] : []),
           '',
           `Review: ${APP_URL}/admin/submissions`,
         ].join('\n'),
