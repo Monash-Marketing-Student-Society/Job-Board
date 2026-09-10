@@ -17,6 +17,7 @@ const full = {
   company_logo_url: 'https://acme.example/logo.png',
   tags: ['Brand', 'Strategy'],
   closing_at: '2026-10-01T00:00:00.000Z',
+  is_sponsored: true,
 }
 
 // The minimum the form can submit — required fields only.
@@ -46,6 +47,7 @@ describe('jobSubmissionSchema', () => {
       company_logo_url: null,
       tags: null,
       closing_at: null,
+      is_sponsored: false,
     })
   })
 
