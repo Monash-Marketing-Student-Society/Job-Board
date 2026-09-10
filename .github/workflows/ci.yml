@@ -24,6 +24,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cheapest possible gate: reject a branch whose name does not carry one
+      # of the house prefixes before spending a runner on install + build.
+      # PRs only — a push to main has no head_ref and main is not prefixed.
+      # The name comes in through env, not `${{ }}` interpolation, so a branch
+      # named with shell metacharacters cannot inject into this script.
+      - name: Branch name
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          case "$HEAD_REF" in
+            feat/?*|fix/?*|chore/?*|refactor/?*|exp/?*) ;;
+            *)
+              echo "::error::Branch '$HEAD_REF' must start with feat/ fix/ chore/ refactor/ or exp/"
+              exit 1
+              ;;
+          esac
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc

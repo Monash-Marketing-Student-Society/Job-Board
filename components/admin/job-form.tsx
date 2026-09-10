@@ -298,7 +298,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t pt-6">
+      <div className="flex flex-col gap-3 pt-6">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -322,7 +322,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </label>
       </div>
 
-      <div className="flex gap-3 border-t pt-6">
+      <div className="flex gap-3 pt-6">
         <Button type="submit" variant="primary" loading={isSubmitting}>
           {isEditing ? 'Update Job' : 'Create Job'}
         </Button>
