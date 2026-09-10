@@ -88,6 +88,14 @@ export const jobSubmissionSchema = z.object({
 
   // The form sends `new Date(value).toISOString()`, i.e. a UTC ISO 8601 string.
   closing_at: nullableDefault(z.string().datetime({ offset: true })),
+
+  // Submitter opting into a sponsored/pinned placement. A request only: the
+  // approval route publishes the job with is_sponsored = false regardless, and
+  // an admin decides sponsorship on the live job. Absent (older client) → false.
+  is_sponsored: z
+    .boolean()
+    .nullish()
+    .transform((v) => v ?? false),
 })
 
 export type JobSubmissionInput = z.infer<typeof jobSubmissionSchema>
