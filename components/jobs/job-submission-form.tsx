@@ -485,7 +485,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
         </div>
       </div>
 
-      <div className="border-t pt-6">
+      <div className="pt-6">
         <Button type="submit" variant="primary" loading={isSubmitting} className="w-full sm:w-auto">
           {isEditing ? 'Update Submission' : 'Submit Job Listing'}
         </Button>
