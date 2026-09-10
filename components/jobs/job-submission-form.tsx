@@ -15,7 +15,7 @@ import {
 import { RichTextEditor, type RichTextEditorRef } from '@/components/admin/rich-text-editor'
 import { LogoUploadField } from '@/components/admin/logo-upload-field'
 import { isValidEmail } from '@/lib/utils'
-import { MAX_JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
+import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { JobSubmissionInsert, WorkMode, JobType } from '@/lib/types'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
@@ -470,9 +470,6 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
               }}
               className="mt-1.5"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Choose up to {MAX_JOB_FUNCTIONS} from the set list
-            </p>
           </div>
           <div className="sm:col-span-2">
             <Label>Job description</Label>

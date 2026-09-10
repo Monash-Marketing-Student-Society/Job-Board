@@ -16,7 +16,7 @@ import {
 import { RichTextEditor } from './rich-text-editor'
 import { LogoUploadField } from './logo-upload-field'
 import { createClient } from '@/lib/supabase/client'
-import { MAX_JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '@/lib/tags'
+import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
@@ -274,9 +274,6 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
             }
             className="mt-1.5"
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Choose up to {MAX_JOB_FUNCTIONS} from the set list
-          </p>
         </div>
 
         <div>
