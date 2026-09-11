@@ -488,7 +488,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
         </div>
       </div>
 
-      <div className="border-t pt-6">
+      <div className="pt-6">
         <label className="flex items-start gap-2.5">
           <input
             type="checkbox"
