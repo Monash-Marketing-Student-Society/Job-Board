@@ -7,6 +7,7 @@ import { submissionConfirmationEmail } from '@/lib/email-templates'
 import { toJobFunctions } from '@/lib/tags'
 import { sanitizeDescription } from '@/lib/sanitize'
 import { jobSubmissionSchema } from '@/lib/job-submission-schema'
+import { allowSubmission } from '@/lib/rate-limit'
 import type { JobSubmission } from '@/lib/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -36,6 +37,17 @@ export async function POST(request: Request) {
   const fields = parsed.data
 
   const adminClient = createAdminClient()
+
+  // Public, unauthenticated, and two emails go out per accepted call — see
+  // lib/rate-limit.ts and its migration for why the counter lives in Postgres
+  // rather than in process memory. Checked after the schema parse (cheap, no
+  // DB) but before anything is written.
+  if (!(await allowSubmission(adminClient, request))) {
+    return NextResponse.json(
+      { error: 'Too many submissions from this network. Please try again in an hour.' },
+      { status: 429 }
+    )
+  }
 
   // The combobox on /submit can only produce vocabulary values, but the schema
   // deliberately checks only the outer shape of `tags` — canonicalisation and
