@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import * as XLSX from 'xlsx'
+import { Workbook, type CellValue, type Worksheet } from 'exceljs'
 import { Button, Alert, AlertDescription } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
 import { generateTemplate, SAMPLE_ROW_TITLE } from '@/lib/excel-template'
@@ -34,22 +34,47 @@ function parseYesNo(val: unknown, defaultVal: boolean): boolean {
   return str === 'yes' || str === 'true' || str === '1'
 }
 
+// Excel's serial-date epoch is 1899-12-30 (not 1900-01-01 — the offset bakes
+// in Excel's historical, deliberately-preserved leap-year bug). Only reached
+// when a cell holds a bare number exceljs didn't recognise as a date itself
+// (see cellToRaw below); a cell exceljs does recognise comes through as a
+// Date already, same as it would have with xlsx's cellDates: true.
+function excelSerialToDate(serial: number): Date | null {
+  const ms = Math.round((serial - 25569) * 86400 * 1000)
+  const date = new Date(ms)
+  return isNaN(date.getTime()) ? null : date
+}
+
 function parseDate(val: unknown): string | null {
   if (val === undefined || val === null || val === '') return null
-  // xlsx may parse dates as JS Date objects or serial numbers
   if (val instanceof Date) return val.toISOString()
   if (typeof val === 'number') {
-    // Excel serial date
-    const date = XLSX.SSF.parse_date_code(val)
-    if (date) {
-      return new Date(date.y, date.m - 1, date.d).toISOString()
-    }
-    return null
+    const date = excelSerialToDate(val)
+    return date ? date.toISOString() : null
   }
   const str = String(val).trim()
   const parsed = new Date(str)
   if (isNaN(parsed.getTime())) return null
   return parsed.toISOString()
+}
+
+/**
+ * exceljs hands back plain values (string/number/Date) for ordinary cells,
+ * but rich text, hyperlinks and formulas each come through as a small object
+ * instead. Unwrap those to the value the rest of this file already expects —
+ * xlsx's sheet_to_json flattened all of these to plain values, so without
+ * this a hyperlinked or formula-driven Application URL cell would parse as
+ * "[object Object]".
+ */
+function cellToRaw(value: CellValue): unknown {
+  if (value === null || value === undefined) return ''
+  if (value instanceof Date) return value
+  if (typeof value === 'object') {
+    if ('richText' in value) return value.richText.map((r) => r.text).join('')
+    if ('result' in value) return value.result ?? ''
+    if ('text' in value) return value.text
+  }
+  return value
 }
 
 /**
@@ -62,49 +87,46 @@ function parseDate(val: unknown): string | null {
  * tab; anything else (no name match, more than one sheet) is treated as
  * not this template at all rather than guessed at.
  */
-function findJobDataSheet(sheetNames: string[]): string | null {
-  const byName = sheetNames.find((name) => name.trim().toLowerCase() === 'job data')
+function findJobDataSheet(wb: Workbook): Worksheet | null {
+  const byName = wb.worksheets.find((ws) => ws.name.trim().toLowerCase() === 'job data')
   if (byName) return byName
-  if (sheetNames.length === 1) return sheetNames[0]
+  if (wb.worksheets.length === 1) return wb.worksheets[0]
   return null
 }
 
-function parseExcelRows(data: ArrayBuffer): { rows: ParsedRow[]; errors: ParseError[] } {
-  const wb = XLSX.read(data, { type: 'array', cellDates: true })
+async function parseExcelRows(data: ArrayBuffer): Promise<{ rows: ParsedRow[]; errors: ParseError[] }> {
+  const wb = new Workbook()
+  await wb.xlsx.load(data)
 
-  const sheetName = findJobDataSheet(wb.SheetNames)
-  if (!sheetName) {
+  const ws = findJobDataSheet(wb)
+  if (!ws) {
     return { rows: [], errors: [{ rowNum: 0, message: 'Could not find a "Job Data" sheet. Please download a fresh template and try again.' }] }
   }
 
-  const ws = wb.Sheets[sheetName]
-  const rawRows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-
-  if (rawRows.length < 2) {
+  if (ws.rowCount < 2) {
     return { rows: [], errors: [{ rowNum: 0, message: 'No data rows found in the "Job Data" sheet.' }] }
   }
 
-  // Header row (rawRows[0]) is never read for its text — every column below
-  // is positional (row[0], row[1], ...), so header names, trimmed or not,
-  // have no code path to affect. Nothing to change here; see the report for
-  // why this instruction has no matching call site.
-  const dataRows = rawRows.slice(1)
+  // Row 1 is the header, never read for its text — every column below is
+  // positional (col 1, col 2, ...), so header names, trimmed or not, have no
+  // code path to affect. Nothing to change here; see the report for why this
+  // instruction has no matching call site.
   const rows: ParsedRow[] = []
   const errors: ParseError[] = []
 
-  for (let i = 0; i < dataRows.length; i++) {
-    const row = dataRows[i]
-    const rowNum = i + 2 // 1-indexed, plus header row
+  for (let rowNum = 2; rowNum <= ws.rowCount; rowNum++) {
+    const row = ws.getRow(rowNum)
+    const cell = (col: number) => cellToRaw(row.getCell(col).value)
 
     // Skip template filler rows (no Title) and the template's own sample
     // row (exact match on the Title text generateTemplate wrote into it —
     // SAMPLE_ROW_TITLE, shared from lib/excel-template so the two can't
     // drift apart).
-    const title = String(row?.[0] ?? '').trim()
-    if (!row || !title || title === SAMPLE_ROW_TITLE) continue
+    const title = String(cell(1) ?? '').trim()
+    if (!title || title === SAMPLE_ROW_TITLE) continue
 
-    const company = String(row[1] ?? '').trim()
-    const url = String(row[2] ?? '').trim()
+    const company = String(cell(2) ?? '').trim()
+    const url = String(cell(3) ?? '').trim()
 
     // Validate required fields
     const missing: string[] = []
@@ -119,17 +141,17 @@ function parseExcelRows(data: ArrayBuffer): { rows: ParsedRow[]; errors: ParseEr
     const warnings: string[] = []
 
     // Parse optional fields
-    const location = String(row[3] ?? '').trim() || null
-    const workModeRaw = String(row[4] ?? '').trim().toLowerCase()
-    const jobTypeRaw = String(row[5] ?? '').trim().toLowerCase()
-    const description = String(row[6] ?? '').trim() || null
-    const tagsRaw = String(row[7] ?? '').trim()
-    const logoUrl = String(row[8] ?? '').trim() || null
-    const postedAt = parseDate(row[9])
-    const closingAt = parseDate(row[10])
-    const isSponsored = parseYesNo(row[11], false)
-    // Nothing at index 12+ is a real column any more — the template ends at
-    // Sponsored (11). is_active isn't user-set on import; it takes the same
+    const location = String(cell(4) ?? '').trim() || null
+    const workModeRaw = String(cell(5) ?? '').trim().toLowerCase()
+    const jobTypeRaw = String(cell(6) ?? '').trim().toLowerCase()
+    const description = String(cell(7) ?? '').trim() || null
+    const tagsRaw = String(cell(8) ?? '').trim()
+    const logoUrl = String(cell(9) ?? '').trim() || null
+    const postedAt = parseDate(cell(10))
+    const closingAt = parseDate(cell(11))
+    const isSponsored = parseYesNo(cell(12), false)
+    // Nothing at column 13+ is a real column any more — the template ends at
+    // Sponsored (12). is_active isn't user-set on import; it takes the same
     // default new jobs get everywhere else (omitted here, DB DEFAULT TRUE).
 
     let workMode: WorkMode | null = null
@@ -171,8 +193,8 @@ function parseExcelRows(data: ArrayBuffer): { rows: ParsedRow[]; errors: ParseEr
       )
     }
 
-    if (row[9] && !postedAt) warnings.push('Could not parse posted date')
-    if (row[10] && !closingAt) warnings.push('Could not parse closing date')
+    if (cell(10) && !postedAt) warnings.push('Could not parse posted date')
+    if (cell(11) && !closingAt) warnings.push('Could not parse closing date')
 
     rows.push({
       rowNum,
@@ -207,17 +229,22 @@ export function BulkImport() {
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null)
   const [error, setError] = useState('')
 
-  const handleDownloadTemplate = () => {
-    const buffer = generateTemplate()
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'mmss-job-board-import-template.xlsx'
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleDownloadTemplate = async () => {
+    setError('')
+    try {
+      const buffer = await generateTemplate()
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'mmss-job-board-import-template.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('Failed to generate the template file.')
+    }
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,7 +258,7 @@ export function BulkImport() {
 
     try {
       const buffer = await file.arrayBuffer()
-      const { rows, errors } = parseExcelRows(buffer)
+      const { rows, errors } = await parseExcelRows(buffer)
 
       setParseErrors(errors)
 
