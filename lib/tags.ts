@@ -8,10 +8,22 @@
  * Excel bulk import, and the AI prefill route) accepted arbitrary free text
  * straight into a `TEXT[]` column with no CHECK constraint.
  *
- * Order is carried over verbatim from the real MMSS spreadsheet's data
- * validation list, so the bulk-import instruction text this feeds is unchanged.
- * Nothing depends on the order beyond that — call sites are free to sort for
- * display.
+ * The first nine are carried over verbatim from the real MMSS spreadsheet's
+ * data validation list, so the bulk-import instruction text this feeds was
+ * unchanged when this module was introduced. Nothing depends on that order
+ * beyond that — call sites are free to sort for display.
+ *
+ * Operations, Product and Management were added in the tag-backfill audit
+ * item (supabase/migrations/0018_enforce_tag_vocabulary.sql), appended
+ * rather than interleaved so the original nine keep their positions. They
+ * exist because the drift query behind that migration found live `jobs`
+ * carrying 26 distinct free-text tag strings — the vocabulary above predates
+ * the app enforcing it, and nothing had ever backfilled what came before. 20
+ * of the 27 orphaned tag instances (Supply Chain & Operations, Operations,
+ * Procurement, Logistics, Product, Management, and case variants) had no
+ * honest fit in the original nine; the other 7 ("Marketing", too generic to
+ * mean anything more specific than "this is a marketing job") were dropped
+ * on backfill rather than given a tenth catch-all value.
  */
 export const JOB_FUNCTIONS = [
   'Strategy',
@@ -23,6 +35,9 @@ export const JOB_FUNCTIONS = [
   'Social Media',
   'Digital',
   'Brand',
+  'Operations',
+  'Product',
+  'Management',
 ] as const
 
 export type JobFunction = (typeof JOB_FUNCTIONS)[number]

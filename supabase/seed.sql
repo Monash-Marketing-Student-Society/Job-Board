@@ -24,7 +24,7 @@ Requirements:
 - Strong communication skills
 - Familiarity with social media platforms
 - Basic knowledge of analytics tools',
-  ARRAY['social media', 'content creation', 'analytics', 'digital marketing'],
+  ARRAY['Social Media', 'Creative', 'Analytics', 'Digital'],
   NOW() - INTERVAL '3 days',
   NOW() + INTERVAL '30 days',
   TRUE,
@@ -50,7 +50,7 @@ What we''re looking for:
 - Strong organizational skills
 - Excellent attention to detail
 - Team player attitude',
-  ARRAY['brand management', 'project coordination', 'graduate program'],
+  ARRAY['Brand', 'Management'],
   NOW() - INTERVAL '7 days',
   NOW() + INTERVAL '21 days',
   TRUE,
@@ -76,7 +76,7 @@ Requirements:
 - Understanding of social platforms
 - Creative mindset
 - Available 15-20 hours/week',
-  ARRAY['social media', 'copywriting', 'community management'],
+  ARRAY['Social Media', 'Creative'],
   NOW() - INTERVAL '5 days',
   NOW() + INTERVAL '14 days',
   TRUE,
@@ -90,7 +90,7 @@ Requirements:
   'casual',
   'https://example.com/apply/4',
   'Casual digital marketing support — SEO, email marketing and content updates, flexible hours.',
-  ARRAY['SEO', 'email marketing', 'digital marketing'],
+  ARRAY['Digital'],
   NOW() - INTERVAL '2 days',
   NULL,
   TRUE,
@@ -104,7 +104,7 @@ Requirements:
   'internship',
   'https://example.com/apply/5',
   'Internship in marketing analytics — Google Analytics, data visualization and A/B testing.',
-  ARRAY['analytics', 'data analysis', 'google analytics', 'reporting'],
+  ARRAY['Analytics'],
   NOW() - INTERVAL '10 days',
   NOW() + INTERVAL '5 days',
   TRUE,
@@ -118,7 +118,7 @@ Requirements:
   'contract',
   'https://example.com/apply/6',
   '3-month remote contract for a content writer looking to build their portfolio.',
-  ARRAY['content writing', 'copywriting', 'blogging'],
+  ARRAY['Creative'],
   NOW() - INTERVAL '1 day',
   NOW() + INTERVAL '45 days',
   TRUE,
