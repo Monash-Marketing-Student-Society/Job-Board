@@ -8,8 +8,8 @@ import {
 } from './tags'
 
 describe('JOB_FUNCTIONS', () => {
-  it('is the nine-value vocabulary', () => {
-    expect(JOB_FUNCTIONS).toHaveLength(9)
+  it('is the twelve-value vocabulary', () => {
+    expect(JOB_FUNCTIONS).toHaveLength(12)
     expect([...JOB_FUNCTIONS].sort()).toEqual([
       'Analytics',
       'Brand',
@@ -17,15 +17,18 @@ describe('JOB_FUNCTIONS', () => {
       'Creative',
       'Digital',
       'Events',
+      'Management',
+      'Operations',
+      'Product',
       'Sales',
       'Social Media',
       'Strategy',
     ])
   })
 
-  it('keeps the spreadsheet order the bulk-import help text is built from', () => {
+  it('keeps the spreadsheet order the bulk-import help text is built from, with the backfill additions appended', () => {
     expect(JOB_FUNCTIONS.join(', ')).toBe(
-      'Strategy, Sales, Creative, Events, Communications, Analytics, Social Media, Digital, Brand'
+      'Strategy, Sales, Creative, Events, Communications, Analytics, Social Media, Digital, Brand, Operations, Product, Management'
     )
   })
 })
