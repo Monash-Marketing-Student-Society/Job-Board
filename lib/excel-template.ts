@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import { Workbook } from 'exceljs'
 
 import { JOB_FUNCTIONS } from '@/lib/tags'
 
@@ -26,11 +26,11 @@ const HEADERS = [
 /**
  * The one thing that actually has to identify row 2 as the sample —
  * bulk-import.tsx imports this same constant and skips any row whose Title
- * cell matches it exactly. Grey fill + italic would be nice too, but the
- * installed `xlsx` package (SheetJS Community Edition) doesn't support
- * writing cell styles — confirmed by inspecting its source, not assumed —
- * so the text marker is carrying the whole job, not just the human-readable
- * half of it.
+ * cell matches it exactly. The grey fill + italic added below (exceljs, unlike
+ * the xlsx package this replaced, can write cell styles) are cosmetic on top
+ * of that; the text marker is still what the parser trusts, so a user who
+ * strips formatting by pasting into a fresh sheet doesn't slip the sample row
+ * through.
  */
 export const SAMPLE_ROW_TITLE = 'SAMPLE — delete this row before importing'
 
@@ -82,23 +82,30 @@ const INSTRUCTIONS: string[] = [
   '5. Save the file and upload it back on the admin page.',
 ]
 
-export function generateTemplate(): ArrayBuffer {
-  const wb = XLSX.utils.book_new()
+export async function generateTemplate() {
+  const wb = new Workbook()
+  const ws = wb.addWorksheet('Job Data')
 
-  const ws = XLSX.utils.aoa_to_sheet([HEADERS, SAMPLE_ROW])
+  ws.addRow(HEADERS)
+  const sampleRow = ws.addRow(SAMPLE_ROW)
+  sampleRow.eachCell((cell) => {
+    cell.font = { italic: true, color: { argb: 'FF6B7280' } }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }
+  })
 
   // Placed by absolute cell address rather than materializing ~500 blank
-  // array rows in between — XLSX and the parser both read an absent cell
-  // the same as an explicitly blank one.
-  XLSX.utils.sheet_add_aoa(
-    ws,
-    INSTRUCTIONS.map((line) => ['', line]),
-    { origin: `A${INSTRUCTIONS_START_ROW}` }
-  )
+  // rows in between — an untouched row/cell reads as blank to both exceljs
+  // and the parser.
+  INSTRUCTIONS.forEach((line, i) => {
+    ws.getCell(`B${INSTRUCTIONS_START_ROW + i}`).value = line
+  })
 
-  ws['!cols'] = HEADERS.map((h) => ({ wch: Math.max(h.length + 4, 18) }))
+  HEADERS.forEach((h, i) => {
+    ws.getColumn(i + 1).width = Math.max(h.length + 4, 18)
+  })
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Job Data')
-
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+  // exceljs's Buffer here is its own type (an ArrayBuffer alias for browser
+  // callers), not Node's — this runs client-side in bulk-import.tsx, which
+  // hands the result straight to `new Blob([...])`.
+  return wb.xlsx.writeBuffer()
 }
