@@ -62,8 +62,17 @@ const optionalText = (max: number) =>
 
 // Optional enum / url / array: accept null or undefined, normalise undefined to
 // null so the insert always gets an explicit value.
+//
+// Also folds a blank/whitespace-only string onto null before validating, the
+// same rule optionalText applies to plain text fields. Without this, a
+// client sending "" here got a 400 while the identical "empty" intent on
+// location/description/summary succeeded — none of these fields (an enum
+// member, a URL, an array, an ISO datetime) is ever legitimately "", so
+// treating it as "absent" instead of "invalid" is strictly more permissive.
 const nullableDefault = <T extends z.ZodTypeAny>(schema: T) =>
-  schema.nullish().transform((v) => v ?? null)
+  z
+    .preprocess((v) => (typeof v === 'string' && v.trim() === '' ? null : v), schema.nullish())
+    .transform((v) => v ?? null)
 
 export const jobSubmissionSchema = z.object({
   submitter_name: z.string().trim().min(1).max(200),
