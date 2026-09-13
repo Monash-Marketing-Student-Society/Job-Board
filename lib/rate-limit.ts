@@ -28,8 +28,42 @@ export function clientIp(request: Request): string {
   return request.headers.get('x-real-ip')?.trim() || 'unknown'
 }
 
+/**
+ * A plain SHA-256 of an IPv4 address is not meaningfully anonymous: the
+ * address space is only 2^32 values, so hashing every one of them and
+ * matching against a stored `ip_hash` recovers the original address in well
+ * under an hour on a single CPU core (seconds on a GPU) — a brute force over
+ * the *hash function*, not over the data, since there is no secret in it.
+ * RATE_LIMIT_HASH_PEPPER is that secret: with it, `hashIp` is an HMAC keyed
+ * on a value only this server knows, so the same exhaustive-IPv4-space
+ * attack requires the pepper as well and is no longer a pure hash-cracking
+ * problem.
+ *
+ * Missing pepper falls back to the original unsalted hash rather than
+ * throwing — a misconfigured or absent secret degrades privacy, it must not
+ * take the public submit form down — logging once per cold start so the gap
+ * is visible in practice without spamming on every request.
+ *
+ * Read from `process.env` inside the function rather than cached at module
+ * load: cheap, and it means a test can flip the env var between cases
+ * without a module reset.
+ */
+let warnedMissingPepper = false
+
 function hashIp(ip: string): string {
-  return crypto.createHash('sha256').update(ip).digest('hex')
+  const pepper = process.env.RATE_LIMIT_HASH_PEPPER
+  if (!pepper) {
+    if (!warnedMissingPepper) {
+      console.error(
+        'RATE_LIMIT_HASH_PEPPER is not set — rate-limit IP hashes are unsalted and ' +
+          'reversible across the whole IPv4 address space. Set it to restore the ' +
+          'intended privacy guarantee.'
+      )
+      warnedMissingPepper = true
+    }
+    return crypto.createHash('sha256').update(ip).digest('hex')
+  }
+  return crypto.createHmac('sha256', pepper).update(ip).digest('hex')
 }
 
 /**

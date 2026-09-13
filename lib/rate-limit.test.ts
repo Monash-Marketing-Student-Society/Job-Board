@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { clientIp, allowSubmission } from './rate-limit'
 
 function req(headers: Record<string, string>): Request {
@@ -62,5 +62,44 @@ describe('allowSubmission', () => {
     const [, args] = rpc.mock.calls[0]
     expect(args.p_ip_hash).not.toBe('203.0.113.4')
     expect(args.p_ip_hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
+describe('IP hash peppering', () => {
+  const ORIGINAL_PEPPER = process.env.RATE_LIMIT_HASH_PEPPER
+
+  afterEach(() => {
+    if (ORIGINAL_PEPPER === undefined) delete process.env.RATE_LIMIT_HASH_PEPPER
+    else process.env.RATE_LIMIT_HASH_PEPPER = ORIGINAL_PEPPER
+  })
+
+  async function hashVia(pepper: string | undefined, ip: string): Promise<string> {
+    if (pepper === undefined) delete process.env.RATE_LIMIT_HASH_PEPPER
+    else process.env.RATE_LIMIT_HASH_PEPPER = pepper
+    const rpc = vi.fn(async (_fn: string, args: { p_ip_hash: string }) => ({
+      data: true,
+      error: null,
+    }))
+    await allowSubmission({ rpc } as any, req({ 'x-forwarded-for': ip }))
+    return rpc.mock.calls[0][1].p_ip_hash
+  }
+
+  it('produces a different hash for the same IP under different peppers', async () => {
+    const a = await hashVia('pepper-one', '203.0.113.4')
+    const b = await hashVia('pepper-two', '203.0.113.4')
+    expect(a).not.toBe(b)
+  })
+
+  it('is deterministic for the same IP and pepper', async () => {
+    const a = await hashVia('pepper-one', '203.0.113.4')
+    const b = await hashVia('pepper-one', '203.0.113.4')
+    expect(a).toBe(b)
+  })
+
+  it('falls back to the plain unsalted hash when no pepper is set, still 64 hex chars', async () => {
+    const unpeppered = await hashVia(undefined, '203.0.113.4')
+    expect(unpeppered).toMatch(/^[0-9a-f]{64}$/)
+    const peppered = await hashVia('pepper-one', '203.0.113.4')
+    expect(unpeppered).not.toBe(peppered)
   })
 })
