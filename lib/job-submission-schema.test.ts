@@ -102,6 +102,25 @@ describe('jobSubmissionSchema', () => {
     expect(jobSubmissionSchema.safeParse({ ...minimal, tags: [1, 2] }).success).toBe(false)
   })
 
+  it('treats a blank string the same as null for every nullableDefault field, not just plain-text fields', () => {
+    const out = jobSubmissionSchema.parse({
+      ...minimal,
+      work_mode: '',
+      job_type: '   ',
+      company_logo_url: '',
+      closing_at: '',
+    })
+    expect(out.work_mode).toBeNull()
+    expect(out.job_type).toBeNull()
+    expect(out.company_logo_url).toBeNull()
+    expect(out.closing_at).toBeNull()
+  })
+
+  it('still rejects a non-blank value that fails its own type', () => {
+    expect(jobSubmissionSchema.safeParse({ ...minimal, work_mode: 'anywhere' }).success).toBe(false)
+    expect(jobSubmissionSchema.safeParse({ ...minimal, closing_at: 'not-a-date' }).success).toBe(false)
+  })
+
   it('trims surrounding whitespace and collapses blank optionals to null', () => {
     const out = jobSubmissionSchema.parse({
       ...minimal,
