@@ -16,6 +16,7 @@ import {
 import { RichTextEditor } from './rich-text-editor'
 import { LogoUploadField } from './logo-upload-field'
 import { createClient } from '@/lib/supabase/client'
+import { isValidApplicationUrl } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
@@ -79,6 +80,12 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
     e.preventDefault()
     setIsSubmitting(true)
     setError('')
+
+    if (!isValidApplicationUrl(formData.url.trim())) {
+      setError('Application URL must be a valid http(s) link or an email address.')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const supabase = createClient()
@@ -204,13 +211,14 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="job_type">Job Type</Label>
+          <Label htmlFor="job_type" required>Job Type</Label>
           <div className="mt-1.5">
             <NativeSelect
               id="job_type"
               name="job_type"
               value={formData.job_type}
               onChange={handleChange}
+              required
             >
               {JOB_TYPE_OPTIONS.map((option) => (
                 <NativeSelectOption key={option.value} value={option.value}>
@@ -226,10 +234,11 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
           <Input
             id="url"
             name="url"
-            type="url"
+            type="text"
+            inputMode="url"
             value={formData.url}
             onChange={handleChange}
-            placeholder="https://company.com/apply"
+            placeholder="https://company.com/apply or hr@company.com"
             required
             className="mt-1.5"
           />
@@ -286,13 +295,14 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="closing_at">Closing Date</Label>
+          <Label htmlFor="closing_at" required>Closing Date</Label>
           <Input
             id="closing_at"
             name="closing_at"
             type="date"
             value={formData.closing_at}
             onChange={handleChange}
+            required
             className="mt-1.5"
           />
         </div>
