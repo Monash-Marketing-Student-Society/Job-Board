@@ -16,6 +16,10 @@ function useNavItems(pendingSubmissions: number) {
     { href: '/admin/submissions', label: 'Submissions', badge: pendingSubmissions },
     { href: '/admin/analytics', label: 'Analytics' },
     { href: '/admin/users', label: 'Admins' },
+    // Internal-only design-system tool, not a content destination like the
+    // items above it — kept last, same as View Site keeps its own treatment
+    // for the equivalent reason on the other side of that boundary.
+    { href: '/admin/style/preview', label: 'Theme' },
   ]
 }
 
