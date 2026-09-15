@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isValidApplicationUrl } from './utils'
 
 /**
  * The shape a public HR submission is allowed to write.
@@ -49,6 +50,16 @@ const httpUrl = z
   // These land in href/src attributes on the public site.
   .refine((u) => /^https?:\/\//i.test(u), 'Must be an http(s) URL')
 
+// The application link: an http(s) URL, or a bare email for employers whose
+// applications go straight to an inbox rather than a dedicated posting.
+// toApplicationHref() at the call site adds the `mailto:` scheme when this
+// is an email — this only validates the raw value the form/DB store.
+const applicationUrl = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine(isValidApplicationUrl, 'Must be an http(s) URL or an email address')
+
 // Optional free-text: the /submit form sends `null` for anything left blank.
 // Treat an empty or whitespace-only string the same way, so a different client
 // cannot store `""` where the rest of the app expects `null`.
@@ -81,11 +92,11 @@ export const jobSubmissionSchema = z.object({
 
   title: z.string().trim().min(1).max(200),
   company: z.string().trim().min(1).max(200),
-  url: httpUrl,
+  url: applicationUrl,
 
   location: optionalText(200),
   work_mode: nullableDefault(z.enum(WORK_MODES)),
-  job_type: nullableDefault(z.enum(JOB_TYPES)),
+  job_type: z.enum(JOB_TYPES),
 
   description: optionalText(DESCRIPTION_MAX),
   summary: optionalText(500),
@@ -96,7 +107,7 @@ export const jobSubmissionSchema = z.object({
   tags: nullableDefault(z.array(z.string().max(100)).max(20)),
 
   // The form sends `new Date(value).toISOString()`, i.e. a UTC ISO 8601 string.
-  closing_at: nullableDefault(z.string().datetime({ offset: true })),
+  closing_at: z.string().datetime({ offset: true }),
 
   // Submitter opting into a sponsored/pinned placement. A request only: the
   // approval route publishes the job with is_sponsored = false regardless, and

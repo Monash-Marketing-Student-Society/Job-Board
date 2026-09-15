@@ -186,6 +186,40 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Validate a job's application link: either an http(s) URL or a bare email
+ * address. Some employers — small businesses, hiring managers without a
+ * careers page — have HR handle applications directly over email instead of
+ * a dedicated posting, so `jobs.url` / `job_submissions.url` accept both.
+ */
+export function isValidApplicationUrl(value: string): boolean {
+  // Reject anything carrying a non-http(s) URI scheme (mailto:, javascript:,
+  // data:, ftp:, ...) up front. Without this, "mailto:a@b.c" slips past the
+  // loose email regex below as if it were a bare address — the stored value
+  // must be the plain email, since toApplicationHref() is what adds the
+  // `mailto:` scheme at render time.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value) && !/^https?:\/\//i.test(value)) {
+    return false
+  }
+  if (isValidEmail(value)) return true
+  if (!/^https?:\/\//i.test(value)) return false
+  try {
+    new URL(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Turn a job's `url` field into an `<a href>` — prefixing a bare email with
+ * `mailto:` so it opens a mail client instead of failing as a relative link.
+ * A stored http(s) URL is already a valid href and passes through unchanged.
+ */
+export function toApplicationHref(url: string): string {
+  return isValidEmail(url) ? `mailto:${url}` : url
+}
+
+/**
  * Capitalize first letter of each word
  */
 export function capitalizeWords(text: string): string {

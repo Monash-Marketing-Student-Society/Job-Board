@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu'
 import { GridRow, StatusDot, IconActionButton, type StatusDotRole } from './table'
-import { formatDate, decodeHtmlEntities } from '@/lib/utils'
+import { formatDate, decodeHtmlEntities, toApplicationHref } from '@/lib/utils'
 import type { JobSubmission } from '@/lib/types'
 
 /** Literal so Tailwind's JIT scanner can see it — a class built from a
@@ -334,7 +334,7 @@ export function SubmissionsTable({
                   <div className="flex items-center gap-1">
                     <p className="text-sm font-medium text-slate-800 truncate">{decodeHtmlEntities(submission.title)}</p>
                     <a
-                      href={submission.url}
+                      href={toApplicationHref(submission.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Open original listing"
@@ -478,7 +478,7 @@ export function SubmissionsTable({
 
             {/* View link + submitted date */}
             <div className="flex items-center justify-between">
-              <a href={submission.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+              <a href={toApplicationHref(submission.url)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
                 View link ↗
               </a>
               <span className="text-xs text-slate-400">{formatDate(submission.created_at)}</span>

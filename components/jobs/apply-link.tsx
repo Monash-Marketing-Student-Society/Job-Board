@@ -2,6 +2,7 @@
 
 import { trackEvent } from '@/lib/analytics/track'
 import { recordPendingApply } from '@/lib/analytics/pending-applies'
+import { toApplicationHref } from '@/lib/utils'
 
 interface ApplyLinkProps {
   jobId: string
@@ -30,7 +31,7 @@ export function ApplyLink({
 }: ApplyLinkProps) {
   return (
     <a
-      href={href}
+      href={toApplicationHref(href)}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => handleApplyClick({ jobId, title: jobTitle, company: jobCompany })}

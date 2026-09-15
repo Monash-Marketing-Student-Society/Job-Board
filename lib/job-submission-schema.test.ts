@@ -28,6 +28,8 @@ const minimal = {
   title: 'Marketing Intern',
   company: 'Acme',
   url: 'https://acme.example/careers/intern',
+  job_type: 'internship',
+  closing_at: '2026-10-01T00:00:00.000Z',
 }
 
 describe('jobSubmissionSchema', () => {
@@ -41,12 +43,10 @@ describe('jobSubmissionSchema', () => {
       ...minimal,
       location: null,
       work_mode: null,
-      job_type: null,
       description: null,
       summary: null,
       company_logo_url: null,
       tags: null,
-      closing_at: null,
       is_sponsored: false,
     })
   })
@@ -78,15 +78,29 @@ describe('jobSubmissionSchema', () => {
     expect(jobSubmissionSchema.safeParse({ ...minimal, submitter_email: 'dana@' }).success).toBe(false)
   })
 
-  it('rejects a non-http(s) url', () => {
+  it('rejects a non-http(s), non-email url', () => {
     for (const url of ['javascript:alert(1)', 'data:text/html,x', 'ftp://acme.example/x', 'mailto:a@b.c']) {
       expect(jobSubmissionSchema.safeParse({ ...minimal, url }).success).toBe(false)
     }
   })
 
+  it('accepts a bare email as the application url', () => {
+    const out = jobSubmissionSchema.parse({ ...minimal, url: 'hr@acme.example' })
+    expect(out.url).toBe('hr@acme.example')
+  })
+
   it('rejects an unknown work_mode or job_type', () => {
     expect(jobSubmissionSchema.safeParse({ ...minimal, work_mode: 'anywhere' }).success).toBe(false)
     expect(jobSubmissionSchema.safeParse({ ...minimal, job_type: 'freelance' }).success).toBe(false)
+  })
+
+  it('rejects a missing job_type or closing_at — both are now required', () => {
+    const { job_type: _omit1, ...noJobType } = minimal
+    expect(jobSubmissionSchema.safeParse(noJobType).success).toBe(false)
+    const { closing_at: _omit2, ...noClosingAt } = minimal
+    expect(jobSubmissionSchema.safeParse(noClosingAt).success).toBe(false)
+    expect(jobSubmissionSchema.safeParse({ ...minimal, job_type: '' }).success).toBe(false)
+    expect(jobSubmissionSchema.safeParse({ ...minimal, closing_at: '' }).success).toBe(false)
   })
 
   it('rejects an over-long title', () => {
@@ -102,18 +116,14 @@ describe('jobSubmissionSchema', () => {
     expect(jobSubmissionSchema.safeParse({ ...minimal, tags: [1, 2] }).success).toBe(false)
   })
 
-  it('treats a blank string the same as null for every nullableDefault field, not just plain-text fields', () => {
+  it('treats a blank string the same as null for the remaining nullableDefault fields', () => {
     const out = jobSubmissionSchema.parse({
       ...minimal,
       work_mode: '',
-      job_type: '   ',
       company_logo_url: '',
-      closing_at: '',
     })
     expect(out.work_mode).toBeNull()
-    expect(out.job_type).toBeNull()
     expect(out.company_logo_url).toBeNull()
-    expect(out.closing_at).toBeNull()
   })
 
   it('still rejects a non-blank value that fails its own type', () => {
