@@ -302,27 +302,36 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
         </div>
       </div>
 
-      {/* Bulk Actions Panel */}
+      {/* Bulk Actions Panel — two unrelated features (deactivating existing
+          jobs vs. importing new ones) that used to share one flat
+          space-y-4 stack with a bare border-t between them. Each now gets
+          its own bordered card, so the panel reads as two grouped sections
+          rather than a loose run of controls under one heading that only
+          described the first half. */}
       {showBulkActions && (
-        <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 font-heading">
-            Bulk Actions
-          </h3>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Input type="number" value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} className="w-20 h-9 text-sm" min="1" />
-              <span className="text-sm text-slate-500">days old</span>
-              <Button variant="outline" size="sm" onClick={handleBulkDeactivate}>Deactivate Old Jobs</Button>
+        <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 space-y-3">
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3.5 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-700 font-heading">
+              Deactivate jobs
+            </h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">Older than</span>
+                <Input type="number" value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} className="w-16 h-9 text-sm" min="1" />
+                <span className="text-sm text-slate-500">days</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleBulkDeactivate}>Deactivate</Button>
+              {selectedJobs.size > 0 && (
+                <Button variant="outline" size="sm" className="ml-auto" onClick={handleBulkDeactivateSelected}>
+                  Deactivate selected ({selectedJobs.size})
+                </Button>
+              )}
             </div>
-            {selectedJobs.size > 0 && (
-              <Button variant="outline" size="sm" onClick={handleBulkDeactivateSelected}>
-                Deactivate Selected ({selectedJobs.size})
-              </Button>
-            )}
           </div>
-          <div className="border-t border-slate-200 pt-4">
-            <h4 className="text-sm font-semibold text-slate-700 mb-2">Bulk Import from Excel</h4>
-            <p className="text-xs text-slate-500 mb-3">
+
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3.5 space-y-2">
+            <h3 className="text-sm font-semibold text-slate-700 font-heading">Bulk import from Excel</h3>
+            <p className="text-xs text-slate-500">
               Download the template, fill in your job postings, then upload to import them all at once.
             </p>
             <BulkImport />
@@ -351,7 +360,7 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
 
         {filteredJobs.map((job) => (
           <GridRow key={job.id} columnsClassName={JOB_GRID_COLUMNS}>
-            <div className="px-5 py-4 flex items-center">
+            <div className="px-5 py-3 flex items-center">
               <input
                 type="checkbox"
                 checked={selectedJobs.has(job.id)}
@@ -359,7 +368,10 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
                 className="rounded border-slate-300"
               />
             </div>
-            <div className={cn('min-w-0 px-5 py-4', !job.is_active && 'text-slate-400')}>
+            {/* py-3, matching the header row and submissions-table's rows —
+                was py-4 here with no reason for the extra 4px each side, the
+                one place the two admin grids disagreed on row height. */}
+            <div className={cn('min-w-0 px-5 py-3', !job.is_active && 'text-slate-400')}>
               <div className="min-w-0">
                 <div className="flex items-center gap-1">
                   <p className={cn('text-sm font-medium truncate', job.is_active && 'text-slate-800')}>
@@ -386,16 +398,16 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
                 </p>
               </div>
             </div>
-            <div className="px-5 py-4 flex items-center gap-1.5">
+            <div className="px-5 py-3 flex items-center gap-1.5">
               <StatusDot
                 role={job.is_active ? 'success' : 'muted'}
                 label={job.is_active ? 'Active' : 'Inactive'}
               />
             </div>
-            <div className="pr-4 py-4 flex items-center justify-end text-xs text-muted-foreground whitespace-nowrap">
+            <div className="pr-4 py-3 flex items-center justify-end text-xs text-muted-foreground whitespace-nowrap">
               {formatDate(job.posted_at || job.created_at)}
             </div>
-            <div className="py-4 flex items-center justify-end">
+            <div className="py-3 flex items-center justify-end">
               <JobActionsMenu job={job} onDeactivate={handleDeactivate} onActivate={handleActivate} onDelete={handleDelete} />
             </div>
           </GridRow>
