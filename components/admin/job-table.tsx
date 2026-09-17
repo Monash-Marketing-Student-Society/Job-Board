@@ -316,7 +316,7 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
             </h3>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Older than</span>
+                <span className="text-sm text-slate-500 whitespace-nowrap">Older than</span>
                 <Input type="number" value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} className="w-16 h-9 text-sm" min="1" />
                 <span className="text-sm text-slate-500">days</span>
               </div>
