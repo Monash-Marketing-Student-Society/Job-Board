@@ -19,11 +19,10 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  Pagination,
   type SelectOption,
 } from '@/components/ui'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
-import { GridRow, StatusDot, type StatusDotRole } from '@/components/admin/table'
+import { AdminPagination, GridRow, StatusDot, type StatusDotRole } from '@/components/admin/table'
 import { MetricCards } from '@/components/admin/analytics/metric-cards'
 import { JobCard } from '@/components/jobs/job-card'
 import { cn } from '@/lib/utils'
@@ -310,9 +309,15 @@ export function ThemePreviewClient() {
           </ChartContainer>
         </Block>
 
-        {/* Pagination */}
-        <Block title="Pagination" className="xl:col-span-4" bodyClassName="flex justify-center">
-          <Pagination currentPage={2} totalPages={5} baseUrl="#" />
+        {/* Pagination — the admin tables' version. Page 6 of 12 so both
+            ellipses render; local dev rarely has enough rows to page. */}
+        <Block
+          title="Pagination"
+          description="components/admin/table/admin-pagination.tsx, as used by Jobs / Submissions"
+          className="xl:col-span-4"
+          bodyClassName="flex justify-center"
+        >
+          <AdminPagination currentPage={6} totalPages={12} baseUrl="#" />
         </Block>
       </div>
     </div>

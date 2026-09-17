@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { JobTable } from '@/components/admin'
 import { getJobStatusCounts } from '@/lib/admin-data'
+import { tableCardClassName } from '@/components/admin/table/table-styles'
 
 export const metadata = {
   title: 'Manage Jobs | Admin | MMSS Job Board',
@@ -50,7 +51,7 @@ export default async function AdminJobsPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className={tableCardClassName}>
         <JobTable
           jobs={jobs ?? []}
           totalJobs={count ?? 0}

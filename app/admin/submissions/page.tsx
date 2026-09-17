@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { SubmissionsTable } from '@/components/admin/submissions-table'
 import { getSubmissionStatusCounts } from '@/lib/admin-data'
+import { tableCardClassName } from '@/components/admin/table/table-styles'
 import type { JobSubmission } from '@/lib/types'
 
 export const metadata = {
@@ -71,7 +72,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className={tableCardClassName}>
         {/* Keyed on showArchived rather than resetting local state (the
             status filter) via an effect: showArchived is a URL-derived
             prop, not client state set by a handler here, so there's no

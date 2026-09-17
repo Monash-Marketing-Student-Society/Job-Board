@@ -4,6 +4,7 @@ import { forwardRef } from 'react'
 import { Button, type ButtonProps } from '@/components/ui'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip'
 import { cn } from '@/lib/utils'
+import { CHIP_SHAPE } from './table-styles'
 
 interface IconActionButtonProps extends ButtonProps {
   /** Accessible name — always required. Doubles as the Tooltip's label unless `tooltip` is false. */
@@ -26,7 +27,8 @@ export const IconActionButton = forwardRef<HTMLButtonElement, IconActionButtonPr
         variant="ghost"
         size="icon"
         aria-label={label}
-        className={cn('size-7', className)}
+        // Chip geometry (32px / 14px), same as a status tab — see table-styles.
+        className={cn(CHIP_SHAPE, className)}
         {...props}
       >
         {children}
