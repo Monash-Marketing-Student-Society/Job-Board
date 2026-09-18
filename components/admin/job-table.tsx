@@ -348,18 +348,24 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
             <h3 className="text-sm font-semibold text-slate-700 font-heading">
               Deactivate old jobs
             </h3>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-slate-500 whitespace-nowrap">Older than</span>
-              <Input
-                type="number"
-                aria-label="Days old"
-                value={bulkDays}
-                onChange={(e) => setBulkDays(e.target.value)}
-                className={cn(TRACK_SHAPE, 'w-16 border-0 bg-slate-100 text-sm tabular-nums focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0')}
-                min="1"
-              />
-              <span className="text-sm text-slate-500">days</span>
-              <Button type="button" variant="ghost" size="sm" className={cn(softButtonClassName, 'ml-1')} onClick={handleBulkDeactivate}>
+            <div className="flex flex-wrap items-center gap-3">
+              {/* The label/input/unit stay in their own flex row: Input renders
+                  its own `w-full` wrapper div, which claims the whole line and
+                  wraps the row apart if these sit directly in the outer
+                  flex-wrap. */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500 whitespace-nowrap">Older than</span>
+                <Input
+                  type="number"
+                  aria-label="Days old"
+                  value={bulkDays}
+                  onChange={(e) => setBulkDays(e.target.value)}
+                  className={cn(TRACK_SHAPE, 'w-16 border-0 bg-slate-100 text-sm tabular-nums focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0')}
+                  min="1"
+                />
+                <span className="text-sm text-slate-500 whitespace-nowrap">days</span>
+              </div>
+              <Button type="button" variant="ghost" size="sm" className={softButtonClassName} onClick={handleBulkDeactivate}>
                 Deactivate
               </Button>
             </div>

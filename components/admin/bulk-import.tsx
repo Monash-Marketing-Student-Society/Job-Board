@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Workbook, type CellValue, type Worksheet } from 'exceljs'
 import { Button, Alert, AlertDescription } from '@/components/ui'
+import { TRACK_SHAPE, softButtonClassName } from './table/table-styles'
+import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { generateTemplate, SAMPLE_ROW_TITLE } from '@/lib/excel-template'
 import {
@@ -335,16 +337,21 @@ export function BulkImport() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" onClick={handleDownloadTemplate}>
-          Download Template
+      {/* Borderless, on the tables' soft fill — see ./table/table-styles.ts.
+          These sit inside the Jobs table's bulk-actions panel, so they follow
+          the same control language as the toolbar above them. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="ghost" className={softButtonClassName} onClick={handleDownloadTemplate}>
+          Download template
         </Button>
         <label className="cursor-pointer">
           <Button
-            variant="outline"
+            type="button"
+            variant="ghost"
+            className={softButtonClassName}
             onClick={() => fileInputRef.current?.click()}
           >
-            Upload Excel File
+            Upload Excel file
           </Button>
           <input
             ref={fileInputRef}
@@ -393,15 +400,22 @@ export function BulkImport() {
               {preview.length} job{preview.length !== 1 ? 's' : ''} ready to import
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel}>
+              <Button
+                type="button"
+                variant="ghost"
+                className={cn(TRACK_SHAPE, 'px-4 text-slate-500 hover:bg-slate-100 hover:text-slate-900')}
+                onClick={handleCancel}
+              >
                 Cancel
               </Button>
               <Button
+                type="button"
                 variant="primary"
+                className={cn(TRACK_SHAPE, 'px-4 shadow-sm')}
                 onClick={handleImport}
                 loading={isUploading}
               >
-                Import {preview.length} Job{preview.length !== 1 ? 's' : ''}
+                Import {preview.length} job{preview.length !== 1 ? 's' : ''}
               </Button>
             </div>
           </div>

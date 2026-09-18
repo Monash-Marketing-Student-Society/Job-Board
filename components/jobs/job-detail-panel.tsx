@@ -12,6 +12,24 @@ interface JobDetailPanelProps {
   job: Job
   isMainView?: boolean
   onBack?: () => void
+  /**
+   * Rendering an unpublished draft (the admin preview of a pending
+   * submission) rather than a live job. Everything visual — layout,
+   * sanitising, the apply link — renders exactly as it will once published,
+   * which is the point of the preview. Two behavioural differences:
+   *
+   * 1. No analytics. `job.id` is a `job_submissions` id here, so an
+   *    apply/share event would be recorded against something that isn't in
+   *    `jobs` at all.
+   * 2. `initial={false}` on the entry animations, i.e. render at the final
+   *    state. The mount animation did not fire on the admin preview route —
+   *    the subtree hydrated (React fiber attached, reduced-motion off) but
+   *    kept its SSR `opacity: 0`, so the panel came up blank. Moving it
+   *    behind a client boundary didn't change that. An admin reviewing a
+   *    draft wants it on screen immediately rather than faded in, so
+   *    skipping the animation is both the fix and the better behaviour.
+   */
+  preview?: boolean
 }
 
 const pillVariants = {
@@ -19,8 +37,14 @@ const pillVariants = {
   animate: { opacity: 1, y: 0, scale: 1 },
 }
 
-export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPanelProps) {
+export function JobDetailPanel({ job, isMainView = false, onBack, preview = false }: JobDetailPanelProps) {
   const [copied, setCopied] = useState(false)
+
+  /** No-op in preview mode — see the `preview` prop. */
+  const trackApply = () => {
+    if (preview) return
+    handleApplyClick({ jobId: job.id, title: job.title, company: job.company })
+  }
 
   // Memoised on the description itself: this panel re-renders on every
   // selection change and animation tick, and re-parsing the HTML each time
@@ -75,7 +99,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <motion.h1
-                initial={{ opacity: 0, y: 6 }}
+                initial={preview ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight"
@@ -83,7 +107,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
                 {job.title}
               </motion.h1>
               <motion.p
-                initial={{ opacity: 0 }}
+                initial={preview ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.05 }}
                 className="text-sm text-slate-500 mt-1"
@@ -92,7 +116,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
               </motion.p>
             </div>
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={preview ? false : { opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
             >
@@ -116,7 +140,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
               <motion.span
                 key={pill.key}
                 variants={pillVariants}
-                initial="initial"
+                initial={preview ? false : "initial"}
                 animate="animate"
                 transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 400, damping: 22 }}
                 className="inline-flex items-center text-xs px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-slate-600"
@@ -135,7 +159,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
         <div data-lenis-prevent className="px-4 sm:px-6 pb-6 flex-1 overflow-y-auto custom-scrollbar min-h-0">
           {job.description ? (
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={preview ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
             >
@@ -154,7 +178,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
                 href={toApplicationHref(job.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
+                onClick={trackApply}
                 className="inline-flex items-center text-primary font-medium text-sm mt-2 hover:underline"
               >
                 View full details on company website
@@ -173,7 +197,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
             href={toApplicationHref(job.url)}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
+            onClick={trackApply}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
@@ -193,7 +217,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
               // outright) when the document isn't focused or the API is
               // unavailable, and a share the visitor intended shouldn't go
               // uncounted because the clipboard was unavailable.
-              trackEvent('share', job.id)
+              if (!preview) trackEvent('share', job.id)
               navigator.clipboard.writeText(`${window.location.origin}/?job=${job.id}`)
               setCopied(true)
               setTimeout(() => setCopied(false), 2000)
@@ -266,7 +290,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
           href={toApplicationHref(job.url)}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
+          onClick={trackApply}
           className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-4 rounded-xl text-center transition-colors text-sm"
         >
           Apply Now
