@@ -8,10 +8,10 @@ import { toJobFunctions } from '@/lib/tags'
 import { sanitizeDescription } from '@/lib/sanitize'
 import { jobSubmissionSchema } from '@/lib/job-submission-schema'
 import { allowSubmission } from '@/lib/rate-limit'
+import { PARTNERSHIPS_EMAIL } from '@/lib/utils'
 import type { JobSubmission } from '@/lib/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-const ADMIN_EMAIL = 'partnerships@monashmss.com'
 const ADMIN_BCC = ['mmss@monashclubs.org', 'club.mmss@monsu.org']
 
 export async function POST(request: Request) {
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
           `Apply URL:  ${data.url}`,
           '',
           `Edit your submission: ${editLink}`,
-          `Questions? Email ${ADMIN_EMAIL}`,
+          `Questions? Email ${PARTNERSHIPS_EMAIL}`,
           // Drops the optional null lines above while keeping the '' entries,
           // which are deliberate paragraph breaks. filter(Boolean) removed both
           // and collapsed the whole email into one unbroken block.
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     sendEmail(
       {
         from: 'MMSS Job Board <noreply@monashmss.com>',
-        to: ADMIN_EMAIL,
+        to: PARTNERSHIPS_EMAIL,
         bcc: ADMIN_BCC,
         subject: `New submission: ${data.title} at ${data.company}`,
         text: [
