@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowSquareOutIcon, CheckIcon, XIcon, DotsThreeVerticalIcon, ArchiveIcon } from '@phosphor-icons/react'
-import { Badge, useConfirmDialog } from '@/components/ui'
-import { Pagination } from '@/components/ui/pagination'
+import { Badge, Button, useConfirmDialog } from '@/components/ui'
 import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import {
   DropdownMenu,
@@ -16,14 +15,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu'
-import { GridRow, StatusDot, IconActionButton, type StatusDotRole } from './table'
-import { formatDate, decodeHtmlEntities } from '@/lib/utils'
+import {
+  GridRow,
+  StatusDot,
+  IconActionButton,
+  AdminPagination,
+  SelectCheckbox,
+  TRACK_SHAPE,
+  softButtonClassName,
+  headerLabelClassName,
+  type StatusDotRole,
+} from './table'
+import { cn, formatDate, decodeHtmlEntities, toApplicationHref } from '@/lib/utils'
 import type { JobSubmission } from '@/lib/types'
 
 /** Literal so Tailwind's JIT scanner can see it — a class built from a
  *  runtime string never gets generated. Shared by the header and every
- *  body row via GridRow so the two can never drift out of alignment. */
-const SUBMISSION_GRID_COLUMNS = 'grid-cols-[minmax(0,1fr)_112px_96px_104px]'
+ *  body row via GridRow so the two can never drift out of alignment.
+ *
+ *  checkbox / submission / closes / status / actions — the same 40px checkbox
+ *  track as the Jobs table. Actions is 128px: pending rows hold three 32px
+ *  chip-sized icon buttons (Approve, Reject, ⋯) with two 4px gaps — 104px —
+ *  plus px-3 either side. */
+const SUBMISSION_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_112px_112px_128px]'
+
+/** Info chips on the mobile cards: white on the card's slate-50 fill. */
+const MOBILE_CHIP = 'rounded-full border-0 bg-white text-[11px] font-normal text-slate-600'
 
 const STATUS_VARIANTS: Record<string, 'warning' | 'success' | 'destructive'> = {
   pending: 'warning',
@@ -243,12 +260,98 @@ export function SubmissionsTable({
     })
   }
 
+  // Selection — same model as job-table.tsx: judged against the rows on
+  // screen (this page, after the status tab), so a bulk action can never
+  // reach a submission the admin can't currently see.
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const visibleSelected = filtered.filter((s) => selected.has(s.id))
+  const allVisibleSelected = filtered.length > 0 && visibleSelected.length === filtered.length
+  const someVisibleSelected = visibleSelected.length > 0 && !allVisibleSelected
+
+  const handleToggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleSelectAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (allVisibleSelected) filtered.forEach((s) => next.delete(s.id))
+      else filtered.forEach((s) => next.add(s.id))
+      return next
+    })
+  }
+
+  /**
+   * Archive (or, in the archive view, restore) every selected submission.
+   *
+   * Archive is the only bulk action on purpose. It's internal housekeeping —
+   * reversible, and the archive route sends no email. Approve and Reject each
+   * publish or email per row, so they stay one submission at a time.
+   *
+   * One request per row through the existing single-row route rather than a
+   * new bulk endpoint; failures are counted and reported rather than aborting
+   * the rest, and the optimistic removals for failed rows are dropped when
+   * the transition settles.
+   */
+  const handleBulkArchive = async () => {
+    const ids = visibleSelected.map((s) => s.id)
+    if (ids.length === 0) return
+    const noun = ids.length === 1 ? 'submission' : 'submissions'
+
+    if (!showArchived) {
+      const { confirmed } = await confirm({
+        title: `Archive ${ids.length} ${noun}?`,
+        description:
+          'They leave the queue but are kept in full — you can restore them from the archive at any time. Submitters are not notified.',
+        confirmLabel: 'Archive',
+      })
+      if (!confirmed) return
+    }
+
+    startTransition(async () => {
+      ids.forEach((id) => applyOptimistic({ type: 'remove', id }))
+
+      const results = await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/admin/submissions/${id}/archive`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ archived: !showArchived }),
+          })
+            .then((res) => res.ok)
+            .catch(() => false)
+        )
+      )
+      const failed = results.filter((ok) => !ok).length
+      const done = ids.length - failed
+
+      setSelected(new Set())
+      if (failed > 0) {
+        toast.error(
+          `${failed} of ${ids.length} ${noun} failed to ${showArchived ? 'restore' : 'archive'}`,
+          done > 0 ? { description: `${done} ${showArchived ? 'restored' : 'archived'} successfully.` } : undefined
+        )
+      } else {
+        toast.success(showArchived ? `${done} ${noun} restored to the queue` : `${done} ${noun} archived`)
+      }
+      router.refresh()
+    })
+  }
+
   return (
     <>
-      {/* Toolbar — chips scroll as one row rather than wrapping to a second
-          line; "View archive" stays put outside the scroll area so it's
-          always reachable at the right rather than sliding out of view. */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center gap-2">
+      {/* Toolbar — no divider line; tabs and the archive toggle share one row.
+          Chips scroll as one row rather than wrapping to a second line;
+          "View archive" stays put outside the scroll area so it's always
+          reachable at the right. It's a soft track-sized button now, in the
+          tabs' fill (components/admin/table/table-styles.ts), matching the
+          Jobs table's toolbar actions. */}
+      <div className="flex items-center gap-2 px-1 pb-4">
         <div className={`${segmentedTabsListClassName} overflow-x-auto min-w-0`}>
           {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
             <button
@@ -258,7 +361,7 @@ export function SubmissionsTable({
             >
               {f}
               {counts && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium normal-case rounded-full bg-slate-200 text-slate-600 leading-none">
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium normal-case rounded-full bg-slate-200/70 text-slate-500 leading-none tabular-nums">
                   {counts[f] > 99 ? '99+' : counts[f]}
                 </span>
               )}
@@ -268,168 +371,200 @@ export function SubmissionsTable({
 
         <Link
           href={showArchived ? '/admin/submissions' : '/admin/submissions?view=archived'}
-          className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors whitespace-nowrap"
+          className={cn(
+            softButtonClassName,
+            'ml-auto inline-flex shrink-0 items-center whitespace-nowrap text-sm font-medium transition-colors'
+          )}
         >
-          <ArchiveIcon weight={showArchived ? 'fill' : 'regular'} className="size-3.5" />
+          <ArchiveIcon weight={showArchived ? 'fill' : 'bold'} className="size-3.5" />
           {showArchived ? 'Back to queue' : 'View archive'}
         </Link>
       </div>
 
-      {/* Grid — lg and up only. A fixed 4-column template (submission /
-          closes / status / actions) needs real width to breathe; below lg
-          it's replaced by the card list rather than squeezed, same as the
-          table this replaced was swapped out below md.
+      {/* Grid — lg and up only. A fixed 5-column template (checkbox /
+          submission / closes / status / actions) needs real width to
+          breathe; below lg it's replaced by the card list rather than
+          squeezed.
 
-          Actions is 104px: three 28px icon buttons (size-7) + two 4px gaps
-          is 92px of content, and 76px clipped the ellipsis off pending rows
-          — it fit fine on approved/rejected rows (ellipsis alone, ~28px)
-          which is how that got past review the first time.
-
-          The 92px of content plus a real 20px (pr-5) of edge breathing room
-          is 112px, more than the 104px column itself — so pr-5 isn't on the
-          Actions cell, it's on an inner grid wrapper nested inside each
-          row's outer div. Background/border/hover live on the outer div and
-          span the row's true full width; only the grid (and everything
-          inside it) is inset by pr-5. Padding the outer div directly would
-          have shrunk the header's bg-slate-50 and each row's border-b short
-          of the card's actual right edge, leaving a blank sliver — the
-          nesting is what avoids that seam. */}
+          Every cell is px-3, header included, so header and rows align by
+          construction. The header is GridRow's rounded shelf and rows
+          separate on a hover fill — no divider lines — which is why the
+          card around this is padded rather than edge to edge. */}
       <div className="hidden lg:block">
         <GridRow header columnsClassName={SUBMISSION_GRID_COLUMNS}>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Submission</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Closes</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Status</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Actions</div>
+          <div className="flex items-center px-3">
+            <SelectCheckbox
+              label="Select all submissions shown"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
+              onChange={handleSelectAll}
+            />
+          </div>
+          <div className={cn('px-3', headerLabelClassName)}>Submission</div>
+          <div className={cn('px-3 text-right', headerLabelClassName)}>Closes</div>
+          <div className={cn('px-3', headerLabelClassName)}>Status</div>
+          {/* Icon buttons make the column self-evident; screen readers only. */}
+          <div className="px-3"><span className="sr-only">Actions</span></div>
         </GridRow>
 
-        {filtered.map((submission) => {
-          // company/location: skip null segments instead of rendering a
-          // dangling " · " when one side is missing.
-          const secondaryLine = [submission.company, submission.location].filter(Boolean).join(' · ')
+        <div className="pt-1">
+          {filtered.map((submission) => {
+            // company/location: skip null segments instead of rendering a
+            // dangling " · " when one side is missing.
+            const secondaryLine = [submission.company, submission.location].filter(Boolean).join(' · ')
 
-          // Submitter email/company and job type/work mode have no row spot
-          // as of Phase 2, and stay that way — no tooltip bridge. They're
-          // still reachable from the detail view / edit-token flow elsewhere
-          // in the app, and none of them are what a moderator scans a queue
-          // for, per the redesign's premise. Phase 4's overflow menu is
-          // where they'll actually resurface, once that menu exists.
-          const closed = submission.closing_at ? isPastDate(submission.closing_at) : false
+            // Submitter email/company and job type/work mode have no row spot
+            // as of Phase 2, and stay that way — no tooltip bridge. They're
+            // still reachable from the detail view / edit-token flow elsewhere
+            // in the app, and none of them are what a moderator scans a queue
+            // for, per the redesign's premise. Phase 4's overflow menu is
+            // where they'll actually resurface, once that menu exists.
+            const closed = submission.closing_at ? isPastDate(submission.closing_at) : false
 
-          return (
-            <GridRow key={submission.id} columnsClassName={SUBMISSION_GRID_COLUMNS}>
-              {/* Submission — 30px initials avatar + a two-line text block
-                  (job title with an inline external-link icon, then
-                  company · location). ~56px tall in the common case; a
-                  rejection note (rare, only on rejected rows) adds a third
-                  truncated line rather than being dropped silently. */}
-              <div className="min-w-0 px-5 py-3 flex items-center gap-2.5">
-                <div
-                  className="shrink-0 size-[30px] rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium flex items-center justify-center select-none"
-                  aria-label={`Submitted by ${submission.submitter_name}`}
-                >
-                  {getInitials(submission.submitter_name)}
+            return (
+              <GridRow
+                key={submission.id}
+                columnsClassName={SUBMISSION_GRID_COLUMNS}
+                className={cn(selected.has(submission.id) && 'bg-primary/5 hover:bg-primary/[0.07]')}
+              >
+                <div className="flex items-center px-3 py-3">
+                  <SelectCheckbox
+                    label={`Select ${decodeHtmlEntities(submission.title)}`}
+                    checked={selected.has(submission.id)}
+                    onChange={() => handleToggleSelect(submission.id)}
+                  />
                 </div>
+                {/* Submission — 30px initials avatar + a two-line text block
+                    (job title with an inline external-link icon, then
+                    company · location). ~56px tall in the common case; a
+                    rejection note (rare, only on rejected rows) adds a third
+                    truncated line rather than being dropped silently. */}
+                <div className="min-w-0 px-3 py-3 flex items-center gap-2.5">
+                  <div
+                    className="shrink-0 size-[30px] rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium flex items-center justify-center select-none"
+                    aria-label={`Submitted by ${submission.submitter_name}`}
+                  >
+                    {getInitials(submission.submitter_name)}
+                  </div>
 
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1">
-                    <p className="text-sm font-medium text-slate-800 truncate">{decodeHtmlEntities(submission.title)}</p>
-                    <a
-                      href={submission.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Open original listing"
-                      className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      <ArrowSquareOutIcon className="size-3.5" />
-                    </a>
-                    {submission.is_sponsored && (
-                      <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
-                        Sponsor requested
-                      </Badge>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p className="text-sm font-medium text-slate-800 truncate">{decodeHtmlEntities(submission.title)}</p>
+                      <a
+                        href={toApplicationHref(submission.url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open original listing"
+                        className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <ArrowSquareOutIcon className="size-3.5" />
+                      </a>
+                      {submission.is_sponsored && (
+                        <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
+                          Sponsor requested
+                        </Badge>
+                      )}
+                    </div>
+                    {secondaryLine && (
+                      <p className="text-xs text-muted-foreground truncate">{secondaryLine}</p>
+                    )}
+                    {submission.admin_note && (
+                      // Muted, not destructive-red: the one field a moderator
+                      // needs at a glance, but not an alarm. Truncated to one
+                      // line — full text moves to the Phase 4 overflow menu,
+                      // not a title tooltip.
+                      <p className="text-xs text-muted-foreground truncate">
+                        Sent to submitter: {submission.admin_note}
+                      </p>
                     )}
                   </div>
-                  {secondaryLine && (
-                    <p className="text-xs text-muted-foreground truncate">{secondaryLine}</p>
-                  )}
-                  {submission.admin_note && (
-                    // Muted, not destructive-red: the one field a moderator
-                    // needs at a glance, but not an alarm. Truncated to one
-                    // line — full text moves to the Phase 4 overflow menu,
-                    // not a title tooltip.
-                    <p className="text-xs text-muted-foreground truncate">
-                      Sent to submitter: {submission.admin_note}
-                    </p>
+                </div>
+
+                {/* Closes — right-aligned so it doesn't run up against Status.
+                    `whitespace-nowrap` + a 112px (not 84px) column: dates like
+                    "31 Dec 2026" or "5 Sept 2026" were wrapping onto a second
+                    line in the narrower column, which is what was throwing off
+                    row height/alignment down the page — every other cell is
+                    one line, so a wrapped date was the only row that grew.
+                    Null and past-due both mute further than an open date,
+                    since neither needs an admin's attention right now —
+                    reduced opacity on muted-foreground rather than a separate
+                    slate shade, since there's no dedicated "extra-muted" token. */}
+                <div className="px-3 py-3 flex items-center justify-end text-xs tabular-nums whitespace-nowrap">
+                  {submission.closing_at ? (
+                    <span className={closed ? 'text-muted-foreground/60' : 'text-muted-foreground'}>
+                      {formatDate(submission.closing_at)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/60">—</span>
                   )}
                 </div>
-              </div>
 
-              {/* Closes — right-aligned so it doesn't run up against Status.
-                  `whitespace-nowrap` + a 112px (not 84px) column: dates like
-                  "31 Dec 2026" or "5 Sept 2026" were wrapping onto a second
-                  line in the narrower column, which is what was throwing off
-                  row height/alignment down the page — every other cell is
-                  one line, so a wrapped date was the only row that grew.
-                  Null and past-due both mute further than an open date,
-                  since neither needs an admin's attention right now —
-                  reduced opacity on muted-foreground rather than a separate
-                  slate shade, since there's no dedicated "extra-muted" token. */}
-              <div className="pr-5 py-3 flex items-center justify-end text-xs whitespace-nowrap">
-                {submission.closing_at ? (
-                  <span className={closed ? 'text-muted-foreground/60' : 'text-muted-foreground'}>
-                    {formatDate(submission.closing_at)}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/60">—</span>
-                )}
-              </div>
+                {/* Status — fixed width on every row including pending, so the
+                    dot lands at the same x-position all the way down. */}
+                <div className="px-3 py-3 flex items-center gap-1.5">
+                  <StatusDot role={STATUS_ROLE[submission.status]} label={submission.status} />
+                </div>
 
-              {/* Status — fixed width on every row including pending, so the
-                  dot lands at the same x-position all the way down. */}
-              <div className="px-5 py-3 flex items-center gap-1.5">
-                <StatusDot role={STATUS_ROLE[submission.status]} label={submission.status} />
-              </div>
+                {/* Actions — fixed 128px width regardless of which/how many
+                    actions this row has, so it never absorbs space at the
+                    status column's expense (see SUBMISSION_GRID_COLUMNS).
 
-              {/* Actions — fixed 104px width regardless of which/how many
-                  actions this row has, so it never absorbs space at the
-                  status column's expense. No horizontal padding of its own:
-                  the 92px of button content needs the track's full width,
-                  and the right-edge breathing room is the grid wrapper's
-                  pr-5 above, not padding here.
-
-                  justify-end here, not just inside SubmissionActionsMenu:
-                  that inner div's own justify-end only centers/aligns
-                  within ITS OWN box, and a flex item with no flex-grow
-                  sizes to its content by default — without justify-end on
-                  THIS wrapper too, a 1-button row (28px) and a 3-button row
-                  (92px) both sat flush at the track's LEFT edge instead of
-                  its right, so the ellipsis landed at a different x on
-                  every row depending on how many buttons preceded it.
-                  Caught by measuring actual DOM rects, not by eyeballing a
-                  screenshot — the two looked visually "close enough". */}
-              <div className="py-3 flex items-center justify-end">
-                <SubmissionActionsMenu
-                  submission={submission}
-                  showArchived={showArchived}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onArchive={handleArchive}
-                />
-              </div>
-            </GridRow>
-          )
-        })}
+                    justify-end here, not just inside SubmissionActionsMenu:
+                    that inner div's own justify-end only centers/aligns
+                    within ITS OWN box, and a flex item with no flex-grow
+                    sizes to its content by default — without justify-end on
+                    THIS wrapper too, a 1-button row (32px) and a 3-button row
+                    (104px) both sat flush at the track's LEFT edge instead of
+                    its right, so the ellipsis landed at a different x on
+                    every row depending on how many buttons preceded it.
+                    Caught by measuring actual DOM rects, not by eyeballing a
+                    screenshot — the two looked visually "close enough". */}
+                <div className="px-3 py-3 flex items-center justify-end">
+                  <SubmissionActionsMenu
+                    submission={submission}
+                    showArchived={showArchived}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onArchive={handleArchive}
+                  />
+                </div>
+              </GridRow>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Cards — below lg. Same fields as the grid, same card pattern
-          (border/radius, 12px gaps via space-y-3) as the admin job list,
-          so a submitter's name/email, org, job, and the location/type/
-          closing badges read as one record instead of a squeezed row. */}
-      <div className="lg:hidden p-4 space-y-3">
+      {/* Cards — below lg. Same fields as the grid, same card pattern as the
+          admin job list (soft slate-50 fill, 8px gaps, no borders), so a
+          submitter's name/email, org, job, and the location/type/closing
+          chips read as one record instead of a squeezed row. */}
+      <div className="lg:hidden space-y-2">
+        {filtered.length > 0 && (
+          <label className={cn(TRACK_SHAPE, 'flex items-center gap-2.5 bg-slate-100/70 px-3')}>
+            <SelectCheckbox
+              label="Select all submissions shown"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
+              onChange={handleSelectAll}
+            />
+            <span className={headerLabelClassName}>Select all</span>
+          </label>
+        )}
         {filtered.map((submission) => (
-          <div key={submission.id} className="rounded-xl border border-slate-100 p-3 space-y-2">
-            {/* Submitter + status */}
+          <div
+            key={submission.id}
+            className={cn('rounded-xl p-3 space-y-2', selected.has(submission.id) ? 'bg-primary/5' : 'bg-slate-50')}
+          >
+            {/* Checkbox + submitter + status */}
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <SelectCheckbox
+                label={`Select ${decodeHtmlEntities(submission.title)}`}
+                checked={selected.has(submission.id)}
+                onChange={() => handleToggleSelect(submission.id)}
+                className="mt-1 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-slate-800 leading-tight">{submission.submitter_name}</p>
                 <a href={`mailto:${submission.submitter_email}`} className="text-xs text-primary hover:underline break-all">
                   {submission.submitter_email}
@@ -454,20 +589,21 @@ export function SubmissionsTable({
               <p className="text-xs text-slate-400 mt-0.5">{submission.company}</p>
             </div>
 
-            {/* Location/type/mode/closing as small badges */}
+            {/* Location/type/mode/closing as small chips — white on the
+                card's slate-50 fill rather than outlined. */}
             {(submission.location || submission.job_type || submission.work_mode || submission.closing_at) && (
               <div className="flex flex-wrap gap-1">
                 {submission.location && (
-                  <Badge variant="outline" className="rounded-full text-[11px] font-normal">{submission.location}</Badge>
+                  <Badge variant="outline" className={MOBILE_CHIP}>{submission.location}</Badge>
                 )}
                 {submission.job_type && (
-                  <Badge variant="outline" className="rounded-full text-[11px] font-normal capitalize">{submission.job_type}</Badge>
+                  <Badge variant="outline" className={cn(MOBILE_CHIP, 'capitalize')}>{submission.job_type}</Badge>
                 )}
                 {submission.work_mode && (
-                  <Badge variant="outline" className="rounded-full text-[11px] font-normal capitalize">{submission.work_mode}</Badge>
+                  <Badge variant="outline" className={cn(MOBILE_CHIP, 'capitalize')}>{submission.work_mode}</Badge>
                 )}
                 {submission.closing_at && (
-                  <Badge variant="outline" className="rounded-full text-[11px] font-normal">Closes {formatDate(submission.closing_at)}</Badge>
+                  <Badge variant="outline" className={MOBILE_CHIP}>Closes {formatDate(submission.closing_at)}</Badge>
                 )}
               </div>
             )}
@@ -478,14 +614,14 @@ export function SubmissionsTable({
 
             {/* View link + submitted date */}
             <div className="flex items-center justify-between">
-              <a href={submission.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+              <a href={toApplicationHref(submission.url)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
                 View link ↗
               </a>
               <span className="text-xs text-slate-400">{formatDate(submission.created_at)}</span>
             </div>
 
             {/* Actions, right-aligned in its own row */}
-            <div className="flex items-center justify-end pt-1 border-t border-slate-100">
+            <div className="flex items-center justify-end pt-1">
               <SubmissionActionsMenu
                 submission={submission}
                 showArchived={showArchived}
@@ -508,12 +644,43 @@ export function SubmissionsTable({
         </div>
       )}
 
-      {/* Footer */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between border-t border-slate-100">
-        <p className="text-xs text-slate-400">
-          Showing {filtered.length} of {totalCount} submissions
-        </p>
-        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl="/admin/submissions" />
+      {/* Footer — no divider line, pagination in the tabs' style. Doubles as
+          the selection bar, same as the Jobs table. */}
+      <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 px-1 pt-4">
+        {visibleSelected.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold tabular-nums text-slate-900">{visibleSelected.length}</span> of{' '}
+              <span className="tabular-nums">{filtered.length}</span> selected
+            </p>
+            <Button type="button" variant="ghost" size="sm" className={softButtonClassName} onClick={handleBulkArchive}>
+              <ArchiveIcon weight="bold" className="size-3.5" />
+              {showArchived ? 'Restore selected' : 'Archive selected'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(TRACK_SHAPE, 'px-3 text-slate-500 hover:bg-slate-100 hover:text-slate-900')}
+              onClick={() => setSelected(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">
+            Showing <span className="tabular-nums text-slate-600">{filtered.length}</span> of{' '}
+            <span className="tabular-nums text-slate-600">{totalCount}</span> submissions
+          </p>
+        )}
+        {/* `view` rides along on every page link: without it, paging through
+            the archive dropped back into the live queue on page 2. */}
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          baseUrl="/admin/submissions"
+          searchParams={{ view: showArchived ? 'archived' : undefined }}
+        />
       </div>
 
       {dialog}

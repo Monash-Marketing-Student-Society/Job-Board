@@ -4,10 +4,14 @@ import { useOptimistic, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Search } from 'lucide-react'
-import { CurrencyCircleDollarIcon, DotsThreeVerticalIcon, PlusIcon } from '@phosphor-icons/react'
-import { Button, Badge, Input, useConfirmDialog } from '@/components/ui'
-import { Pagination } from '@/components/ui/pagination'
+import {
+  CurrencyCircleDollarIcon,
+  DotsThreeVerticalIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  SlidersHorizontalIcon,
+} from '@phosphor-icons/react'
+import { Button, Input, useConfirmDialog } from '@/components/ui'
 import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip'
 import {
@@ -17,7 +21,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu'
-import { GridRow, StatusDot, IconActionButton } from './table'
+import {
+  GridRow,
+  StatusDot,
+  IconActionButton,
+  AdminPagination,
+  SelectCheckbox,
+  TRACK_SHAPE,
+  softButtonClassName,
+  headerLabelClassName,
+} from './table'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatDate } from '@/lib/utils'
 import { BulkImport } from './bulk-import'
@@ -25,8 +38,9 @@ import type { AdminJobRow } from '@/lib/types'
 
 /** Literal so Tailwind's JIT scanner can see it — see components/admin/table/grid-row.tsx.
  *  checkbox / job / status / posted / actions. No Source track: Phase 3 folds source into
- *  the job cell's secondary line instead of giving it its own column. */
-const JOB_GRID_COLUMNS = 'grid-cols-[22px_minmax(0,1fr)_96px_84px_76px]'
+ *  the job cell's secondary line instead of giving it its own column. Every cell is px-3,
+ *  so the checkbox gets a real 40px track instead of spilling out of a 22px one. */
+const JOB_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_112px_112px_52px]'
 
 interface JobTableProps {
   jobs: AdminJobRow[]
@@ -97,9 +111,23 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
     })
   }
 
+  // Selection is judged against the rows actually on screen. The previous
+  // check compared selectedJobs.size to filteredJobs.length, which misreports
+  // as soon as a selection includes rows a tab or search has hidden — and
+  // "Deactivate selected" would then act on jobs the admin can't see.
+  const visibleSelected = filteredJobs.filter((j) => selectedJobs.has(j.id))
+  const allVisibleSelected = filteredJobs.length > 0 && visibleSelected.length === filteredJobs.length
+  const someVisibleSelected = visibleSelected.length > 0 && !allVisibleSelected
+
+  // Header checkbox: selects every job currently shown (this page, after the
+  // status tab and search), or clears them if they're all already selected.
   const handleSelectAll = () => {
-    if (selectedJobs.size === filteredJobs.length) setSelectedJobs(new Set())
-    else setSelectedJobs(new Set(filteredJobs.map((j) => j.id)))
+    setSelectedJobs((prev) => {
+      const next = new Set(prev)
+      if (allVisibleSelected) filteredJobs.forEach((j) => next.delete(j.id))
+      else filteredJobs.forEach((j) => next.add(j.id))
+      return next
+    })
   }
 
   const handleDeactivate = async (jobId: string) => {
@@ -213,15 +241,15 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
   }
 
   const handleBulkDeactivateSelected = async () => {
-    if (selectedJobs.size === 0) return
+    // Visible selection only — see visibleSelected above.
+    const ids = visibleSelected.map((j) => j.id)
+    if (ids.length === 0) return
     const { confirmed } = await confirm({
-      title: `Deactivate ${selectedJobs.size} selected ${selectedJobs.size === 1 ? 'job' : 'jobs'}?`,
+      title: `Deactivate ${ids.length} selected ${ids.length === 1 ? 'job' : 'jobs'}?`,
       description: 'They are removed from the public board but kept here.',
       confirmLabel: 'Deactivate',
     })
     if (!confirmed) return
-
-    const ids = Array.from(selectedJobs)
 
     startTransition(async () => {
       applyOptimistic({ type: 'deactivate', ids })
@@ -242,11 +270,14 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
 
   return (
     <>
-      {/* Status filter tabs — same segmented-tabs visual language as the
-          submissions queue (components/ui/segmented-tabs.tsx), scoped to
-          this page's own 25 rows the same way that one is: switching tabs
-          filters what's already loaded, it doesn't refetch other pages. */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100">
+      {/* Toolbar — status tabs, search and actions on one row, no divider
+          lines. Every control takes the tabs' fill and track geometry
+          (components/admin/table/table-styles.ts), so the toolbar and the
+          table below read as one component rather than stacked strips.
+
+          Tabs filter what's already loaded (this page's 25 rows), same as
+          the submissions queue — they don't refetch other pages. */}
+      <div className="flex flex-wrap items-center gap-2 px-1 pb-4">
         <div className={`${segmentedTabsListClassName} overflow-x-auto min-w-0`}>
           {STATUS_FILTERS.map((f) => (
             <button
@@ -256,7 +287,7 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
             >
               {f}
               {counts && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium normal-case rounded-full bg-slate-200 text-slate-600 leading-none">
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium normal-case rounded-full bg-slate-200/70 text-slate-500 leading-none tabular-nums">
                   {f === 'all'
                     ? totalJobs > 99 ? '99+' : totalJobs
                     : counts[f] > 99 ? '99+' : counts[f]}
@@ -265,64 +296,78 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Toolbar */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative w-full sm:w-64">
-          <Input
-            type="search"
-            placeholder="Search this page..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full rounded-full border-[0.5px] border-border bg-transparent pr-8 text-sm"
-          />
-          {/* Decorative — the input itself is the whole hit target, this
-              just labels it visually. Not a button: nothing to click here. */}
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-          />
-        </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+          <div className="relative w-full sm:w-56">
+            {/* Decorative — the input itself is the whole hit target. */}
+            <MagnifyingGlassIcon
+              aria-hidden="true"
+              weight="bold"
+              className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-slate-400"
+            />
+            <Input
+              type="search"
+              aria-label="Search jobs on this page"
+              placeholder="Search jobs"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(
+                TRACK_SHAPE,
+                'border-0 bg-slate-100 pl-8 pr-3 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0'
+              )}
+            />
+          </div>
           <Button
-            variant="outline"
+            type="button"
+            variant="ghost"
             size="sm"
-            className="bg-transparent"
+            aria-expanded={showBulkActions}
+            className={cn(softButtonClassName, showBulkActions && 'bg-slate-200/70 text-slate-900')}
             onClick={() => setShowBulkActions(!showBulkActions)}
           >
-            Bulk Actions
+            <SlidersHorizontalIcon weight="bold" className="size-3.5" />
+            Bulk actions
           </Button>
           <Link href="/admin/jobs/new">
-            <Button variant="primary" size="sm" className="gap-1.5">
+            <Button variant="primary" size="sm" className={cn(TRACK_SHAPE, 'gap-1.5 px-4 shadow-sm')}>
               <PlusIcon weight="bold" className="size-3.5" />
-              Add Job
+              Add job
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Bulk Actions Panel */}
+      {/* Bulk Actions Panel — two unrelated features (deactivating by age,
+          importing from Excel) as two white sections on one slate-100 tray,
+          separated by the tray showing through rather than by borders.
+          Deactivating *selected* rows isn't here: it lives in the selection
+          bar under the table, next to the rows it acts on. */}
       {showBulkActions && (
-        <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 font-heading">
-            Bulk Actions
-          </h3>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Input type="number" value={bulkDays} onChange={(e) => setBulkDays(e.target.value)} className="w-20 h-9 text-sm" min="1" />
-              <span className="text-sm text-slate-500">days old</span>
-              <Button variant="outline" size="sm" onClick={handleBulkDeactivate}>Deactivate Old Jobs</Button>
-            </div>
-            {selectedJobs.size > 0 && (
-              <Button variant="outline" size="sm" onClick={handleBulkDeactivateSelected}>
-                Deactivate Selected ({selectedJobs.size})
+        <div className="mb-4 space-y-1.5 rounded-xl bg-slate-100/70 p-1.5">
+          <div className="space-y-3 rounded-lg bg-white px-4 py-3.5">
+            <h3 className="text-sm font-semibold text-slate-700 font-heading">
+              Deactivate old jobs
+            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-slate-500 whitespace-nowrap">Older than</span>
+              <Input
+                type="number"
+                aria-label="Days old"
+                value={bulkDays}
+                onChange={(e) => setBulkDays(e.target.value)}
+                className={cn(TRACK_SHAPE, 'w-16 border-0 bg-slate-100 text-sm tabular-nums focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0')}
+                min="1"
+              />
+              <span className="text-sm text-slate-500">days</span>
+              <Button type="button" variant="ghost" size="sm" className={cn(softButtonClassName, 'ml-1')} onClick={handleBulkDeactivate}>
+                Deactivate
               </Button>
-            )}
+            </div>
           </div>
-          <div className="border-t border-slate-200 pt-4">
-            <h4 className="text-sm font-semibold text-slate-700 mb-2">Bulk Import from Excel</h4>
-            <p className="text-xs text-slate-500 mb-3">
+
+          <div className="space-y-2 rounded-lg bg-white px-4 py-3.5">
+            <h3 className="text-sm font-semibold text-slate-700 font-heading">Bulk import from Excel</h3>
+            <p className="text-xs text-slate-500">
               Download the template, fill in your job postings, then upload to import them all at once.
             </p>
             <BulkImport />
@@ -335,98 +380,105 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
           separate Source track. */}
       <div className="hidden md:block">
         <GridRow header columnsClassName={JOB_GRID_COLUMNS}>
-          <div className="px-5 py-3 flex items-center">
-            <input
-              type="checkbox"
-              checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+          <div className="flex items-center px-3">
+            <SelectCheckbox
+              label="Select all jobs shown"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
               onChange={handleSelectAll}
-              className="rounded border-slate-300"
             />
           </div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Job</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Status</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Posted</div>
-          <div className="px-5 py-3 text-left text-xs uppercase tracking-wide text-slate-500 font-medium">Actions</div>
+          <div className={cn('px-3', headerLabelClassName)}>Job</div>
+          <div className={cn('px-3', headerLabelClassName)}>Status</div>
+          <div className={cn('px-3 text-right', headerLabelClassName)}>Posted</div>
+          {/* The ⋯ buttons make the column self-evident; label kept for
+              screen readers only. */}
+          <div className="px-3"><span className="sr-only">Actions</span></div>
         </GridRow>
 
-        {filteredJobs.map((job) => (
-          <GridRow key={job.id} columnsClassName={JOB_GRID_COLUMNS}>
-            <div className="px-5 py-4 flex items-center">
-              <input
-                type="checkbox"
-                checked={selectedJobs.has(job.id)}
-                onChange={() => handleToggleSelect(job.id)}
-                className="rounded border-slate-300"
-              />
-            </div>
-            <div className={cn('min-w-0 px-5 py-4', !job.is_active && 'text-slate-400')}>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1">
-                  <p className={cn('text-sm font-medium truncate', job.is_active && 'text-slate-800')}>
-                    {job.title}
-                  </p>
-                  {job.is_sponsored && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          role="img"
-                          aria-label="Sponsored"
-                          tabIndex={0}
-                          className={cn('shrink-0 inline-flex', job.is_active ? 'text-primary' : 'text-slate-400')}
-                        >
-                          <CurrencyCircleDollarIcon weight="fill" className="size-3.5" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>Sponsored</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {[job.company, job.source].filter(Boolean).join(' · ')}
-                </p>
+        <div className="pt-1">
+          {filteredJobs.map((job) => (
+            <GridRow
+              key={job.id}
+              columnsClassName={JOB_GRID_COLUMNS}
+              className={cn(selectedJobs.has(job.id) && 'bg-primary/5 hover:bg-primary/[0.07]')}
+            >
+              <div className="flex items-center px-3 py-3">
+                <SelectCheckbox
+                  label={`Select ${job.title}`}
+                  checked={selectedJobs.has(job.id)}
+                  onChange={() => handleToggleSelect(job.id)}
+                />
               </div>
-            </div>
-            <div className="px-5 py-4 flex items-center gap-1.5">
-              <StatusDot
-                role={job.is_active ? 'success' : 'muted'}
-                label={job.is_active ? 'Active' : 'Inactive'}
-              />
-            </div>
-            <div className="pr-4 py-4 flex items-center justify-end text-xs text-muted-foreground whitespace-nowrap">
-              {formatDate(job.posted_at || job.created_at)}
-            </div>
-            <div className="py-4 flex items-center justify-end">
-              <JobActionsMenu job={job} onDeactivate={handleDeactivate} onActivate={handleActivate} onDelete={handleDelete} />
-            </div>
-          </GridRow>
-        ))}
+              <div className={cn('min-w-0 px-3 py-3', !job.is_active && 'text-slate-400')}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1">
+                    <p className={cn('text-sm font-medium truncate', job.is_active && 'text-slate-800')}>
+                      {job.title}
+                    </p>
+                    {job.is_sponsored && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            role="img"
+                            aria-label="Sponsored"
+                            tabIndex={0}
+                            className={cn('shrink-0 inline-flex', job.is_active ? 'text-primary' : 'text-slate-400')}
+                          >
+                            <CurrencyCircleDollarIcon weight="fill" className="size-3.5" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>Sponsored</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {[job.company, job.source].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-3">
+                <StatusDot
+                  role={job.is_active ? 'success' : 'muted'}
+                  label={job.is_active ? 'Active' : 'Inactive'}
+                />
+              </div>
+              <div className="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums text-muted-foreground">
+                {formatDate(job.posted_at || job.created_at)}
+              </div>
+              <div className="flex items-center justify-end px-3 py-3">
+                <JobActionsMenu job={job} onDeactivate={handleDeactivate} onActivate={handleActivate} onDelete={handleDelete} />
+              </div>
+            </GridRow>
+          ))}
+        </div>
       </div>
 
-      {/* Cards — mobile. Same data, same badge variants, same action logic
+      {/* Cards — mobile. Same data, same status dots, same action logic
           and selection state as the table above — bulk select-and-deactivate
           works identically here, not a reduced feature set.
           Each job is one record, not three stacked rows: title/company +
-          checkbox share a baseline-aligned top row, source+status badges
-          sit together directly below, and date+actions close it out. Cards
-          get their own border/radius and 12px gaps (space-y-3) rather than
-          divide-y, so more than two fit on screen without reading as a
-          single dense strip. */}
-      <div className="md:hidden p-4 space-y-3">
+          checkbox share a baseline-aligned top row, status sits directly
+          below, and date+actions close it out. Cards separate on a soft
+          slate-50 fill and 8px gaps rather than borders, in keeping with the
+          desktop grid. */}
+      <div className="md:hidden space-y-2">
         {filteredJobs.length > 0 && (
-          <div className="flex items-center gap-2 px-1">
-            <input
-              type="checkbox"
-              checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+          <label className={cn(TRACK_SHAPE, 'flex items-center gap-2.5 bg-slate-100/70 px-3')}>
+            <SelectCheckbox
+              label="Select all jobs shown"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
               onChange={handleSelectAll}
-              className="rounded border-slate-300"
             />
-            <span className="text-[11px] uppercase tracking-wide text-slate-500 font-medium">
-              Select all
-            </span>
-          </div>
+            <span className={headerLabelClassName}>Select all</span>
+          </label>
         )}
         {filteredJobs.map((job) => (
-          <div key={job.id} className="rounded-xl border border-slate-100 p-3 space-y-2">
+          <div
+            key={job.id}
+            className={cn('space-y-2 rounded-xl p-3', selectedJobs.has(job.id) ? 'bg-primary/5' : 'bg-slate-50')}
+          >
             {/* Title + company, checkbox aligned with the title's own line */}
             <div className="flex items-start justify-between gap-2">
               <div className={cn('min-w-0', !job.is_active && 'text-slate-400')}>
@@ -454,19 +506,22 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
                   {[job.company, job.source].filter(Boolean).join(' · ')}
                 </p>
               </div>
-              <input
-                type="checkbox"
+              <SelectCheckbox
+                label={`Select ${job.title}`}
                 checked={selectedJobs.has(job.id)}
                 onChange={() => handleToggleSelect(job.id)}
-                className="rounded border-slate-300 shrink-0"
+                className="mt-0.5 shrink-0"
               />
             </div>
 
-            {/* Status */}
-            <div className="flex items-center gap-2">
-              <Badge variant={job.is_active ? 'success' : 'destructive'} className="rounded-full">
-                {job.is_active ? 'Active' : 'Inactive'}
-              </Badge>
+            {/* Status — StatusDot, same as the desktop grid. The Badge that
+                was here showed Inactive in destructive red, which the grid
+                deliberately doesn't: inactive is a normal, reversible state. */}
+            <div className="flex items-center gap-1.5">
+              <StatusDot
+                role={job.is_active ? 'success' : 'muted'}
+                label={job.is_active ? 'Active' : 'Inactive'}
+              />
             </div>
 
             {/* Date + actions, one row */}
@@ -486,12 +541,36 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
         </div>
       )}
 
-      {/* Footer */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between border-t border-slate-100">
-        <p className="text-xs text-slate-400">
-          Showing {filteredJobs.length} of {totalJobs} jobs
-        </p>
-        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl="/admin/jobs" />
+      {/* Footer — doubles as the selection bar. With nothing selected it's
+          the row count; once rows are ticked it says how many and offers the
+          actions that apply to them, right under the rows themselves. */}
+      <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 px-1 pt-4">
+        {visibleSelected.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-600">
+              <span className="font-semibold tabular-nums text-slate-900">{visibleSelected.length}</span> of{' '}
+              <span className="tabular-nums">{filteredJobs.length}</span> selected
+            </p>
+            <Button type="button" variant="ghost" size="sm" className={softButtonClassName} onClick={handleBulkDeactivateSelected}>
+              Deactivate selected
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(TRACK_SHAPE, 'px-3 text-slate-500 hover:bg-slate-100 hover:text-slate-900')}
+              onClick={() => setSelectedJobs(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">
+            Showing <span className="tabular-nums text-slate-600">{filteredJobs.length}</span> of{' '}
+            <span className="tabular-nums text-slate-600">{totalJobs}</span> jobs
+          </p>
+        )}
+        <AdminPagination currentPage={currentPage} totalPages={totalPages} baseUrl="/admin/jobs" />
       </div>
 
       {dialog}

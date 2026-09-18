@@ -14,12 +14,12 @@ import {
 } from '@/components/ui'
 import { RichTextEditor, type RichTextEditorRef } from '@/components/admin/rich-text-editor'
 import { LogoUploadField } from '@/components/admin/logo-upload-field'
-import { isValidEmail } from '@/lib/utils'
+import { isValidEmail, isValidApplicationUrl } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { JobSubmissionInsert, WorkMode, JobType } from '@/lib/types'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
-  { value: '', label: 'Select job type (optional)' },
+  { value: '', label: 'Select job type' },
   { value: 'internship', label: 'Internship' },
   { value: 'graduate', label: 'Graduate' },
   { value: 'part-time', label: 'Part-time' },
@@ -179,6 +179,13 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
 
     if (!isValidEmail(formData.submitter_email)) {
       setErrorMessage('Please enter a valid work email address.')
+      setStatus('error')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!isValidApplicationUrl(formData.url.trim())) {
+      setErrorMessage('Application URL must be a valid http(s) link or an email address.')
       setStatus('error')
       setIsSubmitting(false)
       return
@@ -359,11 +366,12 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
               <Input
                 id="url"
                 name="url"
-                type="url"
+                type="text"
+                inputMode="url"
                 value={formData.url}
                 onChange={handleChange}
                 onBlur={handleUrlBlur}
-                placeholder="https://company.com/apply"
+                placeholder="https://company.com/apply or hr@company.com"
                 required
                 className={isPrefilling ? 'pr-10' : ''}
               />
@@ -377,7 +385,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
               )}
             </div>
             <p className="text-xs text-slate-400 mt-1.5">
-              Insert the link to prefill.
+              A link to prefill, or an email address if applications go straight to an inbox.
             </p>
             {prefillStatus === 'success' && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs text-green-600">
@@ -421,13 +429,14 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             </div>
           </div>
           <div>
-            <Label htmlFor="job_type">Job type</Label>
+            <Label htmlFor="job_type" required>Job type</Label>
             <div className="mt-1.5">
               <NativeSelect
                 id="job_type"
                 name="job_type"
                 value={formData.job_type}
                 onChange={handleChange}
+                required
               >
                 {JOB_TYPE_OPTIONS.map((option) => (
                   <NativeSelectOption key={option.value} value={option.value}>
@@ -438,13 +447,14 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             </div>
           </div>
           <div>
-            <Label htmlFor="closing_at">Application closing date</Label>
+            <Label htmlFor="closing_at" required>Application closing date</Label>
             <Input
               id="closing_at"
               name="closing_at"
               type="date"
               value={formData.closing_at}
               onChange={handleChange}
+              required
               className="mt-1.5"
             />
           </div>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn, toApplicationHref } from '@/lib/utils'
 import { sanitizeDescription } from '@/lib/sanitize'
 import { trackEvent } from '@/lib/analytics/track'
 import { handleApplyClick } from './apply-link'
@@ -151,7 +151,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
                 No description available for this role.
               </p>
               <a
-                href={job.url}
+                href={toApplicationHref(job.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
@@ -170,7 +170,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
         {/* Sticky Apply Button */}
         <div className="p-3 sm:p-4 border-t border-slate-200 bg-white flex gap-3">
           <motion.a
-            href={job.url}
+            href={toApplicationHref(job.url)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
@@ -263,7 +263,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack }: JobDetailPan
       </div>
       <div className="p-4 border-t border-slate-200 flex gap-3">
         <a
-          href={job.url}
+          href={toApplicationHref(job.url)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => handleApplyClick({ jobId: job.id, title: job.title, company: job.company })}
