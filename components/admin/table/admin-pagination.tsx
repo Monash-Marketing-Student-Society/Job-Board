@@ -1,3 +1,9 @@
+'use client'
+
+// Required, even though this renders no state: the Phosphor icons below are
+// client-only (they call createContext), and without the directive a server
+// component importing this — directly or through ./index.ts — crashes with
+// "createContext is not a function".
 import Link from 'next/link'
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'

@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover'
 import {
   GridRow,
   StatusDot,
@@ -67,6 +68,44 @@ const STATUS_ROLE: Record<JobSubmission['status'], StatusDotRole> = {
   pending: 'warning',
   approved: 'success',
   rejected: 'destructive',
+}
+
+/**
+ * The submitter's contact details, opened from their initials avatar in the
+ * row. These came in through the public /submit form and are the only way to
+ * reach whoever posted the job, so they get a click target of their own
+ * rather than living solely in the overflow menu.
+ */
+function SubmitterPopover({ submission }: { submission: JobSubmission }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Contact details for ${submission.submitter_name}`}
+          className="size-[30px] shrink-0 select-none rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-0"
+        >
+          {getInitials(submission.submitter_name)}
+        </button>
+      </PopoverTrigger>
+      {/* w-72: PopoverContent defaults to the trigger's width, which is a
+          30px avatar. p-3 overrides the 4px row gutter it uses for menus. */}
+      <PopoverContent align="start" className="w-72 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Submitted by</p>
+        <p className="mt-1.5 text-sm font-medium text-slate-800">{submission.submitter_name}</p>
+        <a
+          href={`mailto:${submission.submitter_email}`}
+          className="block break-all text-xs text-primary hover:underline"
+        >
+          {submission.submitter_email}
+        </a>
+        <p className="mt-0.5 text-xs text-slate-500">{submission.submitter_company_name}</p>
+        <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400">
+          Submitted {formatDate(submission.created_at)}
+        </p>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 /** First letter of the first and last name; a single name just takes its first two letters. */
@@ -440,25 +479,23 @@ export function SubmissionsTable({
                     rejection note (rare, only on rejected rows) adds a third
                     truncated line rather than being dropped silently. */}
                 <div className="min-w-0 px-3 py-3 flex items-center gap-2.5">
-                  <div
-                    className="shrink-0 size-[30px] rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium flex items-center justify-center select-none"
-                    aria-label={`Submitted by ${submission.submitter_name}`}
-                  >
-                    {getInitials(submission.submitter_name)}
-                  </div>
+                  <SubmitterPopover submission={submission} />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <p className="text-sm font-medium text-slate-800 truncate">{decodeHtmlEntities(submission.title)}</p>
-                      <a
-                        href={toApplicationHref(submission.url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Open original listing"
+                      {/* Opens the draft preview — how this listing will look
+                          on the board — rather than the employer's own link,
+                          which stays in the overflow menu and on the preview
+                          page itself. */}
+                      <Link
+                        href={`/admin/submissions/${submission.id}/preview`}
+                        aria-label={`Preview ${decodeHtmlEntities(submission.title)} as it will appear on the board`}
+                        title="Preview draft listing"
                         className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
                       >
                         <ArrowSquareOutIcon className="size-3.5" />
-                      </a>
+                      </Link>
                       {submission.is_sponsored && (
                         <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
                           Sponsor requested
@@ -612,11 +649,15 @@ export function SubmissionsTable({
               <p className="text-xs text-destructive">Sent to submitter: {submission.admin_note}</p>
             )}
 
-            {/* View link + submitted date */}
+            {/* Preview link + submitted date. The employer's own link is in
+                the overflow menu, same as the desktop row. */}
             <div className="flex items-center justify-between">
-              <a href={toApplicationHref(submission.url)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                View link ↗
-              </a>
+              <Link
+                href={`/admin/submissions/${submission.id}/preview`}
+                className="text-xs text-primary hover:underline"
+              >
+                Preview draft →
+              </Link>
               <span className="text-xs text-slate-400">{formatDate(submission.created_at)}</span>
             </div>
 
@@ -746,6 +787,18 @@ function SubmissionActionsMenu({
             comment; back to the light --popover/--popover-foreground every
             other surface in this app uses. */}
         <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/submissions/${submission.id}/preview`}>Preview draft listing</Link>
+          </DropdownMenuItem>
+          {/* The employer's own application link. It used to be the row's
+              external-link icon; that now opens the draft preview, so this is
+              where the original lives. */}
+          <DropdownMenuItem asChild>
+            <a href={toApplicationHref(submission.url)} target="_blank" rel="noopener noreferrer">
+              Open original listing
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => onArchive(submission.id)}>
             {showArchived ? 'Restore' : 'Archive'}
           </DropdownMenuItem>
