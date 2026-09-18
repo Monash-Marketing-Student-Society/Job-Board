@@ -27,7 +27,7 @@ import {
   headerLabelClassName,
   type StatusDotRole,
 } from './table'
-import { cn, formatDate, decodeHtmlEntities, toApplicationHref } from '@/lib/utils'
+import { cn, formatDate, decodeHtmlEntities, toApplicationHref, gmailComposeHref } from '@/lib/utils'
 import type { JobSubmission } from '@/lib/types'
 
 /** Literal so Tailwind's JIT scanner can see it — a class built from a
@@ -94,7 +94,9 @@ function SubmitterPopover({ submission }: { submission: JobSubmission }) {
         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Submitted by</p>
         <p className="mt-1.5 text-sm font-medium text-slate-800">{submission.submitter_name}</p>
         <a
-          href={`mailto:${submission.submitter_email}`}
+          href={gmailComposeHref(submission.submitter_email)}
+          target="_blank"
+          rel="noopener noreferrer"
           className="block break-all text-xs text-primary hover:underline"
         >
           {submission.submitter_email}
@@ -603,7 +605,12 @@ export function SubmissionsTable({
               />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-slate-800 leading-tight">{submission.submitter_name}</p>
-                <a href={`mailto:${submission.submitter_email}`} className="text-xs text-primary hover:underline break-all">
+                <a
+                  href={gmailComposeHref(submission.submitter_email)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline break-all"
+                >
                   {submission.submitter_email}
                 </a>
                 <p className="text-xs text-slate-400 mt-0.5">{submission.submitter_company_name}</p>

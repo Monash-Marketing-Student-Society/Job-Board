@@ -219,6 +219,33 @@ export function toApplicationHref(url: string): string {
   return isValidEmail(url) ? `mailto:${url}` : url
 }
 
+/** The mailbox the partnerships team works job submissions out of. */
+export const PARTNERSHIPS_EMAIL = 'partnerships@monashmss.com'
+
+/**
+ * Build a Gmail compose link to `to`, addressed from the partnerships
+ * mailbox. The admin dashboard is worked in a browser out of that one shared
+ * account, so a plain `mailto:` is the wrong target twice over: it hands the
+ * draft to whatever desktop client the machine has registered, and when it
+ * does open Gmail it composes from whichever account happens to be first in
+ * the browser's session, which for a student committee is usually a personal
+ * one.
+ *
+ * `authuser` takes an address rather than the `/u/0` index, which is ordered
+ * per browser session and so cannot be hardcoded. If that account is already
+ * signed in, Gmail opens the draft in it; if not, Google routes through its
+ * sign-in / account chooser first and lands on the same draft afterwards.
+ */
+export function gmailComposeHref(to: string): string {
+  const params = new URLSearchParams({
+    authuser: PARTNERSHIPS_EMAIL,
+    view: 'cm', // compose
+    fs: '1',    // full-screen compose, not the corner popout
+    to,
+  })
+  return `https://mail.google.com/mail/?${params.toString()}`
+}
+
 /**
  * Capitalize first letter of each word
  */
