@@ -78,6 +78,14 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 {expired && (
                   <Badge variant="destructive">Closed</Badge>
                 )}
+                {/* This header sits on the primary colour, where the default
+                    badge (bg-primary) would disappear into it, so the
+                    disclosure is inverted to read against the background. */}
+                {job.is_sponsored && (
+                  <span className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-white text-primary font-semibold">
+                    Sponsored
+                  </span>
+                )}
               </div>
               <h1 className="text-3xl font-bold text-primary-foreground">
                 {job.title}
