@@ -32,9 +32,27 @@ export default function TermsPage() {
         <p>
           We are not a recruiter or an employment agency, and we are not a party to anything
           that happens between you and an employer. Committee members apply judgement when
-          reviewing a listing, but we do not formally verify employers, confirm that a role
-          exists, or check pay and conditions. A listing appearing here is not an endorsement
-          by MMSS.
+          reviewing a listing, but for most listings we do not formally verify the employer,
+          confirm that a role exists, or check pay and conditions. Treat an ordinary listing as
+          a role we thought was worth passing on, rather than one we vouch for.
+        </p>
+      </Section>
+
+      <Section heading="Sponsored listings">
+        <p>
+          Some roles on the board are sponsored. These come from organisations that support the
+          society, and they are a commercial arrangement between that organisation and MMSS.
+        </p>
+        <p>
+          Sponsored roles are labelled <strong className="font-semibold text-slate-800">
+          Sponsored</strong> and appear above other listings. We review an organisation before
+          agreeing to work with them, and their listings go through the same review as everyone
+          else&apos;s. So unlike an ordinary listing, a sponsored one does reflect a
+          relationship we have chosen to enter into.
+        </p>
+        <p>
+          Sponsorship affects where a listing sits on the page. It does not change the advice
+          below, and it is not a guarantee about the role or the employer.
         </p>
       </Section>
 
