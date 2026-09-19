@@ -66,9 +66,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 bg-muted">
+    <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="bg-background rounded-lg border border-border shadow-sm p-8">
+        <div className="bg-card rounded-lg border border-border shadow-sm p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Reset Password</h1>
             <p className="text-muted-foreground mt-1">
