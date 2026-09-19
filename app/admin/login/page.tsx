@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button, Input, Alert, AlertDescription } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { LoginBackdrop } from '@/components/admin/login-backdrop'
 
 /** Google's mark, drawn inline so the button renders without a network fetch. */
 function GoogleMark() {
@@ -30,11 +31,30 @@ function GoogleMark() {
   )
 }
 
+/**
+ * Kept to one short line each.
+ *
+ * This box sits directly above the form, so every extra line pushes the thing
+ * the reader came to use further down the card. A sign-in error has one job:
+ * say what went wrong. The remedy belongs wherever the remedy actually is.
+ */
 const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized:
-    'That account does not have admin access. Ask an existing admin to invite your email address.',
-  cancelled: 'Google sign-in was cancelled.',
-  oauth: 'Google sign-in did not complete. Please try again.',
+  unauthorized: 'That account does not have admin access.',
+  cancelled: 'Sign-in cancelled.',
+  oauth: 'Google sign-in did not complete.',
+}
+
+type Notice = { type: 'error' | 'success'; text: string } | null
+
+/**
+ * Supabase and Google errors are written for developers and run long. Take the
+ * first sentence and fall back to our own wording past a sane length, so an
+ * upstream change cannot silently turn this box into a paragraph.
+ */
+function shortMessage(err: unknown, fallback: string): string {
+  if (!(err instanceof Error) || !err.message) return fallback
+  const firstSentence = err.message.split(/(?<=[.!?])\s/)[0].trim()
+  return firstSentence.length > 0 && firstSentence.length <= 80 ? firstSentence : fallback
 }
 
 export default function AdminLoginPage() {
@@ -47,16 +67,35 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [error, setError] = useState(
-    errorParam ? ERROR_MESSAGES[errorParam] ?? 'Sign-in failed.' : ''
-  )
   const [isSendingReset, setIsSendingReset] = useState(false)
-  const [resetMessage, setResetMessage] = useState('')
+
+  // One slot, not two. Previously an error and a reset confirmation were
+  // separate pieces of state rendering separate alerts, so the card could show
+  // both at once -- a success and a failure stacked above the form, describing
+  // two different attempts.
+  const [notice, setNotice] = useState<Notice>(
+    errorParam ? { type: 'error', text: ERROR_MESSAGES[errorParam] ?? 'Sign-in failed.' } : null
+  )
+
+  /**
+   * Take the error out of the URL once it has been read into state.
+   *
+   * Without this the message is part of the address: it survives a refresh,
+   * comes back on a browser Back, and would still be sitting there after a
+   * successful sign-in and sign-out. The notice should describe the attempt
+   * just made, not the one made ten minutes ago.
+   */
+  useEffect(() => {
+    if (!errorParam) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('error')
+    const query = params.toString()
+    router.replace(query ? `/admin/login?${query}` : '/admin/login', { scroll: false })
+  }, [errorParam, searchParams, router])
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
-    setError('')
-    setResetMessage('')
+    setNotice(null)
 
     try {
       const supabase = createClient()
@@ -76,7 +115,7 @@ export default function AdminLoginPage() {
       if (oauthError) throw oauthError
       // On success the browser navigates to Google; nothing below runs.
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not start Google sign-in')
+      setNotice({ type: 'error', text: shortMessage(err, 'Could not start Google sign-in') })
       setIsGoogleLoading(false)
     }
   }
@@ -84,7 +123,7 @@ export default function AdminLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
+    setNotice(null)
 
     try {
       const supabase = createClient()
@@ -112,7 +151,7 @@ export default function AdminLoginPage() {
       router.push(redirectTo)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setNotice({ type: 'error', text: shortMessage(err, 'Sign-in failed.') })
     } finally {
       setIsLoading(false)
     }
@@ -120,30 +159,32 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError('Enter your email above first, then click "Forgot password?"')
+      setNotice({ type: 'error', text: 'Enter your email first.' })
       return
     }
     setIsSendingReset(true)
-    setError('')
-    setResetMessage('')
+    setNotice(null)
     try {
       const supabase = createClient()
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/admin/reset-password`,
       })
       if (resetError) throw resetError
-      setResetMessage('If an account exists for that email, a reset link has been sent.')
+      setNotice({ type: 'success', text: 'Reset link sent, if that account exists.' })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset email')
+      setNotice({ type: 'error', text: shortMessage(err, 'Could not send the reset email.') })
     } finally {
       setIsSendingReset(false)
     }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 bg-muted">
-      <div className="w-full max-w-md">
-        <div className="bg-background rounded-lg border border-border shadow-sm p-8">
+    <main className="min-h-screen flex items-center justify-center px-4">
+      <LoginBackdrop />
+      {/* relative + z-10: the backdrop is fixed at z-0, which paints above the
+          admin shell's background but has to stay below the card. */}
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-card rounded-lg border border-border shadow-sm p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Admin Login</h1>
             <p className="text-muted-foreground mt-1">
@@ -151,15 +192,12 @@ export default function AdminLoginPage() {
             </p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {resetMessage && (
-            <Alert variant="success" className="mb-6">
-              <AlertDescription>{resetMessage}</AlertDescription>
+          {notice && (
+            <Alert
+              variant={notice.type === 'success' ? 'success' : 'destructive'}
+              className="mb-6"
+            >
+              <AlertDescription>{notice.text}</AlertDescription>
             </Alert>
           )}
 
@@ -195,7 +233,10 @@ export default function AdminLoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setNotice(null)
+                }}
                 placeholder="admin@example.com"
                 required
                 autoComplete="email"
@@ -210,7 +251,10 @@ export default function AdminLoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setNotice(null)
+                }}
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
