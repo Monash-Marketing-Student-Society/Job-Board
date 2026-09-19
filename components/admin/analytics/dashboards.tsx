@@ -11,19 +11,15 @@ import type { AnalyticsSnapshot } from '@/lib/analytics/queries'
 /**
  * The two dashboards, given a snapshot.
  *
- * Split out of the page so the admin route and the local preview route render
- * exactly the same thing from exactly the same data — a preview that drifts
- * from the page it previews is worse than no preview.
+ * Split out of the page so the page itself stays what it should be: resolve a
+ * period, fetch a snapshot, hand both over.
  */
 export function AnalyticsDashboards({
   snapshot,
   period,
-  basePath,
 }: {
   snapshot: AnalyticsSnapshot
   period: Period
-  /** Where the period control's links point. */
-  basePath: string
 }) {
   const {
     chartBuckets,
@@ -40,7 +36,7 @@ export function AnalyticsDashboards({
 
   return (
     <div className="space-y-5">
-      <DashboardSection title="Audience" icon={Users} period={period} basePath={basePath}>
+      <DashboardSection title="Audience" icon={Users} period={period}>
         <MetricCards tiles={audience} periodLabel={period.spanLabel} />
         <ChartViewersOverTime data={chartBuckets} cadence={chartCadence} />
       </DashboardSection>
@@ -50,7 +46,6 @@ export function AnalyticsDashboards({
         description="What they did with the jobs they found"
         icon={MousePointerClick}
         period={period}
-        basePath={basePath}
       >
         <MetricCards tiles={engagement} periodLabel={period.spanLabel} />
         <ConversionFunnel steps={funnel} />

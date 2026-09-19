@@ -42,11 +42,7 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
       {snapshot.isEmpty ? (
         <AnalyticsEmptyState />
       ) : (
-        <AnalyticsDashboards
-          snapshot={snapshot}
-          period={period}
-          basePath="/admin/analytics"
-        />
+        <AnalyticsDashboards snapshot={snapshot} period={period} />
       )}
     </div>
   )

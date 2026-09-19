@@ -29,7 +29,6 @@ export function DashboardSection({
   description,
   icon: Icon,
   period,
-  basePath,
   children,
 }: {
   title: string
@@ -37,8 +36,6 @@ export function DashboardSection({
   description?: string
   icon: LucideIcon
   period: Period
-  /** Where the picker's links point — the admin page, or the local preview. */
-  basePath: string
   children: React.ReactNode
 }) {
   return (
@@ -56,7 +53,7 @@ export function DashboardSection({
           </div>
         </div>
 
-        <PeriodPicker period={period} basePath={basePath} />
+        <PeriodPicker period={period} />
       </header>
 
       <div className="space-y-4 border-t border-slate-200 bg-slate-50 p-4">{children}</div>

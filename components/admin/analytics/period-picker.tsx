@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { CalendarDays, Check, ChevronDown } from 'lucide-react'
 
@@ -27,8 +27,11 @@ import type { Period } from '@/lib/analytics/period'
  * cached for five minutes. Keeping it in the URL is what makes a particular
  * view linkable and the back button step through periods.
  */
-export function PeriodPicker({ period, basePath }: { period: Period; basePath: string }) {
+export function PeriodPicker({ period }: { period: Period }) {
   const router = useRouter()
+  // The control rewrites the query of the page it is rendered on rather than
+  // naming that page, so it stays correct wherever the dashboards are mounted.
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [showCustom, setShowCustom] = useState(period.custom)
   const [from, setFrom] = useState(period.from)
@@ -74,7 +77,7 @@ export function PeriodPicker({ period, basePath }: { period: Period; basePath: s
               <button
                 key={range.value}
                 type="button"
-                onClick={() => go(`${basePath}?range=${range.value}`)}
+                onClick={() => go(`${pathname}?range=${range.value}`)}
                 className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-slate-100 ${
                   active ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'
                 }`}
@@ -104,7 +107,7 @@ export function PeriodPicker({ period, basePath }: { period: Period; basePath: s
             className="px-2.5 pb-1.5 pt-1"
             onSubmit={(event) => {
               event.preventDefault()
-              if (!problem) go(`${basePath}?from=${from}&to=${to}`)
+              if (!problem) go(`${pathname}?from=${from}&to=${to}`)
             }}
           >
             {/* The project's own Input and Button, not a second set of
