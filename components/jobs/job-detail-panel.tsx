@@ -136,6 +136,21 @@ export function JobDetailPanel({ job, isMainView = false, onBack, preview = fals
 
           {/* Info pills row - staggered */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {/* Sponsored is a paid placement, so it is disclosed wherever the
+                listing is shown, not only on the card people scroll past. It
+                keeps the card's filled treatment rather than the neutral pill
+                beside it: a disclosure that looks like a metadata chip reads
+                as one. */}
+            {job.is_sponsored && (
+              <motion.span
+                initial={preview ? false : { opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.1 }}
+                className="inline-flex items-center text-xs px-3 py-1 rounded-full bg-primary text-white font-semibold"
+              >
+                Sponsored
+              </motion.span>
+            )}
             {pills.map((pill, i) => (
               <motion.span
                 key={pill.key}
@@ -274,6 +289,11 @@ export function JobDetailPanel({ job, isMainView = false, onBack, preview = fals
           {getInitials(job.company)}
         </div>
         <h2 className="text-lg font-semibold text-slate-800">{job.company}</h2>
+        {job.is_sponsored && (
+          <span className="inline-flex items-center text-[11px] px-2 py-0.5 mt-2 rounded-full bg-primary text-white font-semibold">
+            Sponsored
+          </span>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto p-6">
         <h3 className="font-semibold text-slate-800">{job.title}</h3>
