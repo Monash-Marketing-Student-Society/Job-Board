@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { LegalPage, Section, Bullets } from '@/components/legal/legal-page'
+import { LegalPage, Section, Bullets, Summary } from '@/components/legal/legal-page'
 import { PARTNERSHIPS_EMAIL } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -32,109 +32,129 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       updated="2026-09-19"
       intro={
-        <>
-          <p>
-            A privacy policy sets out what a service does with information about you, so you can
-            decide whether to use it. This one covers the MMSS Job Board at jobs.monashmss.com.
-          </p>
-          <p className="mt-3">
-            It explains how we collect, use, store and share information when you browse
-            listings, submit a role, or sign in as a committee administrator. There are no
-            public accounts. You do not need to sign in to read listings or apply for anything.
-          </p>
-        </>
+        <p>
+          A privacy policy explains what a website does with information about you, so you can
+          decide whether you are comfortable using it. This one covers the MMSS Job Board at
+          jobs.monashmss.com. We have written it in plain English, because a policy you cannot
+          follow is not much use to you.
+        </p>
       }
     >
+      <Summary
+        points={[
+          'You can browse every listing without telling us anything about yourself.',
+          'There are no student accounts, and nothing to sign up for.',
+          'We never sell your information, and there are no advertising trackers on this site.',
+          'If you post a job, we keep your contact details so we can talk to you about it.',
+        ]}
+      />
+
       <Section heading="Who we are, and why we built the board">
         <p>
-          The Monash Marketing Students&apos; Society is a student society at Monash University.
-          The Job Board is run by our committee, who are volunteers.
+          We are the Monash Marketing Students&apos; Society, a student society at Monash
+          University. The Job Board is run by our committee, who are all students and
+          volunteers.
         </p>
         <p>
-          Marketing roles for students are scattered across general job sites, and most of what
-          those sites return is irrelevant. We built the board to keep the relevant ones in one
-          place. It is free for students to use and free for employers to post to.
+          Marketing roles for students tend to be scattered across big job sites, buried under
+          hundreds of listings that are not relevant. We built the board to gather the good ones
+          in one place. It is free for students to use and free for employers to post to.
         </p>
         <p>
-          General enquiries: <Mail address={CONTACT} />. Anything about a listing:{' '}
-          <Mail address={PARTNERSHIPS_EMAIL} />.
+          If you have a question about anything here, please just email us at{' '}
+          <Mail address={CONTACT} />. For anything about a specific listing,{' '}
+          <Mail address={PARTNERSHIPS_EMAIL} /> reaches us faster.
         </p>
       </Section>
 
       <Section heading="Information we collect">
-        <p>Most visitors give us none of this.</p>
+        <p>
+          If you are here to look for a job, the answer is almost nothing. You do not need an
+          account, and we do not ask you to identify yourself.
+        </p>
         <Bullets
           items={[
             {
-              lead: 'Listing submissions',
-              text: 'your name, email and organisation, plus the role details (title, employer, location, work arrangement, job type, closing date, description, application link and any logo).',
+              lead: 'If you post a job',
+              text: 'your name, email address and organisation, along with the details of the role you are advertising.',
             },
             {
-              lead: 'Browsing',
-              text: 'anonymous usage events recording a random cookie identifier, the listing, its job type and tags at the time, and when. No IP address, name, browser or device details.',
+              lead: 'If you are just browsing',
+              text: 'we note things like "a listing was opened" or "someone clicked apply", along with which listing and when. These notes do not include your name, your email, or the address your device connects from, so we cannot tell who you are from them.',
             },
             {
-              lead: 'Submitting a listing',
-              text: 'a one-way keyed hash of the sending IP address, to stop automated abuse. The address itself is never stored.',
+              lead: 'When someone posts a job',
+              text: 'we take the internet address the form was sent from and scramble it into a code. It helps us spot one person flooding the form with fake listings. The code cannot be turned back into the original address, and we never save the address itself.',
             },
             {
-              lead: 'Administrator accounts',
-              text: 'email address, sign-in method (password or Google), and last sign-in.',
+              lead: 'If you are on our committee',
+              text: 'your email address, how you sign in, and when you last signed in.',
             },
           ]}
         />
         <p>
-          Your browser also keeps a list of listings you clicked apply on, so the site can ask
-          whether you finished. It stays on your device.
+          Your own browser also remembers which listings you clicked apply on, so the site can
+          check whether you got the application finished. That list stays on your device and is
+          never sent to us.
         </p>
       </Section>
 
       <Section heading="How we use information">
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li>To review, publish and manage listings.</li>
-          <li>To contact you about a listing you submitted.</li>
-          <li>To measure how the board is used, so we know which roles are worth chasing.</li>
-          <li>To limit automated submissions.</li>
-          <li>To sign committee administrators in.</li>
-        </ul>
+        <Bullets
+          items={[
+            { text: 'To read, publish and keep track of job listings.' },
+            { text: 'To get in touch with you about a listing you posted.' },
+            {
+              text: 'To see how the board is being used, so we know what kinds of roles are worth chasing for next year.',
+            },
+            { text: 'To stop people spamming the submission form.' },
+            { text: 'To let committee members sign in to manage listings.' },
+          ]}
+        />
         <p>
-          We do not sell information, share it for advertising, or use it to build profiles of
-          individuals.
+          That is the whole list. We do not sell information, we do not hand it to advertisers,
+          and we do not build profiles of the people who visit.
         </p>
       </Section>
 
       <Section heading="Analytics, cookies and similar technologies">
         <p>
-          Two first-party cookies. No third-party advertising or tracking cookies, and no Google
-          Analytics. Our analytics run on our own database.
+          Cookies are small files a website saves in your browser so it can remember something.
+          We use two, and both are ours rather than an outside company&apos;s. There are no
+          advertising or tracking cookies on this site, and we do not use Google Analytics.
         </p>
         <Bullets
           items={[
             {
-              lead: 'mmss_vid',
-              text: 'a random visitor identifier, expiring after a year. It counts people rather than page loads. It holds nothing about you and is not linked to your name or email.',
+              lead: 'A visitor cookie, called mmss_vid',
+              text: 'a random number with no name attached. It lets us tell whether a hundred visits came from a hundred people or one person visiting a hundred times. It expires after a year.',
             },
             {
               lead: 'Sign-in cookies',
-              text: 'set only for committee administrators, to keep them signed in.',
+              text: 'these keep committee members signed in to the part of the site where listings are managed. If you are not on the committee, you will never be given one.',
             },
           ]}
         />
         <p>
-          To opt out, block or clear cookies for this site, or use private browsing. The board
-          works normally either way.
+          If you would rather not have them, you can clear or block cookies for this site, or
+          open it in a private browsing window. Everything on the board keeps working normally.
         </p>
       </Section>
 
       <Section heading="When we share information">
         <p>
-          With the providers listed at the bottom of this page, who run parts of the site on our
-          behalf and cannot use the information for their own purposes. We will also disclose
-          information if the law requires it.
+          We use a few outside companies to actually run the site: to store the listings, send
+          our emails, and keep the website online. They handle this information only to provide
+          that service to us, and are not allowed to use it for anything of their own. You can
+          find them listed at the bottom of this page.
         </p>
+        <p>We would also share information if the law required us to.</p>
         <p>
-          Published listings are public. Your name, email address and organisation are not
-          published. Only our committee sees those.
+          One thing worth being clear about: job listings are public once approved, but{' '}
+          <strong className="font-semibold text-slate-800">
+            your name, email address and organisation are not published
+          </strong>
+          . Only our committee sees those.
         </p>
       </Section>
 
@@ -142,54 +162,69 @@ export default function PrivacyPage() {
         <Bullets
           items={[
             {
-              lead: 'Listings',
-              text: 'kept while live, then as a record of what we published. Ask us and we will delete yours.',
+              lead: 'Job listings',
+              text: 'we keep these while they are live, and afterwards as a record of what the board has advertised. If you would like yours removed, just ask.',
             },
             {
-              lead: 'Usage events',
-              text: 'kept as long-term history so the committee can see how the board is used across years. They are anonymous.',
+              lead: 'Browsing notes',
+              text: 'kept long term, so future committees can see how the board has been used over the years. They are anonymous, so they are not linked back to anyone.',
             },
-            { lead: 'Rate-limit hashes', text: 'deleted automatically about an hour after they are written.' },
-            { lead: 'Administrator accounts', text: 'removed when a committee member\u2019s term ends.' },
+            {
+              lead: 'The scrambled codes above',
+              text: 'deleted automatically about an hour after they are created.',
+            },
+            {
+              lead: 'Committee accounts',
+              text: 'removed when someone’s time on the committee ends.',
+            },
           ]}
         />
       </Section>
 
       <Section heading="Your choices">
         <p>
-          Email <Mail address={CONTACT} /> to ask what we hold about you, to correct it, or to
-          have your submission and contact details deleted. If you submitted a listing, your
-          confirmation email contains a private link that lets you edit it yourself. Treat that
-          link as you would a password.
+          You are welcome to email <Mail address={CONTACT} /> and ask us what we hold about you,
+          to correct something that is wrong, or to delete your listing and contact details. You
+          do not need a reason, and we will not make it difficult.
         </p>
         <p>
-          We aim to handle personal information consistently with the Australian Privacy
-          Principles. If you think we have got something wrong, tell us and we will try to fix
-          it.
+          If you posted a job, the confirmation email we sent you has a private link for editing
+          it yourself. Keep that link to yourself, as anyone who has it can change your listing.
+        </p>
+        <p>
+          We aim to handle personal information in line with the Australian Privacy Principles.
+          If you think we have got something wrong, please tell us and we will do our best to
+          put it right.
         </p>
       </Section>
 
       <Section heading="International processing">
         <p>
-          Our providers operate outside Australia, mainly in the United States, so information
-          may be stored and processed overseas. By using the board you agree to that transfer.
-          We use established providers and do not transfer information to anyone else.
+          The companies that help us run the site are based overseas, mostly in the United
+          States, so this information is stored on computers outside Australia. This is normal
+          for almost any website, and it is protected by those companies&apos; own security and
+          privacy commitments, linked below.
         </p>
       </Section>
 
       <Section heading="Security">
         <p>
-          Information is held in an access-controlled database, and the admin dashboard requires
-          a sign-in. No system is completely secure, and we would rather say so than promise
-          otherwise. If you believe you have found a security problem with this site, email{' '}
-          <Mail address={CONTACT} /> rather than posting it publicly.
+          The listings are kept in a database that is not open to the public, and the area where
+          committee members manage them requires a sign-in. No website can honestly promise
+          perfect security, and we would rather say so than pretend otherwise.
+        </p>
+        <p>
+          If you think you have found a security problem with the board, please email{' '}
+          <Mail address={CONTACT} /> and tell us privately rather than posting it publicly. We
+          will be grateful, not annoyed.
         </p>
       </Section>
 
       <Section heading="Changes to this policy">
         <p>
-          We may update this policy from time to time. If we make material changes we will
-          update the date above and, where appropriate, add a notice on the site.
+          We may update this policy from time to time. If we change something significant we
+          will update the date at the top of this page and, where it makes sense, add a notice
+          on the site. The committee changes every year, but these commitments carry over.
         </p>
       </Section>
 
