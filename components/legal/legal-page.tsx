@@ -53,21 +53,27 @@ export function Section({ heading, children }: { heading: string; children: Reac
 }
 
 /**
- * Definition-style list for "what we collect" and similar.
+ * Compact bullet list with an optional bold lead-in.
  *
- * A table would be the obvious choice and the wrong one: these rows are a term
- * and a paragraph, and a two-column table forces the paragraph into a gutter
- * that collapses badly on a phone.
+ * Replaces an earlier term-and-paragraph layout that indented every entry
+ * behind a rule: at this measure the detail wrapped to three or four lines and
+ * the bold term floated above it, so a four-item list read as four separate
+ * sections rather than one list. A bullet keeps the entry visually single,
+ * which is what makes a list scannable.
  */
-export function Defs({ items }: { items: { term: string; detail: ReactNode }[] }) {
+export function Bullets({
+  items,
+}: {
+  items: { lead?: string; text: ReactNode }[]
+}) {
   return (
-    <dl className="space-y-4 mt-1">
-      {items.map((item) => (
-        <div key={item.term} className="border-l-2 border-slate-200 pl-4">
-          <dt className="text-sm font-semibold text-slate-800">{item.term}</dt>
-          <dd className="text-[15px] leading-relaxed text-slate-600 mt-1">{item.detail}</dd>
-        </div>
+    <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
+      {items.map((item, i) => (
+        <li key={item.lead ?? i} className="text-[15px] leading-relaxed text-slate-600 pl-1">
+          {item.lead && <strong className="font-semibold text-slate-800">{item.lead}:</strong>}{' '}
+          {item.text}
+        </li>
       ))}
-    </dl>
+    </ul>
   )
 }

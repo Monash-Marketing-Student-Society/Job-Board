@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { LegalPage, Section, Defs } from '@/components/legal/legal-page'
+import { LegalPage, Section, Bullets } from '@/components/legal/legal-page'
 import { PARTNERSHIPS_EMAIL } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 const CONTACT = 'enquires@monashmss.com'
 
 const THIRD_PARTIES = [
-  { name: 'Supabase', role: 'Database, administrator sign-in, uploaded logos', href: 'https://supabase.com/privacy' },
-  { name: 'Vercel', role: 'Website hosting', href: 'https://vercel.com/legal/privacy-policy' },
-  { name: 'Resend', role: 'Email delivery', href: 'https://resend.com/legal/privacy-policy' },
-  { name: 'Google', role: 'Administrator sign-in, listing pre-fill', href: 'https://policies.google.com/privacy' },
+  { name: 'Supabase', href: 'https://supabase.com/privacy' },
+  { name: 'Vercel', href: 'https://vercel.com/legal/privacy-policy' },
+  { name: 'Resend', href: 'https://resend.com/legal/privacy-policy' },
+  { name: 'Google', href: 'https://policies.google.com/privacy' },
 ]
 
 function Mail({ address }: { address: string }) {
@@ -63,38 +63,29 @@ export default function PrivacyPage() {
 
       <Section heading="Information we collect">
         <p>Most visitors give us none of this.</p>
-        <Defs
+        <Bullets
           items={[
             {
-              term: 'If you submit a listing',
-              detail:
-                'Your name, email address and organisation, plus the details of the role: title, employer, location, work arrangement, job type, closing date, description, application link and any logo you upload.',
+              lead: 'Listing submissions',
+              text: 'your name, email and organisation, plus the role details (title, employer, location, work arrangement, job type, closing date, description, application link and any logo).',
             },
             {
-              term: 'If you browse the board',
-              detail: (
-                <>
-                  Anonymous usage events. Each one records a random cookie identifier, which
-                  listing was involved, its job type and tags at that moment, and the time. No IP
-                  address, name, browser or device details are stored with them.
-                </>
-              ),
+              lead: 'Browsing',
+              text: 'anonymous usage events recording a random cookie identifier, the listing, its job type and tags at the time, and when. No IP address, name, browser or device details.',
             },
             {
-              term: 'When a listing is submitted',
-              detail:
-                'A one-way keyed hash of the sending IP address, to stop automated abuse of the form. The address itself is never stored.',
+              lead: 'Submitting a listing',
+              text: 'a one-way keyed hash of the sending IP address, to stop automated abuse. The address itself is never stored.',
             },
             {
-              term: 'If you are a committee administrator',
-              detail:
-                'Your email address, how you sign in (password or Google), and when you last signed in.',
+              lead: 'Administrator accounts',
+              text: 'email address, sign-in method (password or Google), and last sign-in.',
             },
           ]}
         />
         <p>
-          Your browser also keeps a short list of listings you clicked apply on, so the site can
-          ask whether you finished. That list stays on your device and is not sent to us.
+          Your browser also keeps a list of listings you clicked apply on, so the site can ask
+          whether you finished. It stays on your device.
         </p>
       </Section>
 
@@ -114,19 +105,18 @@ export default function PrivacyPage() {
 
       <Section heading="Analytics, cookies and similar technologies">
         <p>
-          We use two cookies, both first-party. There are no third-party advertising or tracking
-          cookies on this site, and no Google Analytics. Our analytics run on our own database.
+          Two first-party cookies. No third-party advertising or tracking cookies, and no Google
+          Analytics. Our analytics run on our own database.
         </p>
-        <Defs
+        <Bullets
           items={[
             {
-              term: 'mmss_vid',
-              detail:
-                'A random visitor identifier that expires after a year. It lets us count people rather than page loads, so one person reading five listings is not counted as five. It holds nothing about you and is not linked to your name or email.',
+              lead: 'mmss_vid',
+              text: 'a random visitor identifier, expiring after a year. It counts people rather than page loads. It holds nothing about you and is not linked to your name or email.',
             },
             {
-              term: 'Sign-in cookies',
-              detail: 'Set only for committee administrators, to keep them signed in.',
+              lead: 'Sign-in cookies',
+              text: 'set only for committee administrators, to keep them signed in.',
             },
           ]}
         />
@@ -149,23 +139,18 @@ export default function PrivacyPage() {
       </Section>
 
       <Section heading="Data retention">
-        <Defs
+        <Bullets
           items={[
             {
-              term: 'Listings',
-              detail:
-                'Kept while live, and afterwards as a record of what we have published. Ask us and we will delete yours.',
+              lead: 'Listings',
+              text: 'kept while live, then as a record of what we published. Ask us and we will delete yours.',
             },
             {
-              term: 'Usage events',
-              detail:
-                'Kept as long-term history so the committee can see how the board is used across years. They are anonymous and are not traced back to individuals.',
+              lead: 'Usage events',
+              text: 'kept as long-term history so the committee can see how the board is used across years. They are anonymous.',
             },
-            { term: 'Rate-limit hashes', detail: 'Deleted automatically about an hour after they are written.' },
-            {
-              term: 'Administrator accounts',
-              detail: 'Removed when a committee member’s term ends.',
-            },
+            { lead: 'Rate-limit hashes', text: 'deleted automatically about an hour after they are written.' },
+            { lead: 'Administrator accounts', text: 'removed when a committee member\u2019s term ends.' },
           ]}
         />
       </Section>
@@ -209,23 +194,26 @@ export default function PrivacyPage() {
       </Section>
 
       <Section heading="Third-party privacy policies">
-        <p>The providers we rely on publish their own policies:</p>
-        <ul className="space-y-2 mt-1">
+        <p>
+          These links may help you understand how some of our service providers handle
+          information:
+        </p>
+        {/* Inline row rather than a list: four short names read as a set of
+            links here, where a stacked list makes each one look like a section. */}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 pt-1">
           {THIRD_PARTIES.map((party) => (
-            <li key={party.name} className="text-[15px]">
-              <a
-                href={party.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slate-900 underline underline-offset-2 font-medium"
-              >
-                {party.name}
-              </a>
-              <span className="text-slate-500">, {party.role.toLowerCase()}</span>
-            </li>
+            <a
+              key={party.name}
+              href={party.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[15px] font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-600 transition-colors"
+            >
+              {party.name}
+            </a>
           ))}
-        </ul>
-        <p className="pt-2">
+        </div>
+        <p className="pt-3">
           See also our{' '}
           <Link href="/terms" className="text-slate-900 underline underline-offset-2">
             Terms of Service
