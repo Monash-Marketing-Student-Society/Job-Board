@@ -5,6 +5,7 @@ import {
   normalizeEmail,
   autoApproveDomains,
   emailMatchesAutoApprovedDomain,
+  recoveryAdminEmail,
 } from '@/lib/admin-access'
 
 /**
@@ -44,6 +45,22 @@ export async function DELETE(
 
   const { data: target } = await adminClient.auth.admin.getUserById(id)
   const email = target.user?.email ? normalizeEmail(target.user.email) : null
+
+  // The recovery admin is the last way back in when every other route has
+  // lapsed, so it cannot be removed from this screen. Removing it would be
+  // undone on its next sign-in anyway (lib/admin-access.ts grants it before
+  // anything else), and an action that silently reverts is worse than one that
+  // refuses: this says plainly that the way to retire it is to point the
+  // setting at a different mailbox first.
+  if (email && email === (await recoveryAdminEmail(adminClient))) {
+    return NextResponse.json(
+      {
+        error:
+          'This is the recovery admin and cannot be removed. Point the recovery admin at another address first.',
+      },
+      { status: 400 }
+    )
+  }
 
   const { error } = await adminClient.from('admin_users').delete().eq('id', id)
   if (error) {
