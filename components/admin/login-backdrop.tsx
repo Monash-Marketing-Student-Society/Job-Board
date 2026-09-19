@@ -105,10 +105,11 @@ export function LoginBackdrop() {
         </div>
       </div>
 
-      {/* Scrim. The card carries the only text anyone has to read on this page,
-          and a busy backdrop costs it contrast, so the scenery is knocked back
-          rather than left competing. */}
-      <div className="absolute inset-0 bg-[#e8e8e8]/70" />
+      {/* Scrim. The card is opaque, so this does not affect the legibility of
+          anything in it; what it protects is "Back to Job Board", the one piece
+          of text sitting directly on the backdrop. 55% is the point where the
+          dashboard still reads as a dashboard and that link still reads. */}
+      <div className="absolute inset-0 bg-[#e8e8e8]/55" />
     </div>
   )
 }
