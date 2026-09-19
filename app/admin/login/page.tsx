@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button, Input, Alert, AlertDescription } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { gmailComposeHref } from '@/lib/utils'
 import { LoginBackdrop } from '@/components/admin/login-backdrop'
 
 /** Google's mark, drawn inline so the button renders without a network fetch. */
@@ -68,6 +69,7 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isSendingReset, setIsSendingReset] = useState(false)
+  const [recoveryEmail, setRecoveryEmail] = useState('')
 
   // One slot, not two. Previously an error and a reset confirmation were
   // separate pieces of state rendering separate alerts, so the card could show
@@ -76,6 +78,24 @@ export default function AdminLoginPage() {
   const [notice, setNotice] = useState<Notice>(
     errorParam ? { type: 'error', text: ERROR_MESSAGES[errorParam] ?? 'Sign-in failed.' } : null
   )
+
+  // Fetched rather than hard-coded: the committee can repoint it from
+  // /admin/users, and a locked-out person reading a stale address here would
+  // be writing to a mailbox nobody checks. Silent on failure -- it is a
+  // pointer, and a broken pointer should not become an error box on a page
+  // somebody is already struggling with.
+  useEffect(() => {
+    let active = true
+    fetch('/api/auth/recovery-contact')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (active && body?.email) setRecoveryEmail(body.email)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   /**
    * Take the error out of the URL once it has been read into state.
@@ -283,7 +303,21 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-4">
+        {recoveryEmail && (
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Locked out?{' '}
+            <a
+              href={gmailComposeHref(recoveryEmail)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Contact {recoveryEmail}
+            </a>
+          </p>
+        )}
+
+        <p className="text-center text-sm text-muted-foreground mt-3">
           <Link href="/" className="hover:text-foreground">
             &larr; Back to Job Board
           </Link>

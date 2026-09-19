@@ -19,6 +19,7 @@ interface AdminAccountRow {
   lastSignInAt: string | null
   emailConfirmed: boolean
   viaDomain: boolean
+  isRecoveryAdmin: boolean
 }
 
 interface AdminInviteRow {
@@ -32,6 +33,7 @@ interface RosterResponse {
   admins: AdminAccountRow[]
   invites: AdminInviteRow[]
   autoApproveDomains: string[]
+  recoveryAdminEmail: string
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -71,7 +73,10 @@ export default function AdminUsersPage() {
     admins: [],
     invites: [],
     autoApproveDomains: [],
+    recoveryAdminEmail: '',
   })
+  const [recoveryDraft, setRecoveryDraft] = useState('')
+  const [isSavingRecovery, setIsSavingRecovery] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [email, setEmail] = useState('')
   const [isInviting, setIsInviting] = useState(false)
@@ -85,6 +90,7 @@ export default function AdminUsersPage() {
     if (res.ok) {
       const { data } = await res.json()
       setRoster(data)
+      setRecoveryDraft(data.recoveryAdminEmail ?? '')
     }
     setIsLoading(false)
   }, [])
@@ -92,6 +98,33 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchRoster()
   }, [fetchRoster])
+
+  const handleSaveRecovery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSavingRecovery(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recoveryAdminEmail: recoveryDraft }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Failed to save the recovery admin')
+      setMessage({
+        type: 'success',
+        text: `${body.recoveryAdminEmail} is now the recovery admin.`,
+      })
+      fetchRoster()
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to save the recovery admin',
+      })
+    } finally {
+      setIsSavingRecovery(false)
+    }
+  }
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -263,6 +296,46 @@ export default function AdminUsersPage() {
         )}
       </div>
 
+      {/* Recovery admin */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 max-w-xl">
+        <h2 className="text-base font-semibold text-slate-700 font-heading">Recovery admin</h2>
+        <p className="text-sm text-slate-500 mt-1 mb-4">
+          The address that can always get back in. If every other way into the dashboard
+          lapses, whoever can read this inbox resets its password and regains access. Keep it
+          on a mailbox the president and vice president hold, rather than a personal account.
+        </p>
+
+        <form onSubmit={handleSaveRecovery} className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex-1">
+            <Label htmlFor="recovery-email" required>
+              Email
+            </Label>
+            <Input
+              id="recovery-email"
+              type="email"
+              value={recoveryDraft}
+              onChange={(e) => setRecoveryDraft(e.target.value)}
+              placeholder="mmss@monashclubs.org"
+              required
+              className="mt-1.5"
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={isSavingRecovery}
+            disabled={!recoveryDraft || recoveryDraft === roster.recoveryAdminEmail}
+          >
+            Save
+          </Button>
+        </form>
+
+        <p className="text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
+          Changing this grants the new address admin access straight away. It does not remove
+          the old one, so a typo here cannot lock anyone out.
+        </p>
+      </div>
+
       {/* Current admins */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-slate-100">
@@ -336,6 +409,11 @@ export default function AdminUsersPage() {
                             Domain
                           </Badge>
                         )}
+                        {admin.isRecoveryAdmin && (
+                          <Badge variant="warning" title="Can always regain access; cannot be removed here">
+                            Recovery
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500">
@@ -353,13 +431,22 @@ export default function AdminUsersPage() {
                         Send reset link
                       </button>
                       <span className="mx-2 text-slate-200">|</span>
-                      <button
-                        onClick={() => handleRemoveAdmin(admin)}
-                        disabled={busyId === admin.id}
-                        className="text-xs text-destructive hover:underline disabled:opacity-50"
-                      >
-                        Remove
-                      </button>
+                      {admin.isRecoveryAdmin ? (
+                        <span
+                          className="text-xs text-slate-400"
+                          title="Point the recovery admin at another address to remove this one"
+                        >
+                          Protected
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleRemoveAdmin(admin)}
+                          disabled={busyId === admin.id}
+                          className="text-xs text-destructive hover:underline disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

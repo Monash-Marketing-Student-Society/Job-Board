@@ -81,8 +81,32 @@ export function safeAdminRedirectPath(next: string | null | undefined): string {
   return next
 }
 
+export const RECOVERY_ADMIN_SETTING = 'recovery_admin_email'
+
+/** Used when the settings row is missing, so recovery never depends on a read. */
+export const RECOVERY_ADMIN_FALLBACK = 'mmss@monashclubs.org'
+
+/**
+ * The address that can always get back in.
+ *
+ * Falls back to a constant rather than returning null if the lookup fails. The
+ * moment this matters is the moment something is already wrong, so a recovery
+ * route that itself depends on a working database read is not much of a
+ * recovery route.
+ */
+export async function recoveryAdminEmail(adminClient: SupabaseClient): Promise<string> {
+  const { data } = await adminClient
+    .from('admin_settings')
+    .select('value')
+    .eq('key', RECOVERY_ADMIN_SETTING)
+    .maybeSingle()
+
+  const value = (data as { value: string | null } | null)?.value
+  return value ? normalizeEmail(value) : RECOVERY_ADMIN_FALLBACK
+}
+
 export type AdminAccessResult =
-  | { granted: true; reason: 'existing' | 'invite' | 'domain' }
+  | { granted: true; reason: 'existing' | 'invite' | 'domain' | 'recovery' }
   | { granted: false; reason: 'no-email' | 'unverified-email' | 'not-invited' }
 
 /**
@@ -113,6 +137,11 @@ export async function ensureAdminAccess(
     return { granted: true, reason: 'existing' }
   }
 
+  // Checked before invites and domains. This grant is the one that must hold
+  // when everything else has lapsed, so it does not depend on a row anybody
+  // could have deleted.
+  const isRecoveryAdmin = email === (await recoveryAdminEmail(adminClient))
+
   const { data: invite } = await adminClient
     .from('admin_invites')
     .select('id')
@@ -122,13 +151,15 @@ export async function ensureAdminAccess(
   const invited = Boolean(invite)
   const domainApproved = emailMatchesAutoApprovedDomain(email, autoApproveDomains())
 
-  if (!invited && !domainApproved) return { granted: false, reason: 'not-invited' }
+  if (!invited && !domainApproved && !isRecoveryAdmin) {
+    return { granted: false, reason: 'not-invited' }
+  }
 
   // Domain auto-approval trusts the address, so the address has to have been
   // proven. Google sign-in always confirms it; this matters for any account
   // created another way, where an unconfirmed address on an approved domain
   // would otherwise be a free admin account for whoever typed it.
-  if (!invited && !user.email_confirmed_at) {
+  if (!invited && !isRecoveryAdmin && !user.email_confirmed_at) {
     return { granted: false, reason: 'unverified-email' }
   }
 
@@ -149,5 +180,5 @@ export async function ensureAdminAccess(
       .is('claimed_at', null)
   }
 
-  return { granted: true, reason: invited ? 'invite' : 'domain' }
+  return { granted: true, reason: isRecoveryAdmin ? 'recovery' : invited ? 'invite' : 'domain' }
 }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { isCurrentUserAdmin, getUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizeEmail, autoApproveDomains } from '@/lib/admin-access'
+import { normalizeEmail, autoApproveDomains, recoveryAdminEmail } from '@/lib/admin-access'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -45,6 +45,8 @@ export interface AdminAccountRow {
   emailConfirmed: boolean
   /** True when the grant came from a domain rule rather than an invitation. */
   viaDomain: boolean
+  /** The address that can always get back in. Cannot be removed from the UI. */
+  isRecoveryAdmin: boolean
 }
 
 export interface AdminInviteRow {
@@ -96,6 +98,7 @@ export async function GET() {
   }[]
   const invitedEmails = new Set(invitesFromDb.map((row) => normalizeEmail(row.email)))
   const domains = autoApproveDomains()
+  const recoveryEmail = await recoveryAdminEmail(adminClient)
 
   const admins: AdminAccountRow[] = (
     adminRows as { id: string; created_at: string }[]
@@ -112,6 +115,7 @@ export async function GET() {
       viaDomain: Boolean(
         email && domains.length > 0 && !invitedEmails.has(normalizeEmail(email))
       ),
+      isRecoveryAdmin: Boolean(email && normalizeEmail(email) === recoveryEmail),
     }
   })
 
@@ -129,7 +133,9 @@ export async function GET() {
       claimedAt: row.claimed_at,
     }))
 
-  return NextResponse.json({ data: { admins, invites, autoApproveDomains: domains } })
+  return NextResponse.json({
+    data: { admins, invites, autoApproveDomains: domains, recoveryAdminEmail: recoveryEmail },
+  })
 }
 
 /**
