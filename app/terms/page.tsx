@@ -30,10 +30,11 @@ export default function TermsPage() {
           roles that look relevant to Monash students and list them in one place.
         </p>
         <p>
-          We are not a recruiter, an employment agency, or a party to anything that happens
-          between you and an employer. We do not screen employers, verify that a listed role
-          exists, check pay or conditions, or confirm that an organisation is who it says it is.
-          A listing appearing here is not a recommendation or an endorsement by MMSS.
+          We are not a recruiter or an employment agency, and we are not a party to anything
+          that happens between you and an employer. Committee members apply judgement when
+          reviewing a listing, but we do not formally verify employers, confirm that a role
+          exists, or check pay and conditions. A listing appearing here is not an endorsement
+          by MMSS.
         </p>
       </Section>
 
@@ -43,10 +44,10 @@ export default function TermsPage() {
           Those sites are not ours and we are not responsible for them.
         </p>
         <p>
-          Please use ordinary caution. A legitimate employer will not ask you to pay to apply,
-          to be hired, or for training or equipment as a condition of starting. Be wary of
-          anyone asking for bank details, identity documents, or money before you have a written
-          offer. If a listing on this board looks like a scam, tell us at{' '}
+          Use ordinary caution. A legitimate employer will not ask you to pay to apply, to be
+          hired, or for training or equipment before you start. Be wary of anyone asking for
+          bank details, identity documents or money before you have a written offer. If a
+          listing here looks like a scam, tell us at{' '}
           <a
             href={`mailto:${PARTNERSHIPS_EMAIL}`}
             className="text-slate-900 underline underline-offset-2"
@@ -77,15 +78,15 @@ export default function TermsPage() {
           </li>
         </ul>
         <p>
-          Listings are reviewed by a committee member before they appear. We may edit a listing
-          for length, clarity, formatting or tagging. We may decline or remove any listing, at
-          any time, for any reason — most often because it is out of scope for a marketing
-          student audience, looks unsafe, or we cannot verify it. Review is a sanity check by
-          volunteers, not an investigation, and approval carries no warranty.
+          A committee member reviews every listing before it appears, and we may edit it for
+          length, clarity, formatting or tagging. We may decline or remove any listing at any
+          time, usually because it is out of scope for a marketing student audience, looks
+          unsafe, or cannot be verified. Review is a check by volunteers, not an investigation.
+          Approval carries no warranty.
         </p>
         <p>
-          Your confirmation email contains a private link for editing your own listing. Treat it
-          as you would a password: anyone who has it can change your listing. Let us know if it
+          Your confirmation email contains a private link for editing your listing. Treat it as
+          you would a password, since anyone holding it can change the listing. Tell us if it
           goes astray and we will issue a new one.
         </p>
       </Section>
@@ -116,22 +117,21 @@ export default function TermsPage() {
           display, edit for presentation, and archive it in connection with the Job Board.
         </p>
         <p>
-          The rest of the site — its design, code and the MMSS name and logo — belongs to MMSS.
+          The design, code, and the MMSS name and logo belong to MMSS.
         </p>
       </Section>
 
       <Section heading="Availability and liability">
         <p>
           The board is provided as-is. It is run by volunteers alongside their studies, and we
-          make no promise that it will be available without interruption, or that every listing
-          is current, accurate or complete.
+          do not promise uninterrupted availability or that every listing is current, accurate
+          and complete.
         </p>
         <p>
           To the extent the law allows, MMSS and its committee members are not liable for loss
-          arising from your use of the board — including anything that follows from an
-          application you make, a hire you make, or a listing being wrong, removed, or delayed.
-          Nothing here excludes rights you have under the Australian Consumer Law that cannot be
-          excluded.
+          arising from your use of the board, including anything following from an application
+          you make, a hire you make, or a listing being wrong, removed or delayed. Nothing here
+          excludes rights under the Australian Consumer Law that cannot be excluded.
         </p>
       </Section>
 
