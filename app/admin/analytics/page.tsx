@@ -1,78 +1,53 @@
 import { getAnalyticsSnapshot } from '@/lib/analytics/queries'
-import { resolveRange } from '@/lib/analytics/constants'
-import { RangeTabs } from '@/components/admin/analytics/range-tabs'
-import { MetricCards } from '@/components/admin/analytics/metric-cards'
-import { ChartViewersOverTime } from '@/components/admin/analytics/chart-viewers-over-time'
-import { ChartBarJobType } from '@/components/admin/analytics/chart-bar-job-type'
-import { ChartBarTag } from '@/components/admin/analytics/chart-bar-tag'
+import { resolvePeriod } from '@/lib/analytics/period'
+import {
+  AnalyticsDashboards,
+  AnalyticsEmptyState,
+} from '@/components/admin/analytics/dashboards'
 
 export const metadata = {
   title: 'User Analytics | Admin | MMSS Job Board',
 }
 
 interface PageProps {
-  searchParams: Promise<{ range?: string }>
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>
 }
 
+/**
+ * Two dashboards, one period.
+ *
+ * The page answers two questions that were previously stacked into one
+ * undifferentiated column of cards: how many people the board reached
+ * (Audience) and what those people then did (Engagement). Giving each its own
+ * titled surface is what lets a reader stop at the first one — most weeks the
+ * committee only wants reach — and it puts the funnel and the interest lists
+ * next to the tiles they explain rather than three scroll-lengths below them.
+ *
+ * The period lives in the address, as a preset (`?range=30d`) or a pair of
+ * dates (`?from=…&to=…`), and `resolvePeriod` is total: anything unparseable
+ * becomes the default rather than reaching a Postgres function unchecked. Each
+ * section's header carries a control that writes to it.
+ */
 export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
-  const { range } = await searchParams
-
-  // Resolved against the known ranges rather than passed through: the value
-  // reaches a Postgres function, and an unrecognised period has to become a
-  // real one here rather than further down.
-  const period = resolveRange(range)
-
-  const { dailyBuckets, jobTypes, tags, actions, jobTypeGrowth, tagGrowth, isEmpty } =
-    await getAnalyticsSnapshot(period.value)
-
-  // "Last 3 months" reads as "last 3 months" mid-sentence, and as a tab label
-  // in title case — one string, two positions.
-  const periodLabel = period.label.toLowerCase()
+  const period = resolvePeriod(await searchParams)
+  const snapshot = await getAnalyticsSnapshot(period)
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold text-slate-800 font-heading">
-            User Analytics
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Anonymous engagement across the job board — {periodLabel}, Melbourne time
-          </p>
-        </div>
+      {/* No subtitle. The period is stated by the control in each section
+          header, and the reporting timezone never changes — a line repeating
+          both under every load was furniture. */}
+      <h1 className="mb-5 font-heading text-[22px] font-bold text-slate-800">User Analytics</h1>
 
-        <RangeTabs current={period.value} />
-      </div>
-
-      {isEmpty ? (
-        <EmptyState />
+      {snapshot.isEmpty ? (
+        <AnalyticsEmptyState />
       ) : (
-        <div className="space-y-4">
-          <MetricCards actions={actions} />
-
-          <ChartViewersOverTime data={dailyBuckets} periodLabel={periodLabel} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-            <ChartBarJobType data={jobTypes} growth={jobTypeGrowth} />
-            <ChartBarTag data={tags} growth={tagGrowth} />
-          </div>
-        </div>
+        <AnalyticsDashboards
+          snapshot={snapshot}
+          period={period}
+          basePath="/admin/analytics"
+        />
       )}
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
-      <h2 className="text-base font-semibold text-slate-800 font-heading">
-        No activity recorded yet
-      </h2>
-      <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-        Views, clicks, apply clicks and shares are tracked from the moment a visitor
-        opens the job board. Numbers will appear here once the first visitor arrives —
-        or try a wider time range above.
-      </p>
     </div>
   )
 }

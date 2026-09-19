@@ -11,6 +11,7 @@ npm run lint
 npm test
 npm run db:start # supabase start — needs Docker running
 npm run db:stop
+npm run seed:analytics   # fabricate ~190 days of analytics events (local DB only)
 ```
 
 ## Local Supabase

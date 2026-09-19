@@ -179,18 +179,52 @@
    * would become two near-identical purples.
    *
    * Validated against a light chart surface: worst adjacent CVD separation
-   * ΔE 9.1 (protan), worst normal-vision ΔE 19.6 — both clear of the floors.
+   * ΔE 9.1 (protan), worst normal-vision ΔE 22.9 — both clear of the floors.
    * Re-validate before changing any value.
    *
    * --chart-4 and --chart-5 fall below 3:1 contrast on white, so any chart
-   * using them needs visible direct labels or a table view. Both interest
-   * charts carry both.
+   * using them needs visible direct labels or a table view.
+   *
+   * Restored 2026-09-18. The comment above has said "kept as the validated
+   * categorical set" since the palette was introduced, but the shadcn
+   * migration snapshot (ca504dc) overwrote the five values with the imported
+   * theme's purple ramp and left the prose describing colors that were no
+   * longer there — every value below sat between hue 301.9 and 306.4. That is
+   * what made the two series on the visitors chart indistinguishable: the
+   * chart had no legend and two purples eight percent apart in lightness.
    */
-  --chart-1: oklch(0.827 0.119 306.383); /* MMSS purple — distinct viewers */
-  --chart-2: oklch(0.627 0.265 303.9); /* orange — job views */
-  --chart-3: oklch(0.558 0.288 302.321); /* blue — interest by job type */
-  --chart-4: oklch(0.496 0.265 301.924); /* aqua — interest by tag */
-  --chart-5: oklch(0.438 0.218 303.724); /* yellow — spare */
+  /*
+   * Every graph mark outside the two-series chart — tile sparklines, the
+   * conversion funnel, both ranked interest lists. One value, deliberately:
+   * these are three ways of drawing the same kind of thing (a magnitude next
+   * to the number it belongs to), and giving them a ramp of purples made the
+   * page look like the shades meant something they did not.
+   *
+   * It sits a step lighter than the brand purple the two-series chart uses, so
+   * the tiles and lists read as support around that chart rather than
+   * competing with it. It clears 3:1 against white and against the section
+   * well, so nothing here depends on a reader catching a subtle step.
+   *
+   * Consumers pass it with this same hex as a var() fallback. A stylesheet
+   * that goes stale against newer markup — a dev server mid-restart, a cached
+   * CSS chunk — would otherwise resolve the custom property to nothing, and
+   * an unresolved var() paints a line in inherited near-black and a filled bar
+   * in nothing at all. The fallback is what keeps that failure invisible.
+   */
+  --graph-mark: #8367a3;
+
+  --chart-1: #6b4d8a; /* MMSS purple — distinct viewers */
+  /* Job views, the second series on the same chart. A light lilac rather than
+     the orange this slot used to hold: the dashboard is meant to read as one
+     purple family, so the pair is separated by lightness within the hue
+     instead of by hue. Re-validated as a two-colour categorical set — ΔE 22.9
+     normal vision, 22.9 protan, both well clear of the floors — and it sits
+     below 3:1 against white, which is why that chart carries a legend and a
+     table view rather than relying on the fill alone. */
+  --chart-2: #b18fd6;
+  --chart-3: #2a78d6; /* blue — interest by job type */
+  --chart-4: #1baf7a; /* green — interest by tag */
+  --chart-5: #eda100; /* yellow — spare */
 }
 
 /*

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EVENT_TYPES, VISITOR_COOKIE } from '@/lib/analytics/constants'
+import {
+  DWELL_MAX_MS,
+  DWELL_MIN_MS,
+  EVENT_TYPES,
+  VISITOR_COOKIE,
+} from '@/lib/analytics/constants'
 import type { AnalyticsEventInsert, AnalyticsEventType } from '@/lib/types'
 
 /**
@@ -22,13 +27,31 @@ const noContent = () => new NextResponse(null, { status: 204 })
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
-  const { event_type: eventType, job_id: jobId } = body as {
+  const {
+    event_type: eventType,
+    job_id: jobId,
+    duration_ms: durationMs,
+  } = body as {
     event_type?: string
     job_id?: string
+    duration_ms?: unknown
   }
 
   if (!EVENT_TYPES.includes(eventType as AnalyticsEventType)) return noContent()
   if (typeof jobId !== 'string' || !UUID_RE.test(jobId)) return noContent()
+
+  // `dwell` is the only event carrying a measurement, and the only one a
+  // client could use to distort an average rather than just inflate a count.
+  // Out-of-range or non-integer durations are dropped outright rather than
+  // clamped: a clamped value is a number this route invented, and it would be
+  // indistinguishable in the table from one a visitor actually produced. The
+  // same bounds are a CHECK constraint on the column (0022) — this is the
+  // polite half of the pair, not the enforcement.
+  const isDwell = eventType === 'dwell'
+  const duration = isDwell ? toDuration(durationMs) : null
+
+  if (isDwell && duration === null) return noContent()
+  if (!isDwell && durationMs !== undefined) return noContent()
 
   // The visitor id comes from the cookie, never from the request body — a
   // client that could name its own visitor id could invent unlimited distinct
@@ -40,6 +63,7 @@ export async function POST(request: Request) {
     event_type: eventType as AnalyticsEventType,
     job_id: jobId,
     visitor_id: visitorId,
+    ...(duration === null ? {} : { duration_ms: duration }),
   }
 
   // Service role: `analytics_events` has no public INSERT policy, so this is
@@ -53,4 +77,14 @@ export async function POST(request: Request) {
   }
 
   return noContent()
+}
+
+/** A whole number of milliseconds inside the accepted band, or nothing. */
+function toDuration(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+
+  const ms = Math.round(value)
+  if (ms < DWELL_MIN_MS || ms > DWELL_MAX_MS) return null
+
+  return ms
 }

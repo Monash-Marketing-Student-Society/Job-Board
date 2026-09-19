@@ -1,105 +1,126 @@
-import { ACTION_LABELS } from '@/lib/analytics/constants'
-import type { ActionCounts, AnalyticsEventType } from '@/lib/types'
+import { Delta } from './delta'
+import { Sparkline } from './sparkline'
+import type { MetricTile } from '@/lib/analytics/metrics'
 
-interface MetricCardsProps {
-  actions: ActionCounts
+/**
+ * The headline tiles — one card per figure.
+ *
+ * These used to be four cells of a single divided strip, on the reasoning that
+ * the gaps between separate cards were buying separation a hairline already
+ * provided. That held while a cell was a label, a number and a qualifier. It
+ * stops holding once each figure also carries its own movement and its own
+ * 44px-tall shape: inside one continuous surface four sparklines read as one
+ * broken line, and the divider that used to separate two numbers now has to
+ * separate two little charts. Separate cards, each with its own edge, are what
+ * keep them four independent claims.
+ *
+ * Every tile is the same three rows — label, figure, shape — so a reader's eye
+ * lands in the same place on each one and the row scans horizontally. Where a
+ * measure has no honest daily shape (a distinct count is not additive across
+ * days) the third row carries the caveat instead, which is the one thing that
+ * genuinely cannot be inferred from the label.
+ */
+export function MetricCards({
+  tiles,
+  periodLabel,
+}: {
+  tiles: MetricTile[]
+  /** Lower-cased period, for the movement figure's screen-reader text. */
+  periodLabel?: string
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {tiles.map((tile) => (
+        <MetricCard key={tile.key} tile={tile} periodLabel={periodLabel} />
+      ))}
+    </div>
+  )
+}
+
+function MetricCard({ tile, periodLabel }: { tile: MetricTile; periodLabel?: string }) {
+  const hasShape = tile.series.length > 1
+
+  return (
+    <article className="flex min-h-[136px] flex-col justify-between rounded-xl border border-slate-200 bg-white px-5 pb-4 pt-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div>
+        <p className="text-[13px] font-medium text-slate-500">{tile.label}</p>
+
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <p className="font-heading text-[28px] font-bold leading-none tracking-tight text-slate-900 tabular-nums">
+            {formatValue(tile)}
+          </p>
+          <Delta trend={tile.trend} periodLabel={periodLabel} />
+        </div>
+      </div>
+
+      <div className="mt-3">
+        {hasShape && (
+          <Sparkline
+            id={tile.key}
+            values={tile.series}
+            // One hue for every shape on the page, rising or falling. Painting
+            // the line green or red made the movement the loudest thing in the
+            // row — a −0.4% drift turned a whole tile red — and it said nothing
+            // the arrow and the sign beside the figure had not already said.
+            // The same value every other graph mark on the page uses; the
+            // hex repeats it as a var() fallback, so a stale stylesheet can
+            // never render this line in inherited near-black.
+            className="h-11 text-[var(--graph-mark,#8367a3)]"
+            label={`${tile.label}, day by day across the period`}
+          />
+        )}
+
+        {/* Only ever present where it changes how the figure should be read —
+            a count that cannot be summed, a total that is really a floor. The
+            line is reserved on every tile that has a shape, note or not, so
+            one caveat in a row does not push its neighbour's sparkline out of
+            line with the rest. */}
+        {(tile.note || hasShape) && (
+          <p className="mt-1.5 min-h-[14px] text-pretty text-[11px] leading-snug text-slate-400">
+            {tile.note}
+          </p>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function formatValue(tile: MetricTile): string {
+  switch (tile.format) {
+    case 'duration':
+      return formatDuration(tile.value)
+    case 'percent':
+      return `${format(tile.value, 1)}%`
+    case 'decimal':
+      return format(tile.value, 1)
+    default:
+      return format(tile.value, 0)
+  }
 }
 
 /**
- * The headline counters.
+ * Seconds as a reader says them: "48s", "5m 38s", "1h 02m".
  *
- * One surface divided into four cells rather than four separate cards. The
- * figures are short and the tiles were far wider than anything in them, so the
- * card gaps and the six edges of padding between them were buying separation
- * that a single hairline rule already provides. Value and qualifier share a
- * baseline for the same reason — stacking them spent vertical space to leave
- * the horizontal space emptier.
- *
- * Each cell is a label, a number and one qualifying line. The qualifier earns
- * its place by saying something the label cannot: how many distinct jobs an
- * action touched (because "jobs clicked" is ambiguous between the event count
- * and the job count), or what the confirmed-application figure is a share of.
- * The reporting window is stated once in the page header rather than repeated
- * on every cell here.
- *
- * Apply clicks is deliberately not tiled, but the figure is still read below to
- * express confirmed applications as a conversion rate — that ratio is what makes
- * the Applications number interpretable.
+ * Never a bare count of seconds past a minute — "338s" is a number you have to
+ * do arithmetic on before it means anything, and this figure exists to be read
+ * at a glance.
  */
-const TRACKED: AnalyticsEventType[] = ['view', 'click', 'share']
+function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds))
 
-export function MetricCards({ actions }: MetricCardsProps) {
-  const applyClicks = actions.apply.events
-  const confirmed = actions.apply_confirmed.events
+  if (seconds < 60) return `${seconds}s`
 
-  // Share of people who left to apply and came back to say they finished.
-  // Only meaningful once there is something to divide by.
-  const confirmRate = applyClicks > 0 ? Math.round((confirmed / applyClicks) * 100) : null
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
 
-  return (
-    <div
-      className="bg-white rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1
-                 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100"
-    >
-      {TRACKED.map((action) => (
-        <Cell
-          key={action}
-          label={ACTION_LABELS[action]}
-          value={actions[action].events}
-          detail={`${formatNumber(actions[action].distinct_jobs)} ${
-            actions[action].distinct_jobs === 1 ? 'job' : 'jobs'
-          }`}
-        />
-      ))}
+  if (minutes < 60) return `${minutes}m ${String(rest).padStart(2, '0')}s`
 
-      <Cell
-        label={ACTION_LABELS.apply_confirmed}
-        value={confirmed}
-        // Kept, unlike the other descriptions: that this figure is a floor and
-        // not a total is the one thing a reader cannot infer from the label,
-        // and getting it wrong overstates how many people actually applied.
-        detail={
-          confirmRate === null
-            ? 'No apply clicks yet'
-            : `${confirmRate}% of apply clicks · a floor, not a total`
-        }
-        emphasis
-      />
-    </div>
-  )
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
 
-function Cell({
-  label,
-  value,
-  detail,
-  emphasis = false,
-}: {
-  label: string
-  value: number
-  detail: string
-  emphasis?: boolean
-}) {
-  return (
-    <div className="px-5 py-3.5">
-      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-      <div className="flex items-baseline gap-2 flex-wrap mt-1.5">
-        <p
-          // Emphasis is carried by the brand colour rather than the outlined
-          // card it replaces: inside a divided strip a coloured border would
-          // read as a boundary between cells, not as weight on one figure.
-          className={`text-[26px] leading-none font-bold font-heading ${
-            emphasis ? 'text-primary' : 'text-slate-800'
-          }`}
-        >
-          {formatNumber(value)}
-        </p>
-        <p className="text-[11px] text-slate-400 leading-snug">{detail}</p>
-      </div>
-    </div>
-  )
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-AU').format(value)
+function format(value: number, decimals: number): string {
+  return new Intl.NumberFormat('en-AU', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value)
 }
