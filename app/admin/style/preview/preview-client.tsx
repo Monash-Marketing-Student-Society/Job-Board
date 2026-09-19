@@ -27,7 +27,7 @@ import { MetricCards } from '@/components/admin/analytics/metric-cards'
 import { JobCard } from '@/components/jobs/job-card'
 import { cn } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
-import { previewJobs, previewActionCounts, previewJobTypeChart, previewSubmissions } from './mock-data'
+import { previewJobs, previewMetricTiles, previewJobTypeChart, previewSubmissions } from './mock-data'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select job type' },
@@ -263,7 +263,7 @@ export function ThemePreviewClient() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Metric cards · components/admin/analytics/metric-cards.tsx, unmodified
           </p>
-          <MetricCards actions={previewActionCounts} />
+          <MetricCards tiles={previewMetricTiles} periodLabel="last 30 days" />
         </div>
 
         {/* Admin table snippet */}

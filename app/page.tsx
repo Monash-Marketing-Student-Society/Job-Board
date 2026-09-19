@@ -8,6 +8,7 @@ import { JobsHeader } from '@/components/jobs/jobs-header'
 import { JobCard } from '@/components/jobs/job-card'
 import { ApplyConfirmPrompt } from '@/components/jobs/apply-confirm-prompt'
 import { trackEvent } from '@/lib/analytics/track'
+import { useDwellTracking } from '@/hooks/use-dwell-tracking'
 import type { Job } from '@/lib/types'
 
 const JOBS_PER_PAGE = 25
@@ -15,6 +16,12 @@ const JOBS_PER_PAGE = 25
 export default function HomePage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  // The listing the visitor actually opened, as opposed to the one the board
+  // happens to be showing: `selectedJob` is auto-filled with the first result
+  // on every load, and timing that panel would credit whatever sorts first
+  // with every idle minute anyone spends on the page. Set in exactly the two
+  // places a `view` is recorded.
+  const [openedJobId, setOpenedJobId] = useState<string | null>(null)
   const [totalJobs, setTotalJobs] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -117,6 +124,7 @@ export default function HomePage() {
       setShowDetail(true)
       setLinkedJobId(null)
       trackEvent('view', found.id)
+      setOpenedJobId(found.id)
     } else {
       // Job not in current page — fetch it directly and show in the panel
       const supabase = createClient()
@@ -125,11 +133,14 @@ export default function HomePage() {
           setSelectedJob(data as Job)
           setShowDetail(true)
           trackEvent('view', (data as Job).id)
+          setOpenedJobId((data as Job).id)
         }
         setLinkedJobId(null)
       })
     }
   }, [jobs, linkedJobId, isLoading])
+
+  useDwellTracking(openedJobId)
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -143,10 +154,14 @@ export default function HomePage() {
     // which produce a view with no click (see the ?job= effect above).
     trackEvent('click', job.id)
     trackEvent('view', job.id)
+    setOpenedJobId(job.id)
   }
 
   const handleBack = () => {
     setShowDetail(false)
+    // Closing the panel ends the reading stretch, so the dwell measurement is
+    // sent here rather than waiting for the next listing or the page unload.
+    setOpenedJobId(null)
   }
 
   const handlePageChange = (page: number) => {

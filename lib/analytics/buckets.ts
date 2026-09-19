@@ -24,11 +24,6 @@ import type {
 
 const MS_PER_DAY = 86_400_000
 
-const SHORT_MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-]
-
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -218,18 +213,27 @@ export function bucketWindow(
   }
 }
 
-/** Every bucket start in the window, oldest first. */
+/**
+ * Every bucket start in the window, oldest first.
+ *
+ * `offsetBuckets` slides the whole window back without changing its length —
+ * 0 ends at the current bucket, 7 ends a week ago — mirroring the
+ * `p_offset_buckets` argument the SQL takes (0023), so a client-side series
+ * and the rows the database returns describe the same window.
+ */
 export function bucketSeries(
   granularity: Granularity,
   count: number,
   now: Date,
-  timeZone: string = REPORTING_TIMEZONE
+  timeZone: string = REPORTING_TIMEZONE,
+  offsetBuckets = 0
 ): Date[] {
   const buckets = Math.max(1, Math.trunc(count))
+  const offset = Math.max(0, Math.trunc(offsetBuckets))
   const current = bucketStart(granularity, now, timeZone)
 
   return Array.from({ length: buckets }, (_, i) =>
-    shiftBucket(granularity, current, i - (buckets - 1), timeZone)
+    shiftBucket(granularity, current, i - (buckets - 1) - offset, timeZone)
   )
 }
 
@@ -237,7 +241,7 @@ export function bucketSeries(
  * Axis label for a bucket.
  *
  * One convention across the whole dashboard, keyed off granularity:
- * `12 March` (week), `March 2026` (month and quarter), `2026` (year).
+ * `12-03` (day and week), `March 2026` (month and quarter), `2026` (year).
  */
 export function bucketLabel(
   granularity: Granularity,
@@ -248,16 +252,17 @@ export function bucketLabel(
   const month = MONTH_NAMES[local.month - 1]
 
   switch (granularity) {
-    // Short month and day, matching the reference design: "Apr 5". Days never
-    // carry a year — a 90-day axis is unambiguous without one.
+    // Day-month, zero-padded, and the same shape for both cadences — a week
+    // is labelled by the day it opens. Fixed-width is the point: "8 June" and
+    // "24 September" are nine characters apart, so a row of them can only be
+    // spaced evenly by accident, and the axis ends up looking arranged by
+    // hand. Every label here is five characters wide.
+    //
+    // Neither carries a year. Across ninety days it is never in doubt, and the
+    // table under the chart has the full date for anyone who needs it.
     case 'day':
-      return `${SHORT_MONTH_NAMES[local.month - 1]} ${local.day}`
-
-    // The bucket's opening day. Week labels carry no year: across a 12-week
-    // window the year is never in doubt, and "29 December" reads better than
-    // the ISO "W1 2026" it replaces — which was accurate but needed explaining.
     case 'week':
-      return `${local.day} ${month}`
+      return `${pad(local.day)}-${pad(local.month)}`
 
     // Quarters are labelled by their opening month rather than "Q3 2026". Note
     // this makes a quarter bucket visually identical to a month bucket; the
@@ -269,6 +274,38 @@ export function bucketLabel(
     case 'year':
       return String(local.year)
   }
+}
+
+/** Two digits, so every label on the axis is the same width. */
+function pad(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+/**
+ * Evenly spaced x-axis ticks, anchored to the most recent bucket.
+ *
+ * Recharts' own thinning (`interval="preserveStartEnd"` with a minimum gap)
+ * decides tick by tick whether the next label would collide, which on thirteen
+ * weekly buckets produced 22 June, 6 July, 13, 20, 27, 10 August, 24 August,
+ * 14 September — gaps of two weeks, then one, then one, then two. Every label
+ * was true and the row of them was noise, because uneven spacing reads as
+ * uneven *time*.
+ *
+ * This picks one stride and holds it, walking back from the newest bucket so
+ * the right-hand edge — the date a reader looks at first — is always labelled.
+ * When the stride does not divide the window exactly, the remainder is left
+ * unlabelled at the left edge rather than spent on a closer pair somewhere in
+ * the middle.
+ */
+export function evenlySpacedTicks(labels: string[], maxTicks = 7): string[] {
+  if (labels.length <= maxTicks) return labels
+
+  const stride = Math.ceil((labels.length - 1) / (maxTicks - 1))
+  const ticks: string[] = []
+
+  for (let i = labels.length - 1; i >= 0; i -= stride) ticks.unshift(labels[i])
+
+  return ticks
 }
 
 export interface FilledBucket {
@@ -291,7 +328,8 @@ export function fillBuckets(
   granularity: Granularity,
   count: number,
   now: Date,
-  timeZone: string = REPORTING_TIMEZONE
+  timeZone: string = REPORTING_TIMEZONE,
+  offsetBuckets = 0
 ): FilledBucket[] {
   const byInstant = new Map<number, ViewerBucket>()
   for (const row of rows) {
@@ -299,7 +337,7 @@ export function fillBuckets(
     if (!Number.isNaN(instant)) byInstant.set(instant, row)
   }
 
-  return bucketSeries(granularity, count, now, timeZone).map((bucket) => {
+  return bucketSeries(granularity, count, now, timeZone, offsetBuckets).map((bucket) => {
     const row = byInstant.get(bucket.getTime())
     return {
       bucketStart: bucket.toISOString(),
@@ -308,6 +346,51 @@ export function fillBuckets(
       views: row?.views ?? 0,
     }
   })
+}
+
+/** One row of `analytics_actions_by_bucket` (0021). */
+export interface ActionBucketRow {
+  bucket_start: string
+  action: string
+  events: number
+}
+
+/**
+ * Turn per-bucket action rows into one dense series per event type.
+ *
+ * Same contract as `fillBuckets`: the caller gets exactly `count` values per
+ * action, oldest first, regardless of what the database sent. The SQL already
+ * zero-fills both dimensions, so this is the second line of defence — but it is
+ * also what guarantees every series is the same length, which the tiles rely on
+ * when they cut a double-length window in half.
+ */
+export function fillActionSeries(
+  rows: ActionBucketRow[] | null | undefined,
+  granularity: Granularity,
+  count: number,
+  now: Date,
+  timeZone: string = REPORTING_TIMEZONE,
+  offsetBuckets = 0
+): Record<AnalyticsEventType, number[]> {
+  const byAction = new Map<string, Map<number, number>>()
+
+  for (const row of rows ?? []) {
+    const instant = new Date(row.bucket_start).getTime()
+    if (Number.isNaN(instant)) continue
+
+    const series = byAction.get(row.action) ?? new Map<number, number>()
+    series.set(instant, Number(row.events) || 0)
+    byAction.set(row.action, series)
+  }
+
+  const buckets = bucketSeries(granularity, count, now, timeZone, offsetBuckets)
+
+  return Object.fromEntries(
+    EVENT_TYPES.map((type) => {
+      const series = byAction.get(type)
+      return [type, buckets.map((bucket) => series?.get(bucket.getTime()) ?? 0)]
+    })
+  ) as Record<AnalyticsEventType, number[]>
 }
 
 const EMPTY_COUNT = { events: 0, distinct_jobs: 0, visitors: 0 }
@@ -350,6 +433,35 @@ export interface InterestSlice {
  * The "Other" row is kept rather than discarded so the bars still sum to the
  * real total.
  */
+/**
+ * Every label in a vocabulary, whether or not anybody touched it.
+ *
+ * The interest breakdown only knows about labels that produced an event, so a
+ * tag nothing was tagged with — or a tag nobody opened — simply is not in the
+ * result. For the bars that is right: an empty row is a row of nothing. For the
+ * table under them it is not, because "which of our tags got no interest at
+ * all this period" is a real question, and a missing row answers it only if the
+ * reader already knows the whole vocabulary by heart.
+ *
+ * Labels present in the data but absent from the vocabulary are kept rather
+ * than dropped: tag membership has only been enforced since 0018, and history
+ * predating it still carries what it carries.
+ */
+export function withVocabulary(
+  slices: InterestSlice[],
+  vocabulary: readonly string[]
+): InterestSlice[] {
+  const byLabel = new Map(slices.map((slice) => [slice.label, slice]))
+
+  for (const label of vocabulary) {
+    if (!byLabel.has(label)) byLabel.set(label, { label, events: 0, visitors: 0 })
+  }
+
+  return [...byLabel.values()].sort(
+    (a, b) => b.events - a.events || a.label.localeCompare(b.label)
+  )
+}
+
 export function topInterests(
   rows: InterestRow[] | null | undefined,
   dimension: InterestRow['dimension'],

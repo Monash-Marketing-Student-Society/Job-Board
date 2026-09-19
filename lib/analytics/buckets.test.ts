@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { EVENT_TYPES } from './constants'
 import {
   bucketStart,
   shiftBucket,
@@ -8,6 +9,8 @@ import {
   fillBuckets,
   normalizeActionCounts,
   topInterests,
+  withVocabulary,
+  evenlySpacedTicks,
 } from './buckets'
 import type { ActionCountRow, InterestRow, ViewerBucket } from '@/lib/types'
 
@@ -184,9 +187,16 @@ describe('bucketLabel', () => {
     expect(bucketLabel('year', bucketStart('year', now, TZ), TZ)).toBe('2026')
   })
 
-  it('labels a week by the day it opens, in "DD Month"', () => {
+  it('labels a week by the day it opens, in DD-MM', () => {
     const week = bucketStart('week', new Date('2026-08-12T05:00:00Z'), TZ)
-    expect(bucketLabel('week', week, TZ)).toBe('10 August')
+    expect(bucketLabel('week', week, TZ)).toBe('10-08')
+  })
+
+  it('labels a day the same way a week is labelled', () => {
+    // One shape for both cadences: the axis is read the same way whether a
+    // point is a day or the week it opens.
+    const day = bucketStart('day', new Date('2026-08-12T05:00:00Z'), TZ)
+    expect(bucketLabel('day', day, TZ)).toBe('12-08')
   })
 
   it('names the opening day of a week that starts in the previous year', () => {
@@ -195,7 +205,7 @@ describe('bucketLabel', () => {
     // the reader to know ISO week numbering.
     const week = bucketStart('week', new Date('2025-12-30T05:00:00Z'), TZ)
     expect(iso(week)).toBe('2025-12-28T13:00:00.000Z')
-    expect(bucketLabel('week', week, TZ)).toBe('29 December')
+    expect(bucketLabel('week', week, TZ)).toBe('29-12')
   })
 
   it('produces distinct, ordered labels across a year boundary', () => {
@@ -203,20 +213,15 @@ describe('bucketLabel', () => {
     const labels = Array.from({ length: 6 }, (_, i) =>
       bucketLabel('week', shiftBucket('week', start, i, TZ), TZ)
     )
-    expect(labels).toEqual([
-      '8 December',
-      '15 December',
-      '22 December',
-      '29 December',
-      '5 January',
-      '12 January',
-    ])
+    expect(labels).toEqual(['08-12', '15-12', '22-12', '29-12', '05-01', '12-01'])
     expect(new Set(labels).size).toBe(labels.length)
   })
 
-  it('does not zero-pad single-digit days', () => {
+  it('zero-pads, so every label on the axis is the same width', () => {
+    // Fixed width is what lets the axis be spaced evenly: "5-1" beside "12-01"
+    // would centre differently under its own tick.
     const week = bucketStart('week', new Date('2026-01-07T05:00:00Z'), TZ)
-    expect(bucketLabel('week', week, TZ)).toBe('5 January')
+    expect(bucketLabel('week', week, TZ)).toBe('05-01')
   })
 })
 
@@ -324,6 +329,7 @@ describe('normalizeActionCounts', () => {
       'apply',
       'apply_confirmed',
       'click',
+      'dwell',
       'share',
       'view',
     ])
@@ -402,7 +408,7 @@ describe('normalizeActionCounts', () => {
     ] as unknown as ActionCountRow[]
 
     const counts = normalizeActionCounts(rows)
-    expect(Object.keys(counts)).toHaveLength(5)
+    expect(Object.keys(counts)).toHaveLength(EVENT_TYPES.length)
     expect(counts.view.events).toBe(2)
   })
 
@@ -479,5 +485,88 @@ describe('topInterests', () => {
   it('clamps a zero limit to one real row plus Other', () => {
     const result = topInterests(rows, 'job_type', 0)
     expect(result.map((r) => r.label)).toEqual(['internship', 'Other'])
+  })
+})
+
+describe('withVocabulary', () => {
+  const slices = [
+    { label: 'Analytics', events: 40, visitors: 20 },
+    { label: 'Creative', events: 10, visitors: 5 },
+  ]
+
+  it('adds every untouched label as a zero row', () => {
+    const all = withVocabulary(slices, ['Analytics', 'Creative', 'Events', 'Brand'])
+
+    expect(all.map((slice) => slice.label)).toEqual([
+      'Analytics',
+      'Creative',
+      'Brand',
+      'Events',
+    ])
+    expect(all.find((slice) => slice.label === 'Brand')).toEqual({
+      label: 'Brand',
+      events: 0,
+      visitors: 0,
+    })
+  })
+
+  it('keeps labels the vocabulary has never heard of', () => {
+    // Tag membership has only been enforced since 0018; history predating it
+    // still carries what it carries, and dropping those rows would make the
+    // table disagree with the totals above it.
+    const all = withVocabulary(
+      [...slices, { label: 'Supply Chain', events: 7, visitors: 3 }],
+      ['Analytics', 'Creative']
+    )
+
+    expect(all.map((slice) => slice.label)).toContain('Supply Chain')
+  })
+
+  it('never lets an untouched label outrank one with interest', () => {
+    const all = withVocabulary(slices, ['Zebra', 'Analytics'])
+
+    expect(all[0].label).toBe('Analytics')
+    expect(all[all.length - 1].label).toBe('Zebra')
+  })
+})
+
+describe('evenlySpacedTicks', () => {
+  const labels = (count: number) =>
+    Array.from({ length: count }, (_, i) => String(i).padStart(2, '0'))
+
+  it('labels everything when the window is short enough', () => {
+    expect(evenlySpacedTicks(labels(7))).toEqual(labels(7))
+  })
+
+  it('holds one stride across the whole axis', () => {
+    // The failure this exists to prevent: gaps of two weeks, then one, then
+    // one, then two, which reads as uneven time rather than uneven labelling.
+    const ticks = evenlySpacedTicks(labels(13))
+    const positions = ticks.map((tick) => labels(13).indexOf(tick))
+    const gaps = positions.slice(1).map((position, i) => position - positions[i])
+
+    expect(new Set(gaps).size).toBe(1)
+  })
+
+  it('always labels the most recent bucket', () => {
+    for (const count of [8, 13, 30, 90]) {
+      const all = labels(count)
+      expect(evenlySpacedTicks(all).at(-1)).toBe(all.at(-1))
+    }
+  })
+
+  it('never returns more ticks than asked for', () => {
+    for (const count of [8, 13, 30, 90]) {
+      expect(evenlySpacedTicks(labels(count)).length).toBeLessThanOrEqual(7)
+    }
+  })
+
+  it('spends the remainder at the left edge, not in the middle', () => {
+    // 30 buckets at a stride of 5 leaves four unlabelled at the start; what
+    // must never happen is one short gap somewhere inside the axis.
+    const all = labels(30)
+    const ticks = evenlySpacedTicks(all)
+
+    expect(ticks).toEqual(['04', '09', '14', '19', '24', '29'])
   })
 })

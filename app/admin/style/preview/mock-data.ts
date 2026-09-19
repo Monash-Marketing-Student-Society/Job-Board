@@ -1,3 +1,4 @@
+import type { MetricTile } from '@/lib/analytics/metrics'
 import type { ActionCounts, Job } from '@/lib/types'
 
 /**
@@ -61,7 +62,55 @@ export const previewActionCounts: ActionCounts = {
   apply: { events: 231, distinct_jobs: 33, visitors: 220 },
   apply_confirmed: { events: 94, distinct_jobs: 28, visitors: 94 },
   share: { events: 37, distinct_jobs: 15, visitors: 35 },
+  dwell: { events: 2860, distinct_jobs: 58, visitors: 1420 },
 }
+
+/**
+ * Tiles for the metric-card block.
+ *
+ * Hand-written rather than derived from `previewActionCounts`: the tiles carry
+ * a movement figure and a daily shape, and the preview exists to judge how
+ * those look at their extremes — a rising series, a falling one, and a figure
+ * with no honest comparison at all — not to re-derive numbers the dashboard
+ * already derives from the database.
+ */
+export const previewMetricTiles: MetricTile[] = [
+  {
+    key: 'preview-viewers',
+    label: 'Distinct viewers',
+    value: 1904,
+    format: 'count',
+    series: [],
+    trend: { changePct: null, direction: 'insufficient' },
+    note: 'Unique visitors over the period — not the sum of the daily counts',
+  },
+  {
+    key: 'preview-views',
+    label: 'Job views',
+    value: 4218,
+    format: 'count',
+    series: [38, 41, 36, 52, 47, 58, 61, 55, 67, 64, 72, 69, 78, 83],
+    trend: { changePct: 44.6, direction: 'up' },
+  },
+  {
+    key: 'preview-depth',
+    label: 'Views per viewer',
+    value: 2.2,
+    format: 'decimal',
+    series: [1.8, 2.1, 1.9, 2.4, 2.2, 2.0, 2.3, 2.6, 2.2, 2.4, 2.1, 2.3, 2.5, 2.2],
+    trend: { changePct: 0, direction: 'flat' },
+    note: 'How many listings a viewer opens on an average day',
+  },
+  {
+    key: 'preview-applications',
+    label: 'Applications',
+    value: 94,
+    format: 'count',
+    series: [12, 11, 13, 9, 10, 8, 9, 7, 8, 6, 7, 5, 6, 4],
+    trend: { changePct: -18.4, direction: 'down' },
+    note: 'Self-reported on return — a floor, not a total',
+  },
+]
 
 export const previewJobTypeChart = [
   { job_type: 'Internship', events: 182 },

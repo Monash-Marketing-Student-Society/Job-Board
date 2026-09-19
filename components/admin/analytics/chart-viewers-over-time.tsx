@@ -1,105 +1,141 @@
 'use client'
 
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui'
-import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
+import { Panel } from './panel'
+import { evenlySpacedTicks } from '@/lib/analytics/buckets'
 import type { FilledBucket } from '@/lib/analytics/buckets'
 
-export const description = 'An area chart of total visitors over the reporting period'
+export const description = 'An area chart of job views and distinct viewers over the reporting period'
 
 /**
- * Unchanged: MMSS purple for distinct viewers, orange for job views. The
- * reference design is monochrome on a dark surface; only its structure and
- * interaction are adopted here, not its palette.
+ * Two series, one hue, one legend.
+ *
+ * The pair used to be genuinely indistinguishable: the shadcn migration
+ * replaced the categorical palette in globals.css with the imported theme's
+ * five-step purple ramp, so `--chart-1` and `--chart-2` became two purples a
+ * few percent of lightness apart — and the chart carried no legend, so nothing
+ * on screen said which was which.
+ *
+ * The fix is not a second hue. The dashboard reads as one purple family, so the
+ * two series are separated *within* the hue instead: deep brand purple against
+ * a light lilac, re-validated as a two-colour categorical set (ΔE 22.9 normal
+ * vision and under colour-vision deficiency, against a floor of 15). What the
+ * old pairing was actually missing was the legend, and that is no longer
+ * optional — with two series, identity is never carried by colour alone.
  */
 const chartConfig = {
-  viewers: {
-    label: 'Distinct viewers',
-    color: 'var(--chart-1)',
-  },
   views: {
-    label: 'Job views',
+    label: 'Page Views',
     color: 'var(--chart-2)',
+  },
+  viewers: {
+    label: 'Visitors',
+    color: 'var(--chart-1)',
   },
 } satisfies ChartConfig
 
 /**
- * Total visitors over time, for whatever period the page is showing.
- *
- * The card used to carry its own range tabs — a second time control that moved
- * this chart and nothing else, so the series could be showing a week while the
- * counters above it reported a quarter. The page-level control is now the only
- * one, and the server sends exactly the days it asked for: no client-side
- * slicing, no local range state, and one period stated once in the header.
+ * Job views and distinct viewers over the selected period.
  *
  * The two series are overlaid, not stacked. Job views already contains every
  * distinct viewer, so a stacked height would be a number that means nothing;
- * overlaying shows the gap between reach and repeat visits.
+ * overlaying shows the gap between reach and repeat visits, which is the whole
+ * point of drawing them together.
+ *
+ * The card used to carry its own range tabs, which meant the series could be
+ * showing a week while the tiles above it reported a quarter. It shows exactly
+ * the window the section it sits in names, and nothing on the card changes it.
  */
 export function ChartViewersOverTime({
   data,
-  periodLabel,
+  cadence,
 }: {
   data: FilledBucket[]
-  /** Already lower-cased by the page, which owns the wording. */
-  periodLabel: string
+  /** "Daily" or "Weekly" — what one point on the line covers. */
+  cadence: string
 }) {
-  return (
-    <Card className="bg-white rounded-2xl border-slate-200">
-      <CardHeader className="border-b py-5">
-        <CardTitle className="text-base">Total Visitors</CardTitle>
-        <CardDescription>Total for the {periodLabel}</CardDescription>
-      </CardHeader>
+  const isWeekly = cadence.toLowerCase().startsWith('week')
+  const ticks = evenlySpacedTicks(data.map((bucket) => bucket.label))
 
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <VisitorsPanel buckets={data} />
-      </CardContent>
-    </Card>
-  )
-}
-
-function VisitorsPanel({ buckets }: { buckets: FilledBucket[] }) {
   return (
-    <>
-      <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
-        <AreaChart data={buckets}>
+    <Panel title="Page Views & Visitors" bodyClassName="pt-1">
+      <ChartContainer config={chartConfig} className="aspect-auto h-[280px] w-full">
+        {/* The right margin is the last tick's other half: its label is centred
+            on the final bucket, which sits flush against the plot's edge, so
+            without the room the newest date renders as "14-0". */}
+        <AreaChart data={data} margin={{ left: 4, right: 20, top: 10 }}>
           <defs>
-            <linearGradient id="fillViewers" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-viewers)" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="var(--color-viewers)" stopOpacity={0.1} />
-            </linearGradient>
+            {/* The wash carries the shape; the stroke carries the identity.
+                Both fade to nothing at the baseline so the two overlapping
+                areas never build into a third, muddier colour. */}
             <linearGradient id="fillViews" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--color-views)" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="var(--color-views)" stopOpacity={0.1} />
+              <stop offset="0%" stopColor="var(--color-views)" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="var(--color-views)" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="fillViewers" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-viewers)" stopOpacity={0.16} />
+              <stop offset="100%" stopColor="var(--color-viewers)" stopOpacity={0.01} />
             </linearGradient>
           </defs>
+
           <CartesianGrid vertical={false} />
+
+          {/* The chart had no value axis at all, so every point was a shape
+              with no magnitude — "is that peak forty or four hundred?" had to
+              be answered by hovering. Four ticks are enough to read a level
+              off; more would compete with the series for attention. */}
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tickCount={4}
+            width={36}
+            tickMargin={6}
+            fontSize={11}
+            allowDecimals={false}
+          />
+
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            tickMargin={8}
-            minTickGap={32}
+            tickMargin={10}
+            fontSize={11}
+            // The ticks are chosen, not thinned. Recharts' own collision
+            // avoidance drops labels one at a time and leaves the survivors
+            // unevenly spaced, which reads as uneven time — see
+            // `evenlySpacedTicks`. `interval={0}` stops it second-guessing the
+            // list it is handed.
+            ticks={ticks}
+            interval={0}
           />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+
+          <ChartTooltip cursor content={<ChartTooltipContent indicator="dot" />} />
+
+          {/* Views is drawn first, and so sits behind: it is always the larger
+              series, and painting it over viewers would hide them entirely.
+
+              `natural` rather than `monotone`: both pass through every value,
+              but monotone flattens its approach to each point to guarantee it
+              never overshoots, which on daily data turns every weekend dip
+              into a pair of hard shoulders. A natural spline carries its
+              curvature through the point instead, which is the soft flow this
+              chart is read for. */}
           <Area
             dataKey="views"
             isAnimationActive={false}
             type="natural"
             fill="url(#fillViews)"
             stroke="var(--color-views)"
+            strokeWidth={2}
           />
           <Area
             dataKey="viewers"
@@ -107,30 +143,30 @@ function VisitorsPanel({ buckets }: { buckets: FilledBucket[] }) {
             type="natural"
             fill="url(#fillViewers)"
             stroke="var(--color-viewers)"
+            strokeWidth={2}
           />
+
+          <ChartLegend content={<ChartLegendContent />} />
         </AreaChart>
       </ChartContainer>
 
-      <p className="text-[11px] text-muted-foreground mt-2 px-2 sm:px-0">
-        Viewers are counted per day and do not sum across days.
-      </p>
 
-      <details className="mt-3 px-2 sm:px-0">
-        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground select-none">
+      <details className="mt-3">
+        <summary className="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-800">
           View as table
         </summary>
         <div className="mt-2 max-h-64 overflow-auto">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-white">
-              <tr className="text-left text-muted-foreground border-b border-border">
-                <th className="py-1.5 pr-4 font-medium">Day</th>
-                <th className="py-1.5 pr-4 font-medium text-right">Distinct viewers</th>
-                <th className="py-1.5 font-medium text-right">Job views</th>
+              <tr className="border-b border-slate-200 text-left text-slate-500">
+                <th className="py-1.5 pr-4 font-medium">{isWeekly ? 'Week of' : 'Day'}</th>
+                <th className="py-1.5 pr-4 text-right font-medium">Visitors</th>
+                <th className="py-1.5 text-right font-medium">Page Views</th>
               </tr>
             </thead>
             <tbody>
-              {buckets.map((row) => (
-                <tr key={row.bucketStart} className="border-b border-border/50 last:border-0">
+              {data.map((row) => (
+                <tr key={row.bucketStart} className="border-b border-slate-100 last:border-0">
                   <td className="py-1.5 pr-4">{row.label}</td>
                   <td className="py-1.5 pr-4 text-right tabular-nums">{row.viewers}</td>
                   <td className="py-1.5 text-right tabular-nums">{row.views}</td>
@@ -140,6 +176,6 @@ function VisitorsPanel({ buckets }: { buckets: FilledBucket[] }) {
           </table>
         </div>
       </details>
-    </>
+    </Panel>
   )
 }

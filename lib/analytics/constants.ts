@@ -18,6 +18,7 @@ export const EVENT_TYPES: readonly AnalyticsEventType[] = [
   'apply',
   'apply_confirmed',
   'share',
+  'dwell',
 ]
 
 /**
@@ -32,9 +33,22 @@ export const EVENT_TYPES: readonly AnalyticsEventType[] = [
  * figure on the page is cut from it.
  */
 export const RANGES = [
-  { value: '90d', label: 'Last 3 months', days: 90 },
-  { value: '30d', label: 'Last 30 days', days: 30 },
-  { value: '7d', label: 'Last 7 days', days: 7 },
+  {
+    value: '90d',
+    label: 'Last 3 months',
+    days: 90,
+    // Ninety daily points in one card is a band of noise: the weekday rhythm
+    // swamps the trend, and the line the reader came for is the one thing they
+    // cannot see. Over this range the chart asks the database for thirteen
+    // weekly buckets instead. Note this is a second query rather than a
+    // client-side regrouping of the daily rows, and it has to be: distinct
+    // viewers are not additive, so a week's viewers is something only the
+    // database can count — summing seven daily figures would report the same
+    // person seven times.
+    chart: { granularity: 'week', buckets: 13, cadence: 'Weekly' },
+  },
+  { value: '30d', label: 'Last 30 days', days: 30, chart: { granularity: 'day', buckets: 30, cadence: 'Daily' } },
+  { value: '7d', label: 'Last 7 days', days: 7, chart: { granularity: 'day', buckets: 7, cadence: 'Daily' } },
 ] as const
 
 export type RangeOption = (typeof RANGES)[number]
@@ -55,17 +69,6 @@ export const DEFAULT_RANGE: AnalyticsRange = RANGES[0].value
 export const RANGE_GRANULARITY: Granularity = 'day'
 
 /**
- * The range named by a URL parameter, falling back to the default.
- *
- * Total by construction, which is the point: the value reaches a Postgres
- * function, so an unrecognised `?range=` has to become a known option here
- * rather than being passed through and rejected further down.
- */
-export function resolveRange(value: string | null | undefined): RangeOption {
-  return RANGES.find((range) => range.value === value) ?? RANGES[0]
-}
-
-/**
  * Buckets are cut in Melbourne time, not UTC.
  *
  * This is a Monash society's job board: "this week" has to mean the week its
@@ -82,11 +85,14 @@ export const REPORTING_TIMEZONE = 'Australia/Melbourne'
  * back and confirming they finished. Never collapse them into one number.
  */
 export const ACTION_LABELS: Record<AnalyticsEventType, string> = {
-  view: 'Job views',
+  view: 'Page Views',
   click: 'Job clicks',
   apply: 'Apply clicks',
   apply_confirmed: 'Applications',
   share: 'Shares',
+  // Never tiled as a count — the number of times somebody left a listing is
+  // not interesting. The measurement it carries is (see `duration_ms`).
+  dwell: 'Time on page',
 }
 
 /**
@@ -97,5 +103,15 @@ export const ACTION_LABELS: Record<AnalyticsEventType, string> = {
  * broken. The upper bound stops us asking about something from last week, which
  * the visitor will not remember accurately.
  */
+/**
+ * Bounds on a single `dwell` measurement, mirrored by the table's CHECK.
+ *
+ * Under a second is an accidental open, not a read. Over thirty minutes is a
+ * tab someone walked away from, and one of those would otherwise own the
+ * average for the whole day.
+ */
+export const DWELL_MIN_MS = 1_000
+export const DWELL_MAX_MS = 30 * 60 * 1000
+
 export const APPLY_CONFIRM_MIN_AGE_MS = 45_000
 export const APPLY_CONFIRM_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000

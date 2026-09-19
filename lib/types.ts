@@ -153,8 +153,18 @@ export interface JobSubmissionUpdate {
  * `apply` is a click on the outbound link; `apply_confirmed` is the visitor
  * telling us afterwards that they actually finished. The second is always a
  * lower bound — it only exists for people who came back to the board.
+ *
+ * `dwell` is the odd one out: it is emitted when a visitor *leaves* a listing
+ * and is the only event that carries a measurement (`duration_ms`) rather than
+ * just a fact. See 0022_page_dwell_time.sql.
  */
-export type AnalyticsEventType = 'view' | 'click' | 'apply' | 'apply_confirmed' | 'share'
+export type AnalyticsEventType =
+  | 'view'
+  | 'click'
+  | 'apply'
+  | 'apply_confirmed'
+  | 'share'
+  | 'dwell'
 /**
  * `day` exists for the Total Visitors card, which runs its own daily series
  * independent of the page-level control. It is deliberately absent from
@@ -171,6 +181,8 @@ export interface AnalyticsEvent {
   /** Snapshot of the job at event time; written by a trigger, never by the caller. */
   job_type: JobType | null
   tags: string[] | null
+  /** Foreground milliseconds on the listing. `dwell` events only. */
+  duration_ms: number | null
   occurred_at: string
 }
 
@@ -185,6 +197,8 @@ export interface AnalyticsEventInsert {
   event_type: AnalyticsEventType
   job_id: string | null
   visitor_id: string
+  /** Only ever sent with `dwell`; the table's CHECK rejects it on anything else. */
+  duration_ms?: number
 }
 
 /** One row of `analytics_viewers_by_bucket`. */
@@ -200,6 +214,13 @@ export interface InterestRow {
   label: string
   events: number
   visitors: number
+}
+
+/** One row of `analytics_dwell_by_bucket`. */
+export interface DwellBucket {
+  bucket_start: string
+  avg_ms: number
+  samples: number
 }
 
 /** One row of `analytics_action_counts`. */

@@ -9,6 +9,7 @@ import { JobCard } from '@/components/jobs/job-card'
 import { ApplyConfirmPrompt } from '@/components/jobs/apply-confirm-prompt'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { trackEvent } from '@/lib/analytics/track'
+import { useDwellTracking } from '@/hooks/use-dwell-tracking'
 import type { Job } from '@/lib/types'
 
 const JOBS_PER_PAGE = 25
@@ -33,6 +34,12 @@ const FILTER_FIELD =
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  // The listing the visitor actually opened, as opposed to the one the board
+  // happens to be showing: `selectedJob` is auto-filled with the first result
+  // on every load, and timing that panel would credit whatever sorts first
+  // with every idle minute anyone spends on the page. Set in exactly the two
+  // places a `view` is recorded.
+  const [openedJobId, setOpenedJobId] = useState<string | null>(null)
   const [totalJobs, setTotalJobs] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
@@ -121,6 +128,8 @@ export default function JobsPage() {
     setFilters(prev => ({ ...prev, sponsored: !prev.sponsored }))
   }
 
+  useDwellTracking(openedJobId)
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
@@ -131,6 +140,7 @@ export default function JobsPage() {
     // near-identical copies, and unifying them is out of scope here.
     trackEvent('click', job.id)
     trackEvent('view', job.id)
+    setOpenedJobId(job.id)
   }
 
   const handlePageChange = (page: number) => {
