@@ -37,8 +37,18 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000"]
+site_url = "http://localhost:3000"
+# Supabase refuses to redirect to a URL that is not on this list, and the OAuth
+# flow redirects to `${window.location.origin}/auth/callback` — which is
+# localhost, not 127.0.0.1. The two are different origins to the browser and to
+# GoTrue, so both spellings are listed rather than assuming which one is typed
+# into the address bar.
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/**",
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -79,7 +89,18 @@ enabled = false
 enabled = false
 
 [auth.external.google]
+# Flip to true once SUPABASE_AUTH_GOOGLE_CLIENT_ID and _SECRET are exported in
+# the shell that runs `supabase start`. Leaving it true without them makes
+# GoTrue refuse to boot, which takes the whole local stack down, so it stays
+# false until the credentials exist.
 enabled = false
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+# Google redirects back to GoTrue, not to the Next.js app. GoTrue then hands
+# control to /auth/callback. This is the URI that must be registered on the
+# Google OAuth client for local development.
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+skip_nonce_check = false
 
 [auth.external.keycloak]
 enabled = false

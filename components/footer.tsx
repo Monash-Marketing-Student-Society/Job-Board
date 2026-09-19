@@ -83,6 +83,25 @@ export function Footer() {
             <p className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
               WEBSITE CREATED BY TARA SINGH
             </p>
+            {/* Lowercase and lighter than the lines above deliberately: these
+                are reference links people look for, not part of the sign-off. */}
+            <nav className="flex items-center gap-4 pt-1.5">
+              <Link
+                href="/privacy"
+                className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <span aria-hidden="true" className="text-slate-300 text-xs">
+                &middot;
+              </span>
+              <Link
+                href="/terms"
+                className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                Terms of Service
+              </Link>
+            </nav>
           </div>
 
           {/* Social Icons */}
