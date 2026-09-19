@@ -193,8 +193,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           We aim to handle personal information in line with the Australian Privacy Principles.
-          If you think we have got something wrong, please tell us and we will do our best to
-          put it right.
+          If anything here does not look right to you, we are always happy to hear about it.
         </p>
       </Section>
 
@@ -210,13 +209,12 @@ export default function PrivacyPage() {
       <Section heading="Security">
         <p>
           The listings are kept in a database that is not open to the public, and the area where
-          committee members manage them requires a sign-in. No website can honestly promise
-          perfect security, and we would rather say so than pretend otherwise.
+          committee members manage them requires a sign-in. No website can promise perfect
+          security, so we will not claim to.
         </p>
         <p>
-          If you think you have found a security problem with the board, please email{' '}
-          <Mail address={CONTACT} /> and tell us privately rather than posting it publicly. We
-          will be grateful, not annoyed.
+          If you spot a security problem with the board, we would love to hear from you at{' '}
+          <Mail address={CONTACT} />.
         </p>
       </Section>
 
