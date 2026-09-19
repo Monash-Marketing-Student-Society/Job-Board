@@ -1,0 +1,24 @@
+-- Drop the stale 3-argument analytics_actions_by_bucket
+-- =====================================================
+-- 0021 created analytics_actions_by_bucket(TEXT, INT, TEXT). 0023 added a
+-- fourth parameter, p_offset_buckets, *with a default* -- which creates an
+-- overload rather than replacing the original. Both signatures have existed
+-- side by side ever since, and the 3-argument one still returns the
+-- per-action shape (bucket_start, action, events) that 0024 exists to get rid
+-- of, along with the 1000-row PostgREST truncation that came with it.
+--
+-- 0024's DROP names the 4-argument signature only, so it left the old one
+-- standing. This removes it.
+--
+-- Nothing calls it. lib/analytics/queries.ts builds `args` with all four
+-- parameters by name (p_granularity, p_buckets, p_tz, p_offset_buckets), so
+-- PostgREST resolves to the 4-argument function; verified against the database
+-- before dropping. The risk this closes is not a live bug but a trap: two
+-- functions sharing a name while returning different shapes, where the one a
+-- caller gets depends on how many arguments they happened to pass.
+--
+-- Already applied to production by hand on 19 Sep 2026, alongside 0024 and
+-- 0025. This migration exists so that a fresh `supabase db reset` produces the
+-- same database production is actually running.
+
+DROP FUNCTION IF EXISTS analytics_actions_by_bucket(TEXT, INT, TEXT);
