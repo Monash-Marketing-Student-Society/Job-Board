@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button, Input, Alert, AlertDescription } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { LoginBackdrop } from '@/components/admin/login-backdrop'
 
 /** Google's mark, drawn inline so the button renders without a network fetch. */
 function GoogleMark() {
@@ -142,7 +143,10 @@ export default function AdminLoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+      <LoginBackdrop />
+      {/* relative + z-10: the backdrop is fixed at z-0, which paints above the
+          admin shell's background but has to stay below the card. */}
+      <div className="w-full max-w-md relative z-10">
         <div className="bg-card rounded-lg border border-border shadow-sm p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Admin Login</h1>
