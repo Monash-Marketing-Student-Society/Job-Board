@@ -177,9 +177,13 @@ export type ActionSeries = Record<AnalyticsEventType, number[]>
 /**
  * What they did with what they found.
  *
- * Every measure here is a plain event count, which is additive, so each one
- * gets both a shape and an exact period-over-period figure from the same
- * double-length series.
+ * Each figure comes from the window totals, and only its shape and its
+ * movement come from the series. That split is deliberate: the two are
+ * different queries, and when they disagreed — a truncated series against an
+ * intact total, see 0024 — the page showed one number in a tile and a
+ * different one for the same measure in the funnel below it. Reading the
+ * headline from the same place the funnel reads it means they cannot part
+ * company again, whatever happens to the series.
  */
 export function engagementTiles(
   series: ActionSeries | null,
@@ -212,7 +216,7 @@ export function engagementTiles(
     return {
       key,
       label: ACTION_LABELS[key],
-      value: sum(now),
+      value: actions[key].events,
       format: 'count',
       series: now,
       trend: trendBetween(sum(now), sum(before), { comparable }),
@@ -248,11 +252,16 @@ function applyRateTile(
   actions: ActionCounts,
   comparable: boolean
 ): MetricTile {
+  // The rate itself is always the window totals divided, for the same reason
+  // the counts above are: it has to agree with the funnel, which divides the
+  // same two numbers.
+  const rate = round1(safeRatio(actions.apply.events, actions.click.events) * 100)
+
   if (!series) {
     return {
       key: 'apply-rate',
       label: 'Apply rate',
-      value: round1(safeRatio(actions.apply.events, actions.click.events) * 100),
+      value: rate,
       format: 'percent',
       series: [],
       trend: NO_TREND,
@@ -262,18 +271,18 @@ function applyRateTile(
   const [clicksBefore, clicksNow] = splitWindows(series.click)
   const [appliesBefore, appliesNow] = splitWindows(series.apply)
 
-  const rate = safeRatio(sum(appliesNow), sum(clicksNow)) * 100
+  const rateNow = safeRatio(sum(appliesNow), sum(clicksNow)) * 100
   const rateBefore = safeRatio(sum(appliesBefore), sum(clicksBefore)) * 100
 
   return {
     key: 'apply-rate',
     label: 'Apply rate',
-    value: round1(rate),
+    value: rate,
     format: 'percent',
     // Per-day rate, not per-day apply count: the shape has to be the same
     // measure as the figure above it, or the line contradicts the number.
     series: ratioSeries(appliesNow, clicksNow).map((value) => value * 100),
-    trend: trendBetween(rate, rateBefore, {
+    trend: trendBetween(rateNow, rateBefore, {
       comparable: comparable && sum(clicksBefore) > 0,
       minBase: 0,
     }),
