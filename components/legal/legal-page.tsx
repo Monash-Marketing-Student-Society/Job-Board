@@ -43,34 +43,6 @@ export function LegalPage({
   )
 }
 
-/**
- * Plain-language summary that opens the privacy policy.
- *
- * Most people will not read a policy end to end, and the ones most affected by
- * that are the ones least comfortable with the subject. This carries the four
- * things somebody actually wants to know, so skipping the rest still leaves
- * them correctly informed rather than uninformed.
- */
-export function Summary({ points }: { points: string[] }) {
-  return (
-    <aside className="rounded-xl bg-slate-50 border border-slate-200 p-5 sm:p-6">
-      <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3">
-        The short version
-      </h2>
-      <ul className="space-y-2">
-        {points.map((point) => (
-          <li key={point} className="flex gap-2.5 text-[15px] leading-relaxed text-slate-700">
-            <span aria-hidden="true" className="text-slate-400 shrink-0 pt-0.5">
-              &#10003;
-            </span>
-            <span>{point}</span>
-          </li>
-        ))}
-      </ul>
-    </aside>
-  )
-}
-
 export function Section({ heading, children }: { heading: string; children: ReactNode }) {
   return (
     <section>

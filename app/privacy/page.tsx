@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { LegalPage, Section, Bullets, Summary } from '@/components/legal/legal-page'
+import { LegalPage, Section, Bullets } from '@/components/legal/legal-page'
 import { PARTNERSHIPS_EMAIL } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -40,15 +40,6 @@ export default function PrivacyPage() {
         </p>
       }
     >
-      <Summary
-        points={[
-          'You can browse every listing without telling us anything about yourself.',
-          'There are no student accounts, and nothing to sign up for.',
-          'We never sell your information, and there are no advertising trackers on this site.',
-          'If you post a job, we keep your contact details so we can talk to you about it.',
-        ]}
-      />
-
       <Section heading="Who we are, and why we built the board">
         <p>
           We are the Monash Marketing Students&apos; Society, a student society at Monash
@@ -184,8 +175,7 @@ export default function PrivacyPage() {
       <Section heading="Your choices">
         <p>
           You are welcome to email <Mail address={CONTACT} /> and ask us what we hold about you,
-          to correct something that is wrong, or to delete your listing and contact details. You
-          do not need a reason, and we will not make it difficult.
+          to correct something that is wrong, or to delete your listing and contact details.
         </p>
         <p>
           If you posted a job, the confirmation email we sent you has a private link for editing
