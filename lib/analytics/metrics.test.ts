@@ -131,12 +131,25 @@ describe('engagementTiles', () => {
     dwell: [4, 4, 4, 4, 7, 7, 7, 7],
   }
 
-  it('takes each figure from the reported half of its own series', () => {
+  it('takes each figure from the window total, and its shape from the series', () => {
+    // Deliberately not sum(series): the funnel reads the same totals, and a
+    // tile that derives its own figure can disagree with the block underneath
+    // it — which is exactly what a truncated series did on the live board.
     const tiles = engagementTiles(series, counts(), true)
     const clicks = tiles.find((tile) => tile.key === 'click')
 
-    expect(clicks?.value).toBe(24)
+    expect(clicks?.value).toBe(50)
+    expect(clicks?.series).toEqual([6, 6, 6, 6])
     expect(clicks?.trend).toEqual({ changePct: 100, direction: 'up' })
+  })
+
+  it('agrees with the funnel about every step it shares with it', () => {
+    const tiles = engagementTiles(series, counts(), true)
+    const steps = funnelSteps(counts())
+
+    const byLabel = new Map(steps.map((step) => [step.key, step.value]))
+    expect(tiles.find((tile) => tile.key === 'click')?.value).toBe(byLabel.get('click'))
+    expect(tiles.find((tile) => tile.key === 'apply')?.value).toBe(byLabel.get('apply'))
   })
 
   it('falls back to the window totals when the per-action series is unavailable', () => {
@@ -157,8 +170,9 @@ describe('engagementTiles', () => {
     expect(tiles.some((tile) => tile.key === 'apply_confirmed')).toBe(false)
 
     const rate = tiles.find((tile) => tile.key === 'apply-rate')
-    // 8 applies against 24 clicks in the reported half.
-    expect(rate?.value).toBe(33.3)
+    // The window totals: 20 applies against 50 clicks, the same pair the
+    // funnel divides.
+    expect(rate?.value).toBe(40)
     expect(rate?.format).toBe('percent')
   })
 

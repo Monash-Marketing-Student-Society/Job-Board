@@ -11,6 +11,7 @@ import {
   topInterests,
   withVocabulary,
   evenlySpacedTicks,
+  fillActionSeries,
 } from './buckets'
 import type { ActionCountRow, InterestRow, ViewerBucket } from '@/lib/types'
 
@@ -568,5 +569,65 @@ describe('evenlySpacedTicks', () => {
     const ticks = evenlySpacedTicks(all)
 
     expect(ticks).toEqual(['04', '09', '14', '19', '24', '29'])
+  })
+})
+
+describe('fillActionSeries', () => {
+  // Melbourne midnight for a September day, which is 14:00 UTC the day before
+  // — the instants the SQL returns and `bucketSeries` generates.
+  const at = (day: number) => `2026-09-${String(day - 1).padStart(2, '0')}T14:00:00.000Z`
+  // 15:00 in Melbourne on the 5th, so a 3-bucket window covers the 3rd to 5th.
+  const now = new Date('2026-09-05T05:00:00Z')
+
+  it('reads every action out of one row per bucket', () => {
+    const series = fillActionSeries(
+      [
+        { bucket_start: at(3), counts: { view: 5, click: 2 } },
+        { bucket_start: at(4), counts: { view: 7, click: 3, share: 1 } },
+      ],
+      'day',
+      3,
+      now,
+      TZ
+    )
+
+    expect(series.view).toEqual([5, 7, 0])
+    expect(series.click).toEqual([2, 3, 0])
+    expect(series.share).toEqual([0, 1, 0])
+  })
+
+  it('returns a full-length series for every known action, named or not', () => {
+    const series = fillActionSeries([], 'day', 4, now, TZ)
+
+    for (const type of EVENT_TYPES) {
+      expect(series[type]).toEqual([0, 0, 0, 0])
+    }
+  })
+
+  it('survives a null counts object', () => {
+    const series = fillActionSeries(
+      [{ bucket_start: at(5), counts: null }],
+      'day',
+      2,
+      now,
+      TZ
+    )
+
+    expect(series.view).toEqual([0, 0])
+  })
+
+  it('zero-fills a bucket the database never sent', () => {
+    // This is the behaviour that hid a truncated response: a missing bucket
+    // and an empty one are indistinguishable here by design, which is why the
+    // tiles take their headline figures from the window totals instead.
+    const series = fillActionSeries(
+      [{ bucket_start: at(5), counts: { click: 9 } }],
+      'day',
+      3,
+      now,
+      TZ
+    )
+
+    expect(series.click).toEqual([0, 0, 9])
   })
 })

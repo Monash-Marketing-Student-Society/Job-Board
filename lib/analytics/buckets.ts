@@ -348,11 +348,18 @@ export function fillBuckets(
   })
 }
 
-/** One row of `analytics_actions_by_bucket` (0021). */
+/**
+ * One row of `analytics_actions_by_bucket` (0021, reshaped by 0024).
+ *
+ * One row per bucket carrying every action's count, rather than a row per
+ * (bucket, action) pair. The pair shape put 1080 rows on the wire at the
+ * dashboard's widest call, and PostgREST truncates a response at 1000 — see
+ * 0024. Counts arrive as an object so a new event type never changes the row
+ * count.
+ */
 export interface ActionBucketRow {
   bucket_start: string
-  action: string
-  events: number
+  counts: Record<string, number> | null
 }
 
 /**
@@ -360,9 +367,15 @@ export interface ActionBucketRow {
  *
  * Same contract as `fillBuckets`: the caller gets exactly `count` values per
  * action, oldest first, regardless of what the database sent. The SQL already
- * zero-fills both dimensions, so this is the second line of defence — but it is
- * also what guarantees every series is the same length, which the tiles rely on
- * when they cut a double-length window in half.
+ * zero-fills, so this is the second line of defence — but it is also what
+ * guarantees every series is the same length, which the tiles rely on when they
+ * cut a double-length window in half.
+ *
+ * Note what that zero-filling cannot tell you: a bucket the database never sent
+ * and a bucket with no events both come out as zero. That is the right
+ * behaviour for a missing quiet day and the wrong one for a truncated response,
+ * which is why the tiles take their headline figures from the window totals
+ * instead of from this series — see `engagementTiles`.
  */
 export function fillActionSeries(
   rows: ActionBucketRow[] | null | undefined,
@@ -372,24 +385,22 @@ export function fillActionSeries(
   timeZone: string = REPORTING_TIMEZONE,
   offsetBuckets = 0
 ): Record<AnalyticsEventType, number[]> {
-  const byAction = new Map<string, Map<number, number>>()
+  const byInstant = new Map<number, Record<string, number>>()
 
   for (const row of rows ?? []) {
     const instant = new Date(row.bucket_start).getTime()
     if (Number.isNaN(instant)) continue
 
-    const series = byAction.get(row.action) ?? new Map<number, number>()
-    series.set(instant, Number(row.events) || 0)
-    byAction.set(row.action, series)
+    byInstant.set(instant, row.counts ?? {})
   }
 
   const buckets = bucketSeries(granularity, count, now, timeZone, offsetBuckets)
 
   return Object.fromEntries(
-    EVENT_TYPES.map((type) => {
-      const series = byAction.get(type)
-      return [type, buckets.map((bucket) => series?.get(bucket.getTime()) ?? 0)]
-    })
+    EVENT_TYPES.map((type) => [
+      type,
+      buckets.map((bucket) => Number(byInstant.get(bucket.getTime())?.[type]) || 0),
+    ])
   ) as Record<AnalyticsEventType, number[]>
 }
 

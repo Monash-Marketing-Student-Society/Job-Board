@@ -101,6 +101,13 @@ export function ChartViewersOverTime({
             tickMargin={6}
             fontSize={11}
             allowDecimals={false}
+            // A natural spline carries its curvature through each point, which
+            // is what makes the line flow — and on a run of empty days beside a
+            // busy one it carries that curvature below the baseline. Nobody had
+            // minus four page views. Pinning the floor at zero and clipping to
+            // the domain cuts the overshoot at the axis instead of drawing it.
+            domain={[0, 'auto']}
+            allowDataOverflow
           />
 
           <XAxis
