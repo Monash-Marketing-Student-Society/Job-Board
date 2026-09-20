@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { isCurrentUserAdmin, getUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizeEmail, autoApproveDomains, recoveryAdminEmail } from '@/lib/admin-access'
+import {
+  normalizeEmail,
+  autoApproveDomains,
+  emailMatchesAutoApprovedDomain,
+  recoveryAdminEmail,
+} from '@/lib/admin-access'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -112,8 +117,22 @@ export async function GET() {
       providers: providersOf(authUser),
       lastSignInAt: authUser?.last_sign_in_at ?? null,
       emailConfirmed: Boolean(authUser?.email_confirmed_at),
+      // Whether *this* address is covered by a domain rule, not merely whether
+      // some rule exists. The previous test was `domains.length > 0`, which
+      // badged every uninvited admin as Domain the moment any domain was
+      // configured -- so mmss@monashclubs.org was labelled domain-approved
+      // under a list containing only monashmss.com.
+      //
+      // It read as a cosmetic slip and was not: the removal dialog keys its
+      // "they will regain access on their next sign-in" warning off this flag,
+      // while the DELETE route decides the real answer with
+      // emailMatchesAutoApprovedDomain. The two disagreed, so the warning fired
+      // for people the server would have removed permanently. Both now ask the
+      // same question of the same function.
       viaDomain: Boolean(
-        email && domains.length > 0 && !invitedEmails.has(normalizeEmail(email))
+        email &&
+          emailMatchesAutoApprovedDomain(email, domains) &&
+          !invitedEmails.has(normalizeEmail(email))
       ),
       isRecoveryAdmin: Boolean(email && normalizeEmail(email) === recoveryEmail),
     }
