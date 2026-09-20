@@ -6,6 +6,7 @@ import { Footer } from '@/components/footer'
 import { SmoothScroll } from '@/components/smooth-scroll'
 import { BottomBlur } from '@/components/bottom-blur'
 import './globals.css'
+import { Toaster } from 'sonner'
 import { cn } from "@/lib/utils";
 
 // Single app font. --font-sans and --font-heading both resolve to this —
@@ -43,6 +44,19 @@ export default function RootLayout({
         <SiteMain>{children}</SiteMain>
         <Footer />
         <BottomBlur />
+
+        {/* One Toaster for the whole app. It used to be mounted in the admin
+            layout, which left the public submit form with nowhere to send a
+            toast; mounting it in both would have double-rendered every admin
+            toast, since the admin layout nests inside this one.
+
+            Bottom right, and deliberately not richColors. That flag paints
+            the whole toast in the status colour -- a solid green panel for
+            every success -- which is louder than the work it reports and
+            makes an error hard to pick out of a stream of them. Neutral
+            surface with the status carried by the icon reads as one system
+            and keeps red meaning something. */}
+        <Toaster position="bottom-right" closeButton />
       </body>
     </html>
   )

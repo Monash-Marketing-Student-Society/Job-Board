@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Workbook, type CellValue, type Worksheet } from 'exceljs'
@@ -229,10 +230,9 @@ export function BulkImport() {
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
   const [parseErrors, setParseErrors] = useState<ParseError[]>([])
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null)
-  const [error, setError] = useState('')
 
   const handleDownloadTemplate = async () => {
-    setError('')
+    toast.error('')
     try {
       const buffer = await generateTemplate()
       const blob = new Blob([buffer], {
@@ -245,7 +245,7 @@ export function BulkImport() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      setError('Failed to generate the template file.')
+      toast.error('Failed to generate the template file.')
     }
   }
 
@@ -253,7 +253,7 @@ export function BulkImport() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setError('')
+    toast.error('')
     setImportResult(null)
     setPreview(null)
     setParseErrors([])
@@ -265,13 +265,13 @@ export function BulkImport() {
       setParseErrors(errors)
 
       if (rows.length === 0 && errors.length === 0) {
-        setError('No valid job rows found in the spreadsheet.')
+        toast.error('No valid job rows found in the spreadsheet.')
         return
       }
 
       setPreview(rows)
     } catch {
-      setError('Failed to read the file. Make sure it is a valid .xlsx file.')
+      toast.error('Failed to read the file. Make sure it is a valid .xlsx file.')
     }
 
     // Reset file input so the same file can be re-selected
@@ -282,7 +282,7 @@ export function BulkImport() {
     if (!preview || preview.length === 0) return
 
     setIsUploading(true)
-    setError('')
+    toast.error('')
 
     try {
       const supabase = createClient()
@@ -322,7 +322,7 @@ export function BulkImport() {
         router.refresh()
       }
     } catch {
-      setError('An unexpected error occurred during import.')
+      toast.error('An unexpected error occurred during import.')
     } finally {
       setIsUploading(false)
     }
@@ -331,7 +331,7 @@ export function BulkImport() {
   const handleCancel = () => {
     setPreview(null)
     setParseErrors([])
-    setError('')
+    toast.error('')
     setImportResult(null)
   }
 
@@ -362,12 +362,6 @@ export function BulkImport() {
           />
         </label>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {importResult && (
         <Alert variant={importResult.failed === 0 ? 'success' : 'destructive'}>

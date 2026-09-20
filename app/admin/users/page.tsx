@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import {
   Button,
   Input,
   Label,
-  Alert,
-  AlertDescription,
   Badge,
   useConfirmDialog,
 } from '@/components/ui'
@@ -81,7 +80,6 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState('')
   const [isInviting, setIsInviting] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const { confirm, dialog } = useConfirmDialog()
 
   const fetchRoster = useCallback(async () => {
@@ -102,7 +100,6 @@ export default function AdminUsersPage() {
   const handleSaveRecovery = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSavingRecovery(true)
-    setMessage(null)
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -111,16 +108,10 @@ export default function AdminUsersPage() {
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || 'Failed to save the recovery admin')
-      setMessage({
-        type: 'success',
-        text: `${body.recoveryAdminEmail} is now the recovery admin.`,
-      })
+      toast.success(`${body.recoveryAdminEmail} is now the recovery admin.`)
       fetchRoster()
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to save the recovery admin',
-      })
+      toast.error(err instanceof Error ? err.message : 'Failed to save the recovery admin')
     } finally {
       setIsSavingRecovery(false)
     }
@@ -129,7 +120,6 @@ export default function AdminUsersPage() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsInviting(true)
-    setMessage(null)
 
     try {
       const res = await fetch('/api/admin/users', {
@@ -150,14 +140,11 @@ export default function AdminUsersPage() {
             ? `${body.email} can now sign in with Google. The invite email could not be sent (Supabase rate-limits these), so send them the link yourself if they need a password.`
             : `Invitation sent to ${body.email}.`
 
-      setMessage({ type: 'success', text })
+      toast.success(text)
       setEmail('')
       fetchRoster()
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to send the invitation',
-      })
+      toast.error(err instanceof Error ? err.message : 'Failed to send the invitation')
     } finally {
       setIsInviting(false)
     }
@@ -165,17 +152,13 @@ export default function AdminUsersPage() {
 
   const handleSendReset = async (admin: AdminAccountRow) => {
     setBusyId(admin.id)
-    setMessage(null)
     try {
       const res = await fetch(`/api/admin/users/${admin.id}/reset-password`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || 'Failed to send the reset email')
-      setMessage({ type: 'success', text: `Password reset link sent to ${body.email}.` })
+      toast.success(`Password reset link sent to ${body.email}.`)
     } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to send the reset email',
-      })
+      toast.error(err instanceof Error ? err.message : 'Failed to send the reset email')
     } finally {
       setBusyId(null)
     }
@@ -201,16 +184,21 @@ export default function AdminUsersPage() {
     setBusyId(null)
 
     if (!res.ok) {
-      setMessage({ type: 'error', text: body.error || 'Failed to remove admin' })
+      toast.error(body.error || 'Failed to remove admin')
       return
     }
 
-    setMessage({
-      type: 'success',
-      text: body.reGrantedByDomain
-        ? `${label} was removed, but their domain is auto-approved — they will be granted access again on their next sign-in.`
-        : `${label} no longer has admin access.`,
-    })
+    if (body.reGrantedByDomain) {
+      // Two sentences: the removal happened, and it will not stick. A toast
+      // gets one line, so the caveat goes in the description where it stays
+      // readable instead of running past the edge.
+      toast.success(`${label} was removed`, {
+        description:
+          'Their domain is auto-approved, so they will be granted access again on their next sign-in.',
+      })
+    } else {
+      toast.success(`${label} no longer has admin access.`)
+    }
     fetchRoster()
   }
 
@@ -229,10 +217,10 @@ export default function AdminUsersPage() {
     setBusyId(null)
 
     if (!res.ok) {
-      setMessage({ type: 'error', text: body.error || 'Failed to withdraw the invitation' })
+      toast.error(body.error || 'Failed to withdraw the invitation')
       return
     }
-    setMessage({ type: 'success', text: `Invitation to ${invite.email} withdrawn.` })
+    toast.success(`Invitation to ${invite.email} withdrawn.`)
     fetchRoster()
   }
 
@@ -246,15 +234,6 @@ export default function AdminUsersPage() {
           Manage who can sign in to the dashboard, and how.
         </p>
       </div>
-
-      {message && (
-        <Alert
-          variant={message.type === 'success' ? 'success' : 'destructive'}
-          className="mb-6 max-w-3xl"
-        >
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Invite */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 max-w-xl">

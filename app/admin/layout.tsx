@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Toaster } from 'sonner'
 import { getUser, isCurrentUserAdmin } from '@/lib/supabase/server'
 import { getPendingSubmissionCount } from '@/lib/admin-data'
 import { AdminNavDesktop, AdminNavMobile } from '@/components/admin/admin-nav'
@@ -71,13 +70,6 @@ export default async function AdminLayout({
         </main>
       </TooltipProvider>
 
-      {/* Bottom right, and deliberately not richColors. That flag paints the
-          whole toast in the status colour -- a solid green panel for every
-          success -- which is louder than the work it reports and makes an
-          error hard to pick out of a stream of them. Neutral surface with the
-          status carried by the icon reads as one system and keeps red meaning
-          something. */}
-      <Toaster position="bottom-right" closeButton />
     </div>
   )
 }

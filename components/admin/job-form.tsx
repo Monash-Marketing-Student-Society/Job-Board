@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -8,8 +9,6 @@ import {
   NativeSelect,
   NativeSelectOption,
   Label,
-  Alert,
-  AlertDescription,
   TagCombobox,
   type SelectOption,
 } from '@/components/ui'
@@ -45,7 +44,6 @@ interface JobFormProps {
 export function JobForm({ job, isEditing = false }: JobFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({
     title: job?.title || '',
@@ -79,10 +77,9 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setError('')
 
     if (!isValidApplicationUrl(formData.url.trim())) {
-      setError('Application URL must be a valid http(s) link or an email address.')
+      toast.error('Application URL must be a valid http(s) link or an email address.')
       setIsSubmitting(false)
       return
     }
@@ -128,7 +125,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
       router.refresh()
     } catch (err) {
       console.error('Error saving job:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save job')
+      toast.error(err instanceof Error ? err.message : 'Failed to save job')
     } finally {
       setIsSubmitting(false)
     }
@@ -136,11 +133,6 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="md:col-span-2">
