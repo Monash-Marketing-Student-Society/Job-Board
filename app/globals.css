@@ -401,8 +401,28 @@
   @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
+/*
+ * A white surface sitting on the page.
+ *
+ * Was `bg-background`, which in this theme is var(--mmss-background), #e8e8e8
+ * -- the page's own grey. A "card" painted the same colour as what it sits on
+ * is not a card, and the sign-in screen shipped looking like a flat panel
+ * because of exactly this. --card is the token that means white.
+ */
 @utility card {
-  @apply rounded-lg border border-border bg-background shadow-xs;
+  @apply rounded-lg border border-border bg-card shadow-xs;
+}
+
+/*
+ * The card on the signed-out admin screens: sign-in and password reset.
+ *
+ * Defined once here rather than repeated as a utility string on each page.
+ * The two pages drifted apart twice already -- reset-password was copied from
+ * login and then kept its old grey background through one fix and missed the
+ * backdrop in another -- and a shared definition is what stops the third time.
+ */
+@utility auth-card {
+  @apply rounded-lg border border-border bg-card shadow-sm p-8;
 }
 
 @utility input-base {
