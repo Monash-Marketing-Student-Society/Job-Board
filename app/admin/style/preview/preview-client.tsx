@@ -28,6 +28,7 @@ import { JobCard } from '@/components/jobs/job-card'
 import { cn } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import { previewJobs, previewMetricTiles, previewJobTypeChart, previewSubmissions } from './mock-data'
+import { BorderComparison } from './border-comparison'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select job type' },
@@ -121,6 +122,17 @@ export function ThemePreviewClient() {
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {/* Border treatments — full width and first, because it is an open
+            question the user is choosing between, not settled documentation
+            like everything below it. */}
+        <Block
+          title="Border treatments — pick one"
+          description="The same admin screen rendered in each treatment. Compare columns, not edges: whether the corners agree down a column, and whether the warning looks like it belongs to the card it sits in."
+          className="xl:col-span-4"
+        >
+          <BorderComparison />
+        </Block>
+
         {/* Palette — full width, first, everything else is built from these. */}
         <Block title="Palette" className="xl:col-span-4">
           <div className="flex flex-wrap gap-2">
