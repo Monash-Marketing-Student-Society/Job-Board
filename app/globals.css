@@ -182,8 +182,10 @@
    * ΔE 9.1 (protan), worst normal-vision ΔE 22.9 — both clear of the floors.
    * Re-validate before changing any value.
    *
-   * --chart-4 and --chart-5 fall below 3:1 contrast on white, so any chart
-   * using them needs visible direct labels or a table view.
+   * Removed 2026-09-20: --chart-3/4/5 (blue, green, yellow) had no consumer
+   * left. The two-series chart uses --chart-1/--chart-2 and every other mark
+   * uses --graph-mark, so the three spares were a palette the app did not
+   * draw with. Re-add a validated value here if a third series ever appears.
    *
    * Restored 2026-09-18. The comment above has said "kept as the validated
    * categorical set" since the palette was introduced, but the shadcn
@@ -222,9 +224,6 @@
      below 3:1 against white, which is why that chart carries a legend and a
      table view rather than relying on the fill alone. */
   --chart-2: #b18fd6;
-  --chart-3: #2a78d6; /* blue — interest by job type */
-  --chart-4: #1baf7a; /* green — interest by tag */
-  --chart-5: #eda100; /* yellow — spare */
 }
 
 /*
@@ -270,9 +269,6 @@
   --sidebar-ring: oklch(0.556 0 0);
   --chart-1: oklch(0.827 0.119 306.383);
   --chart-2: oklch(0.627 0.265 303.9);
-  --chart-3: oklch(0.558 0.288 302.321);
-  --chart-4: oklch(0.496 0.265 301.924);
-  --chart-5: oklch(0.438 0.218 303.724);
 }
 
 /*
@@ -329,9 +325,6 @@
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

@@ -49,7 +49,7 @@ const SUBMISSION_STATUS_ROLE: Record<(typeof previewSubmissions)[number]['status
 const chartConfig = {
   events: {
     label: 'Interactions',
-    color: 'var(--chart-3)',
+    color: 'var(--graph-mark, #8367a3)',
   },
 } satisfies ChartConfig
 
@@ -132,7 +132,7 @@ export function ThemePreviewClient() {
             <Swatch label="success" className="bg-success" textClassName="text-success-foreground" />
             <Swatch label="warning" className="bg-warning" textClassName="text-warning-foreground" />
             <Swatch label="destructive" className="bg-destructive" textClassName="text-destructive-foreground" />
-            {[1, 2, 3, 4, 5].map((n) => (
+            {[1, 2].map((n) => (
               <Swatch
                 key={n}
                 label={`chart-${n}`}

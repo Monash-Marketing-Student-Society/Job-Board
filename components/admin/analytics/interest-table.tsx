@@ -9,9 +9,8 @@ import type { InterestSlice } from '@/lib/analytics/buckets'
  * category lives — interactions *and* the visitors behind them, which the bar
  * cannot encode without becoming two bars.
  *
- * It is also the relief the palette needs. `--chart-4` and `--chart-5` sit
- * below 3:1 against white, so any chart using them owes a reader a way to get
- * the values as text rather than as length.
+ * It is also the relief a bar gives no one: a length below 3:1 against white
+ * owes the reader a way to get the values as text rather than as size.
  */
 export function InterestTable({
   data,
