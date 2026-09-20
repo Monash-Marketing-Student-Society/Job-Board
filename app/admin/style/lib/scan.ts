@@ -32,10 +32,29 @@ export interface VariantUsageReport {
   values: { value: string; count: number; isDefault: boolean }[]
 }
 
+export interface BorderAxisReport {
+  axis: string
+  label: string
+  values: { className: string; count: number }[]
+  distinct: number
+  total: number
+}
+
+export interface BorderUsageReport {
+  axes: BorderAxisReport[]
+}
+
+export interface RouteUsageReport {
+  files: { file: string; routes: string[] }[]
+  allRoutes: string[]
+}
+
 export interface StyleAuditSnapshot {
   generatedAt: string
   rawPalette: RawPaletteReport
   variantUsage: VariantUsageReport[]
+  borderUsage: BorderUsageReport
+  routeUsage: RouteUsageReport
 }
 
 export const styleAudit = rawSnapshot as StyleAuditSnapshot

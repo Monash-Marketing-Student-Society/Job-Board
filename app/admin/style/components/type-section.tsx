@@ -32,8 +32,7 @@ export function TypeSection() {
   return (
     <section className="space-y-8">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">3. Type</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-slate-500">
           Sizes and weights below are Tailwind&apos;s default scale (app/globals.css doesn&apos;t
           override <code>--text-*</code> or <code>--font-weight-*</code>) — each sample still reads
           its own computed metrics live rather than repeating Tailwind&apos;s documented values.

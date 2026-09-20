@@ -11,6 +11,7 @@ export default function StyleGuidePage() {
       rawPalette={styleAudit.rawPalette}
       generatedAt={styleAudit.generatedAt}
       variantReports={styleAudit.variantUsage}
+      borderUsage={styleAudit.borderUsage}
     />
   )
 }

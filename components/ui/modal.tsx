@@ -75,13 +75,13 @@ export function Modal({
       <div
         ref={panelRef}
         className={cn(
-          'relative w-full max-w-md bg-white rounded-2xl border border-slate-200',
+          'relative w-full max-w-md bg-white rounded-lg border border-slate-200',
           'shadow-[0_10px_40px_rgba(0,0,0,0.18)] overflow-hidden',
           className
         )}
       >
         <div className="px-5 pt-5 pb-4">
-          <h2 className="text-[17px] font-bold text-slate-800 font-heading">
+          <h2 className="text-[17px] font-semibold text-slate-800 font-heading">
             {title}
           </h2>
           {description && (

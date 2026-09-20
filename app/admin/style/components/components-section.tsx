@@ -26,14 +26,11 @@ export function ComponentsSection({ variantReports }: { variantReports: VariantU
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
-    <section className="space-y-10">
+    <section className="space-y-6">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">6. Components</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live instances imported directly from <code>components/ui</code> and{' '}
-          <code>components/shadcn</code> — not recreated. &ldquo;Unused&rdquo; is a best-effort static
-          scan of JSX usage across <code>app/</code>, <code>components/</code>, and <code>lib/</code>;
-          it can miss a variant chosen via a runtime expression, so treat it as a lead, not a verdict.
+        <p className="text-[13px] leading-relaxed text-slate-500">
+          Live instances, not recreations. &ldquo;Unused&rdquo; is a static scan that can miss a
+          variant chosen at runtime — a lead, not a verdict.
         </p>
       </header>
 

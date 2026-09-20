@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState, useRef } from 'react'
 import {
   Button,
@@ -84,8 +85,10 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
+  // 'error' is gone: a failed submit is an event and now toasts. Success
+  // stays a status because it replaces the form entirely — toasting it would
+  // leave the page showing nothing.
+  const [status, setStatus] = useState<'idle' | 'success'>('idle')
   const [isPrefilling, setIsPrefilling] = useState(false)
   const [prefillStatus, setPrefillStatus] = useState<'idle' | 'success'>('idle')
   const [descriptionKey, setDescriptionKey] = useState(0)
@@ -175,18 +178,15 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
     e.preventDefault()
     setIsSubmitting(true)
     setStatus('idle')
-    setErrorMessage('')
 
     if (!isValidEmail(formData.submitter_email)) {
-      setErrorMessage('Please enter a valid work email address.')
-      setStatus('error')
+      toast.error('Please enter a valid work email address.')
       setIsSubmitting(false)
       return
     }
 
     if (!isValidApplicationUrl(formData.url.trim())) {
-      setErrorMessage('Application URL must be a valid http(s) link or an email address.')
-      setStatus('error')
+      toast.error('Application URL must be a valid http(s) link or an email address.')
       setIsSubmitting(false)
       return
     }
@@ -232,10 +232,7 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
 
       setStatus('success')
     } catch (err) {
-      setStatus('error')
-      setErrorMessage(
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-      )
+      toast.error(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -255,11 +252,6 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {status === 'error' && (
-        <Alert variant="destructive">
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Contact info */}
       <div>

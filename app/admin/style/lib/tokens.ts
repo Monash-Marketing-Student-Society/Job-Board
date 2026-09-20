@@ -217,13 +217,10 @@ export const COLOR_GROUPS: ColorGroup[] = [
   },
   {
     role: 'Chart',
-    note: 'Categorical series colors for recharts. chart-4 and chart-5 fall below 3:1 contrast on a white chart surface — pair with direct labels, not color alone.',
+    note: 'The two-series chart. Every other graph mark uses --graph-mark instead.',
     tokens: [
       { label: 'chart-1', bgClass: 'bg-chart-1', usageClass: 'bg-chart-1 / stroke-chart-1', cssVar: '--color-chart-1' },
       { label: 'chart-2', bgClass: 'bg-chart-2', usageClass: 'bg-chart-2 / stroke-chart-2', cssVar: '--color-chart-2' },
-      { label: 'chart-3', bgClass: 'bg-chart-3', usageClass: 'bg-chart-3 / stroke-chart-3', cssVar: '--color-chart-3' },
-      { label: 'chart-4', bgClass: 'bg-chart-4', usageClass: 'bg-chart-4 / stroke-chart-4', cssVar: '--color-chart-4' },
-      { label: 'chart-5', bgClass: 'bg-chart-5', usageClass: 'bg-chart-5 / stroke-chart-5', cssVar: '--color-chart-5' },
     ],
   },
 ]

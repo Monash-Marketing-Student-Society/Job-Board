@@ -1,7 +1,49 @@
 {
-  "generatedAt": "2026-08-18T00:43:10.487Z",
+  "generatedAt": "2026-09-20T01:13:37.336Z",
   "rawPalette": {
     "files": [
+      {
+        "file": "app/admin/users/page.tsx",
+        "classes": [
+          {
+            "className": "text-slate-500",
+            "count": 16
+          },
+          {
+            "className": "text-slate-700",
+            "count": 7
+          },
+          {
+            "className": "text-slate-400",
+            "count": 7
+          },
+          {
+            "className": "border-slate-100",
+            "count": 6
+          },
+          {
+            "className": "border-slate-200",
+            "count": 4
+          },
+          {
+            "className": "bg-slate-50",
+            "count": 4
+          },
+          {
+            "className": "text-slate-800",
+            "count": 2
+          },
+          {
+            "className": "divide-slate-50",
+            "count": 2
+          },
+          {
+            "className": "text-slate-200",
+            "count": 1
+          }
+        ],
+        "total": 49
+      },
       {
         "file": "components/jobs/job-detail-panel.tsx",
         "classes": [
@@ -68,20 +110,28 @@
         "file": "components/admin/job-table.tsx",
         "classes": [
           {
-            "className": "text-slate-500",
-            "count": 7
-          },
-          {
             "className": "text-slate-400",
-            "count": 7
+            "count": 9
           },
           {
-            "className": "border-slate-100",
-            "count": 4
+            "className": "text-slate-500",
+            "count": 5
           },
           {
-            "className": "border-slate-300",
-            "count": 4
+            "className": "bg-slate-100",
+            "count": 5
+          },
+          {
+            "className": "text-slate-900",
+            "count": 3
+          },
+          {
+            "className": "text-slate-600",
+            "count": 3
+          },
+          {
+            "className": "bg-slate-200",
+            "count": 2
           },
           {
             "className": "text-slate-700",
@@ -94,43 +144,43 @@
           {
             "className": "bg-slate-50",
             "count": 1
-          },
-          {
-            "className": "border-slate-200",
-            "count": 1
           }
         ],
-        "total": 28
+        "total": 32
       },
       {
         "file": "components/admin/submissions-table.tsx",
         "classes": [
           {
-            "className": "text-slate-500",
-            "count": 5
-          },
-          {
             "className": "text-slate-400",
+            "count": 7
+          },
+          {
+            "className": "text-slate-600",
             "count": 5
           },
           {
-            "className": "border-slate-100",
-            "count": 4
+            "className": "bg-slate-100",
+            "count": 3
+          },
+          {
+            "className": "text-slate-900",
+            "count": 3
           },
           {
             "className": "text-slate-800",
             "count": 3
           },
           {
-            "className": "text-slate-600",
-            "count": 2
-          },
-          {
-            "className": "bg-slate-100",
-            "count": 2
+            "className": "text-slate-500",
+            "count": 3
           },
           {
             "className": "bg-slate-200",
+            "count": 2
+          },
+          {
+            "className": "border-slate-100",
             "count": 1
           },
           {
@@ -142,7 +192,7 @@
             "count": 1
           }
         ],
-        "total": 24
+        "total": 29
       },
       {
         "file": "app/page.tsx",
@@ -171,26 +221,72 @@
         "total": 22
       },
       {
-        "file": "app/admin/analytics/loading.tsx",
+        "file": "components/admin/auth-backdrop.tsx",
         "classes": [
           {
+            "className": "bg-slate-300",
+            "count": 9
+          },
+          {
             "className": "bg-slate-100",
-            "count": 10
+            "count": 3
           },
           {
-            "className": "bg-slate-200",
-            "count": 5
+            "className": "text-slate-400",
+            "count": 3
           },
           {
-            "className": "border-slate-200",
-            "count": 4
+            "className": "border-slate-300",
+            "count": 1
           },
           {
-            "className": "divide-slate-100",
+            "className": "bg-slate-400",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-50",
+            "count": 1
+          },
+          {
+            "className": "border-slate-50",
+            "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-emerald-600",
             "count": 1
           }
         ],
-        "total": 20
+        "total": 21
+      },
+      {
+        "file": "components/footer.tsx",
+        "classes": [
+          {
+            "className": "text-slate-700",
+            "count": 11
+          },
+          {
+            "className": "text-slate-500",
+            "count": 6
+          },
+          {
+            "className": "text-slate-400",
+            "count": 2
+          },
+          {
+            "className": "text-slate-900",
+            "count": 1
+          },
+          {
+            "className": "text-slate-300",
+            "count": 1
+          }
+        ],
+        "total": 21
       },
       {
         "file": "app/admin/jobs/loading.tsx",
@@ -261,39 +357,23 @@
         "total": 20
       },
       {
-        "file": "app/admin/users/page.tsx",
+        "file": "app/admin/analytics/loading.tsx",
         "classes": [
           {
-            "className": "text-slate-500",
-            "count": 4
+            "className": "bg-slate-100",
+            "count": 6
           },
           {
-            "className": "text-slate-400",
+            "className": "bg-slate-200",
             "count": 4
           },
           {
             "className": "border-slate-200",
-            "count": 2
-          },
-          {
-            "className": "text-slate-700",
-            "count": 2
+            "count": 4
           },
           {
             "className": "bg-slate-50",
-            "count": 2
-          },
-          {
-            "className": "text-slate-800",
-            "count": 1
-          },
-          {
-            "className": "border-slate-100",
-            "count": 1
-          },
-          {
-            "className": "divide-slate-50",
-            "count": 1
+            "count": 3
           }
         ],
         "total": 17
@@ -337,22 +417,34 @@
         "total": 16
       },
       {
-        "file": "components/footer.tsx",
+        "file": "components/admin/analytics/period-picker.tsx",
         "classes": [
           {
-            "className": "text-slate-700",
-            "count": 9
-          },
-          {
-            "className": "text-slate-500",
+            "className": "text-slate-400",
             "count": 4
           },
           {
-            "className": "text-slate-400",
+            "className": "bg-slate-100",
+            "count": 3
+          },
+          {
+            "className": "text-slate-600",
+            "count": 3
+          },
+          {
+            "className": "bg-slate-200",
             "count": 2
           },
           {
             "className": "text-slate-900",
+            "count": 2
+          },
+          {
+            "className": "ring-slate-300",
+            "count": 1
+          },
+          {
+            "className": "border-slate-100",
             "count": 1
           }
         ],
@@ -455,56 +547,6 @@
           },
           {
             "className": "bg-slate-100",
-            "count": 1
-          },
-          {
-            "className": "text-slate-400",
-            "count": 1
-          }
-        ],
-        "total": 12
-      },
-      {
-        "file": "components/admin/analytics/insight-treatments.tsx",
-        "classes": [
-          {
-            "className": "text-slate-800",
-            "count": 2
-          },
-          {
-            "className": "bg-emerald-50",
-            "count": 1
-          },
-          {
-            "className": "text-emerald-700",
-            "count": 1
-          },
-          {
-            "className": "bg-rose-50",
-            "count": 1
-          },
-          {
-            "className": "text-rose-700",
-            "count": 1
-          },
-          {
-            "className": "bg-slate-100",
-            "count": 1
-          },
-          {
-            "className": "text-slate-600",
-            "count": 1
-          },
-          {
-            "className": "text-emerald-600",
-            "count": 1
-          },
-          {
-            "className": "text-rose-600",
-            "count": 1
-          },
-          {
-            "className": "text-slate-500",
             "count": 1
           },
           {
@@ -663,18 +705,74 @@
         "classes": [
           {
             "className": "text-slate-400",
-            "count": 4
+            "count": 5
           },
           {
             "className": "text-slate-700",
-            "count": 2
+            "count": 3
           },
           {
             "className": "text-green-600",
             "count": 1
           }
         ],
-        "total": 7
+        "total": 9
+      },
+      {
+        "file": "components/admin/analytics/ranked-bars.tsx",
+        "classes": [
+          {
+            "className": "text-slate-400",
+            "count": 2
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          },
+          {
+            "className": "border-slate-100",
+            "count": 1
+          },
+          {
+            "className": "text-slate-300",
+            "count": 1
+          },
+          {
+            "className": "text-slate-700",
+            "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          }
+        ],
+        "total": 8
+      },
+      {
+        "file": "components/legal/legal-page.tsx",
+        "classes": [
+          {
+            "className": "text-slate-600",
+            "count": 3
+          },
+          {
+            "className": "text-slate-900",
+            "count": 2
+          },
+          {
+            "className": "text-slate-400",
+            "count": 2
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          }
+        ],
+        "total": 8
       },
       {
         "file": "app/submit/edit/page.tsx",
@@ -690,6 +788,114 @@
           {
             "className": "text-slate-500",
             "count": 2
+          }
+        ],
+        "total": 6
+      },
+      {
+        "file": "components/admin/analytics/dashboard-section.tsx",
+        "classes": [
+          {
+            "className": "border-slate-200",
+            "count": 2
+          },
+          {
+            "className": "text-slate-400",
+            "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-50",
+            "count": 1
+          }
+        ],
+        "total": 6
+      },
+      {
+        "file": "components/admin/analytics/funnel.tsx",
+        "classes": [
+          {
+            "className": "text-slate-400",
+            "count": 2
+          },
+          {
+            "className": "text-slate-700",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          }
+        ],
+        "total": 6
+      },
+      {
+        "file": "components/admin/table/admin-pagination.tsx",
+        "classes": [
+          {
+            "className": "text-slate-500",
+            "count": 2
+          },
+          {
+            "className": "text-slate-900",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
+          {
+            "className": "text-slate-400",
+            "count": 1
+          },
+          {
+            "className": "text-slate-600",
+            "count": 1
+          }
+        ],
+        "total": 6
+      },
+      {
+        "file": "components/admin/table/table-styles.ts",
+        "classes": [
+          {
+            "className": "ring-slate-200",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
+          {
+            "className": "text-slate-700",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-200",
+            "count": 1
+          },
+          {
+            "className": "text-slate-900",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
           }
         ],
         "total": 6
@@ -721,44 +927,98 @@
         "total": 6
       },
       {
-        "file": "app/admin/analytics/page.tsx",
+        "file": "app/privacy/page.tsx",
         "classes": [
           {
+            "className": "text-slate-900",
+            "count": 3
+          },
+          {
             "className": "text-slate-800",
-            "count": 2
+            "count": 1
           },
           {
-            "className": "text-slate-500",
-            "count": 2
-          },
-          {
-            "className": "border-slate-200",
+            "className": "text-slate-600",
             "count": 1
           }
         ],
         "total": 5
       },
       {
-        "file": "components/admin/analytics/metric-cards.tsx",
+        "file": "app/terms/page.tsx",
         "classes": [
           {
-            "className": "border-slate-200",
-            "count": 1
+            "className": "text-slate-900",
+            "count": 4
           },
           {
-            "className": "divide-slate-100",
+            "className": "text-slate-800",
             "count": 1
-          },
+          }
+        ],
+        "total": 5
+      },
+      {
+        "file": "components/admin/analytics/chart-viewers-over-time.tsx",
+        "classes": [
           {
             "className": "text-slate-500",
-            "count": 1
+            "count": 2
           },
           {
             "className": "text-slate-800",
             "count": 1
           },
           {
+            "className": "border-slate-200",
+            "count": 1
+          },
+          {
+            "className": "border-slate-100",
+            "count": 1
+          }
+        ],
+        "total": 5
+      },
+      {
+        "file": "components/admin/analytics/delta.tsx",
+        "classes": [
+          {
+            "className": "text-slate-500",
+            "count": 2
+          },
+          {
+            "className": "text-emerald-600",
+            "count": 1
+          },
+          {
+            "className": "text-rose-600",
+            "count": 1
+          },
+          {
             "className": "text-slate-400",
+            "count": 1
+          }
+        ],
+        "total": 5
+      },
+      {
+        "file": "components/admin/analytics/interest-table.tsx",
+        "classes": [
+          {
+            "className": "text-slate-500",
+            "count": 2
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "border-slate-200",
+            "count": 1
+          },
+          {
+            "className": "border-slate-100",
             "count": 1
           }
         ],
@@ -791,18 +1051,44 @@
         "total": 5
       },
       {
-        "file": "components/admin/table/grid-row.tsx",
+        "file": "components/admin/analytics/metric-cards.tsx",
         "classes": [
           {
-            "className": "bg-slate-50",
-            "count": 2
-          },
-          {
-            "className": "border-slate-100",
+            "className": "border-slate-200",
             "count": 1
           },
           {
-            "className": "border-slate-50",
+            "className": "text-slate-500",
+            "count": 1
+          },
+          {
+            "className": "text-slate-900",
+            "count": 1
+          },
+          {
+            "className": "text-slate-400",
+            "count": 1
+          }
+        ],
+        "total": 4
+      },
+      {
+        "file": "components/admin/bulk-import.tsx",
+        "classes": [
+          {
+            "className": "text-slate-500",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
+          {
+            "className": "text-slate-900",
+            "count": 1
+          },
+          {
+            "className": "text-amber-600",
             "count": 1
           }
         ],
@@ -889,36 +1175,18 @@
         "total": 3
       },
       {
-        "file": "app/admin/jobs/page.tsx",
+        "file": "app/admin/submissions/[id]/preview/page.tsx",
         "classes": [
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
           {
             "className": "text-slate-800",
             "count": 1
           },
           {
-            "className": "text-slate-500",
-            "count": 1
-          },
-          {
-            "className": "border-slate-200",
-            "count": 1
-          }
-        ],
-        "total": 3
-      },
-      {
-        "file": "app/admin/submissions/page.tsx",
-        "classes": [
-          {
-            "className": "text-slate-800",
-            "count": 1
-          },
-          {
-            "className": "text-slate-500",
-            "count": 1
-          },
-          {
-            "className": "border-slate-200",
+            "className": "text-slate-600",
             "count": 1
           }
         ],
@@ -943,40 +1211,88 @@
         "total": 3
       },
       {
-        "file": "components/admin/analytics/chart-bar-job-type.tsx",
-        "classes": [
-          {
-            "className": "border-slate-200",
-            "count": 2
-          }
-        ],
-        "total": 2
-      },
-      {
-        "file": "components/admin/analytics/chart-bar-tag.tsx",
-        "classes": [
-          {
-            "className": "border-slate-200",
-            "count": 2
-          }
-        ],
-        "total": 2
-      },
-      {
-        "file": "components/admin/analytics/chart-viewers-over-time.tsx",
+        "file": "components/admin/analytics/dashboards.tsx",
         "classes": [
           {
             "className": "border-slate-200",
             "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
           }
         ],
-        "total": 1
+        "total": 3
       },
       {
-        "file": "components/admin/bulk-import.tsx",
+        "file": "components/admin/analytics/panel.tsx",
         "classes": [
           {
-            "className": "text-amber-600",
+            "className": "border-slate-200",
+            "count": 1
+          },
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          }
+        ],
+        "total": 3
+      },
+      {
+        "file": "app/admin/jobs/page.tsx",
+        "classes": [
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          }
+        ],
+        "total": 2
+      },
+      {
+        "file": "app/admin/submissions/page.tsx",
+        "classes": [
+          {
+            "className": "text-slate-800",
+            "count": 1
+          },
+          {
+            "className": "text-slate-500",
+            "count": 1
+          }
+        ],
+        "total": 2
+      },
+      {
+        "file": "components/admin/table/grid-row.tsx",
+        "classes": [
+          {
+            "className": "bg-slate-100",
+            "count": 1
+          },
+          {
+            "className": "bg-slate-50",
+            "count": 1
+          }
+        ],
+        "total": 2
+      },
+      {
+        "file": "app/admin/analytics/page.tsx",
+        "classes": [
+          {
+            "className": "text-slate-800",
             "count": 1
           }
         ],
@@ -993,12 +1309,12 @@
         "total": 1
       }
     ],
-    "totalInstances": 380,
-    "totalFiles": 37,
+    "totalInstances": 513,
+    "totalFiles": 49,
     "byFamily": [
       {
         "family": "slate",
-        "count": 358
+        "count": 494
       },
       {
         "family": "purple",
@@ -1010,14 +1326,14 @@
       },
       {
         "family": "emerald",
-        "count": 3
-      },
-      {
-        "family": "rose",
-        "count": 3
+        "count": 2
       },
       {
         "family": "red",
+        "count": 1
+      },
+      {
+        "family": "rose",
         "count": 1
       },
       {
@@ -1037,22 +1353,22 @@
       "values": [
         {
           "value": "primary",
-          "count": 13,
+          "count": 14,
           "isDefault": true
         },
         {
           "value": "secondary",
-          "count": 0,
+          "count": 1,
           "isDefault": false
         },
         {
           "value": "outline",
-          "count": 9,
+          "count": 4,
           "isDefault": false
         },
         {
           "value": "ghost",
-          "count": 3,
+          "count": 12,
           "isDefault": false
         },
         {
@@ -1073,12 +1389,12 @@
       "values": [
         {
           "value": "sm",
-          "count": 6,
+          "count": 10,
           "isDefault": false
         },
         {
           "value": "md",
-          "count": 18,
+          "count": 20,
           "isDefault": true
         },
         {
@@ -1099,17 +1415,17 @@
       "values": [
         {
           "value": "default",
-          "count": 2,
+          "count": 4,
           "isDefault": true
         },
         {
           "value": "secondary",
-          "count": 0,
+          "count": 1,
           "isDefault": false
         },
         {
           "value": "outline",
-          "count": 5,
+          "count": 6,
           "isDefault": false
         },
         {
@@ -1119,7 +1435,7 @@
         },
         {
           "value": "warning",
-          "count": 0,
+          "count": 2,
           "isDefault": false
         },
         {
@@ -1129,5 +1445,1235 @@
         }
       ]
     }
-  ]
+  ],
+  "borderUsage": {
+    "axes": [
+      {
+        "axis": "color",
+        "label": "Border colour",
+        "values": [
+          {
+            "className": "border-slate-200",
+            "count": 44
+          },
+          {
+            "className": "border-border",
+            "count": 25
+          },
+          {
+            "className": "border-slate-100",
+            "count": 22
+          },
+          {
+            "className": "border-primary",
+            "count": 5
+          },
+          {
+            "className": "border-ring",
+            "count": 5
+          },
+          {
+            "className": "border-transparent",
+            "count": 5
+          },
+          {
+            "className": "border-slate-300",
+            "count": 4
+          },
+          {
+            "className": "border-slate-50",
+            "count": 4
+          },
+          {
+            "className": "border-destructive",
+            "count": 3
+          },
+          {
+            "className": "border-input",
+            "count": 3
+          },
+          {
+            "className": "border-purple-200",
+            "count": 2
+          },
+          {
+            "className": "border-slate-200/50",
+            "count": 2
+          },
+          {
+            "className": "border-[#d5d5d5]",
+            "count": 1
+          },
+          {
+            "className": "border-[0.5px]",
+            "count": 1
+          },
+          {
+            "className": "border-[1.5px]",
+            "count": 1
+          },
+          {
+            "className": "border-destructive/20",
+            "count": 1
+          },
+          {
+            "className": "border-destructive/50",
+            "count": 1
+          },
+          {
+            "className": "border-green-300",
+            "count": 1
+          },
+          {
+            "className": "border-slate-300/70",
+            "count": 1
+          },
+          {
+            "className": "border-success/20",
+            "count": 1
+          },
+          {
+            "className": "border-warning/20",
+            "count": 1
+          },
+          {
+            "className": "border-warning/30",
+            "count": 1
+          }
+        ],
+        "distinct": 22,
+        "total": 134
+      },
+      {
+        "axis": "width",
+        "label": "Border width",
+        "values": [
+          {
+            "className": "border",
+            "count": 74
+          },
+          {
+            "className": "border-b",
+            "count": 23
+          },
+          {
+            "className": "border-t",
+            "count": 20
+          },
+          {
+            "className": "border-0",
+            "count": 9
+          },
+          {
+            "className": "border-2",
+            "count": 3
+          },
+          {
+            "className": "border-[0.5px]",
+            "count": 1
+          },
+          {
+            "className": "border-[1.5px]",
+            "count": 1
+          },
+          {
+            "className": "border-r",
+            "count": 1
+          }
+        ],
+        "distinct": 8,
+        "total": 132
+      },
+      {
+        "axis": "radius",
+        "label": "Corner radius",
+        "values": [
+          {
+            "className": "rounded",
+            "count": 49
+          },
+          {
+            "className": "rounded-full",
+            "count": 46
+          },
+          {
+            "className": "rounded-lg",
+            "count": 39
+          },
+          {
+            "className": "rounded-md",
+            "count": 36
+          },
+          {
+            "className": "rounded-xl",
+            "count": 36
+          },
+          {
+            "className": "rounded-2xl",
+            "count": 21
+          },
+          {
+            "className": "rounded-sm",
+            "count": 8
+          },
+          {
+            "className": "rounded-[15px]",
+            "count": 5
+          },
+          {
+            "className": "rounded-[2px]",
+            "count": 3
+          },
+          {
+            "className": "rounded-[20px]",
+            "count": 2
+          },
+          {
+            "className": "rounded-[inherit]",
+            "count": 1
+          },
+          {
+            "className": "rounded-3xl",
+            "count": 1
+          },
+          {
+            "className": "rounded-r-full",
+            "count": 1
+          }
+        ],
+        "distinct": 13,
+        "total": 248
+      },
+      {
+        "axis": "method",
+        "label": "Edge drawn with",
+        "values": [
+          {
+            "className": "ring-2",
+            "count": 14
+          },
+          {
+            "className": "ring-3",
+            "count": 6
+          },
+          {
+            "className": "ring-1",
+            "count": 5
+          },
+          {
+            "className": "ring-0",
+            "count": 2
+          }
+        ],
+        "distinct": 4,
+        "total": 27
+      }
+    ]
+  },
+  "routeUsage": {
+    "files": [
+      {
+        "file": "app/admin/analytics/page.tsx",
+        "routes": [
+          "/admin/analytics"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/[id]/edit/page.tsx",
+        "routes": [
+          "/admin/jobs/[id]/edit"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/new/page.tsx",
+        "routes": [
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/page.tsx",
+        "routes": [
+          "/admin/jobs"
+        ]
+      },
+      {
+        "file": "app/admin/layout.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "app/admin/login/page.tsx",
+        "routes": [
+          "/admin/login"
+        ]
+      },
+      {
+        "file": "app/admin/page.tsx",
+        "routes": [
+          "/admin"
+        ]
+      },
+      {
+        "file": "app/admin/reset-password/page.tsx",
+        "routes": [
+          "/admin/reset-password"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/[id]/preview/draft-preview.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/[id]/preview/page.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/page.tsx",
+        "routes": [
+          "/admin/submissions"
+        ]
+      },
+      {
+        "file": "app/admin/users/page.tsx",
+        "routes": [
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "app/jobs/[id]/page.tsx",
+        "routes": [
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "app/jobs/page.tsx",
+        "routes": [
+          "/jobs"
+        ]
+      },
+      {
+        "file": "app/layout.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "app/page.tsx",
+        "routes": [
+          "/"
+        ]
+      },
+      {
+        "file": "app/privacy/page.tsx",
+        "routes": [
+          "/privacy"
+        ]
+      },
+      {
+        "file": "app/submit/edit/page.tsx",
+        "routes": [
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "app/submit/page.tsx",
+        "routes": [
+          "/submit"
+        ]
+      },
+      {
+        "file": "app/terms/page.tsx",
+        "routes": [
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/admin/admin-nav.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/chart-viewers-over-time.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/dashboard-section.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/delta.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/funnel.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/interest-table.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/metric-cards.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/panel.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/period-picker.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/ranked-bars.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/sparkline.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/auth-backdrop.tsx",
+        "routes": [
+          "/admin/login",
+          "/admin/reset-password"
+        ]
+      },
+      {
+        "file": "components/admin/bulk-import.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/index.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/job-form.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/job-table.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/logo-upload-field.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/admin/rich-text-editor.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/admin/submissions-table.tsx",
+        "routes": [
+          "/admin/submissions"
+        ]
+      },
+      {
+        "file": "components/admin/table/admin-pagination.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/grid-row.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/icon-action-button.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/index.ts",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/select-checkbox.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/status-dot.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/table-styles.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/bottom-blur.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/footer.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/jobs/apply-confirm-prompt.tsx",
+        "routes": [
+          "/",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "components/jobs/apply-link.tsx",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "components/jobs/job-card.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/jobs/job-detail-panel.tsx",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/jobs/job-submission-form.tsx",
+        "routes": [
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/jobs/jobs-header.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/legal/legal-page.tsx",
+        "routes": [
+          "/privacy",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/Logo.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/navbar.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/shadcn/popover.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/shadcn/tooltip.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "components/site-main.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/smooth-scroll.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/ui/alert.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/badge.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/button.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/card.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/confirm-dialog.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/index.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/input.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/label.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/modal.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/native-select.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/ui/pagination.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/segmented-tabs.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/ui/tag-combobox.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/textarea.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "hooks/use-dwell-tracking.ts",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "lib/admin-data.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "lib/analytics/buckets.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/constants.ts",
+        "routes": [
+          "/",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/growth.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/metrics.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/pending-applies.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/period.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/queries.ts",
+        "routes": [
+          "/admin/analytics"
+        ]
+      },
+      {
+        "file": "lib/analytics/track.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/trend.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/excel-template.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/sanitize.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "lib/supabase/admin.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/supabase/client.ts",
+        "routes": [
+          "/",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/jobs",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/supabase/server.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/tags.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/types.ts",
+        "routes": [
+          "/",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/utils.ts",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      }
+    ],
+    "allRoutes": [
+      "/",
+      "/admin",
+      "/admin/analytics",
+      "/admin/jobs",
+      "/admin/jobs/[id]/edit",
+      "/admin/jobs/new",
+      "/admin/login",
+      "/admin/reset-password",
+      "/admin/submissions",
+      "/admin/submissions/[id]/preview",
+      "/admin/users",
+      "/jobs",
+      "/jobs/[id]",
+      "/privacy",
+      "/submit",
+      "/submit/edit",
+      "/terms"
+    ]
+  }
 }

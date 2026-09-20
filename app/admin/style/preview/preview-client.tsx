@@ -28,6 +28,10 @@ import { JobCard } from '@/components/jobs/job-card'
 import { cn } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import { previewJobs, previewMetricTiles, previewJobTypeChart, previewSubmissions } from './mock-data'
+import { BorderComparison } from './border-comparison'
+import { UndocumentedBlock, UtilityLayerBlock } from './undocumented'
+import { Usage } from '../components/usage'
+import { Panel } from '../components/shell'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select job type' },
@@ -45,39 +49,9 @@ const SUBMISSION_STATUS_ROLE: Record<(typeof previewSubmissions)[number]['status
 const chartConfig = {
   events: {
     label: 'Interactions',
-    color: 'var(--chart-3)',
+    color: 'var(--graph-mark, #8367a3)',
   },
 } satisfies ChartConfig
-
-/**
- * Card chrome shared by every block below, so what varies from block to
- * block is only ever the real UI inside it — never the surface it sits on.
- */
-function Block({
-  title,
-  description,
-  className,
-  bodyClassName,
-  children,
-}: {
-  title: string
-  description?: string
-  className?: string
-  bodyClassName?: string
-  children: React.ReactNode
-}) {
-  return (
-    <Card className={cn('flex flex-col', className)}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent className={cn('flex-1 pt-0', bodyClassName)}>{children}</CardContent>
-    </Card>
-  )
-}
 
 function Swatch({
   label,
@@ -93,7 +67,7 @@ function Swatch({
   return (
     <div
       className={cn(
-        'flex h-16 min-w-[100px] flex-1 flex-col justify-end rounded-lg border border-border p-2',
+        'flex h-16 flex-col justify-end rounded-lg border border-border p-2',
         className
       )}
       style={style}
@@ -109,21 +83,45 @@ export function ThemePreviewClient() {
 
   return (
     <div className="space-y-8 pb-24">
-      <header className="space-y-2 border-b border-border pb-6">
-        <h1 className="text-3xl font-semibold text-foreground">Theme preview</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Real UI blocks — a job card, a form, an admin table row, a chart — composed on one dense
-          canvas instead of shown one at a time. <a href="/admin/style" className="underline underline-offset-2 hover:text-foreground">Reference</a> proves what a
-          single token resolves to; this is for judging how a set of them reads once actual
-          components sit next to each other. Nothing here writes to Supabase — every block below
-          renders from fixture data in <code className="rounded bg-muted px-1 py-0.5 text-xs">mock-data.ts</code>.
+      <header className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold text-slate-900">Preview</h1>
+        <p className="text-[13px] text-slate-500">
+          Real components, composed. Fixture data only.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        {/* Border treatments — full width and first, because it is an open
+            question the user is choosing between, not settled documentation
+            like everything below it. */}
+        <Panel
+          title="Border treatments"
+          description="The same screen in each treatment. Compare columns, not edges."
+          className="xl:col-span-2"
+        >
+          <BorderComparison />
+        </Panel>
+
+        {/* Previously undocumented — see undocumented.tsx. */}
+        <Panel
+          title="Not previously documented"
+          description="Components and global styles neither page covered."
+          className="xl:col-span-2"
+        >
+          <UndocumentedBlock />
+        </Panel>
+
+        <Panel
+          title="The @utility layer"
+          description="A second button and card system in globals.css that no component imports."
+          className="xl:col-span-2"
+        >
+          <UtilityLayerBlock />
+        </Panel>
+
         {/* Palette — full width, first, everything else is built from these. */}
-        <Block title="Palette" className="xl:col-span-4">
-          <div className="flex flex-wrap gap-2">
+        <Panel title="Palette" className="xl:col-span-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
             <Swatch label="background" className="bg-background" />
             <Swatch label="foreground" className="bg-foreground" textClassName="text-background" />
             <Swatch label="primary" className="bg-primary" textClassName="text-primary-foreground" />
@@ -134,7 +132,7 @@ export function ThemePreviewClient() {
             <Swatch label="success" className="bg-success" textClassName="text-success-foreground" />
             <Swatch label="warning" className="bg-warning" textClassName="text-warning-foreground" />
             <Swatch label="destructive" className="bg-destructive" textClassName="text-destructive-foreground" />
-            {[1, 2, 3, 4, 5].map((n) => (
+            {[1, 2].map((n) => (
               <Swatch
                 key={n}
                 label={`chart-${n}`}
@@ -143,15 +141,15 @@ export function ThemePreviewClient() {
               />
             ))}
           </div>
-        </Block>
+        </Panel>
 
         {/* Typography */}
-        <Block title="Typography" className="xl:col-span-2">
+        <Panel title="Typography" className="xl:col-span-2">
           <div className="space-y-3">
-            <p className="font-heading text-3xl font-bold leading-tight text-foreground">
+            <p className="font-heading text-3xl font-semibold leading-tight text-foreground">
               Marketing Intern
             </p>
-            <p className="font-heading text-base font-semibold text-foreground">
+            <p className="font-heading text-base font-medium text-foreground">
               Acme Retail Co. · Melbourne, VIC
             </p>
             <p className="text-sm leading-relaxed text-foreground">
@@ -162,11 +160,12 @@ export function ThemePreviewClient() {
               Closing in 5 days · posted 3 days ago
             </p>
           </div>
-        </Block>
+        </Panel>
 
         {/* Real job cards, side by side, one selected */}
-        <Block title="Job card" description="components/jobs/job-card.tsx, unmodified" className="xl:col-span-2">
+        <Panel title="Job card" description="Unmodified" className="xl:col-span-2">
           <div className="space-y-2">
+            <Usage file="components/jobs/job-card.tsx" />
             {previewJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -176,11 +175,12 @@ export function ThemePreviewClient() {
               />
             ))}
           </div>
-        </Block>
+        </Panel>
 
         {/* Buttons & badges */}
-        <Block title="Buttons & badges">
+        <Panel title="Buttons & badges">
           <div className="space-y-4">
+            <Usage file="components/ui/button.tsx" />
             <div className="flex flex-wrap gap-2">
               <Button size="sm">Primary</Button>
               <Button size="sm" variant="secondary">Secondary</Button>
@@ -198,10 +198,10 @@ export function ThemePreviewClient() {
               <Badge variant="destructive">Destructive</Badge>
             </div>
           </div>
-        </Block>
+        </Panel>
 
         {/* Alerts */}
-        <Block title="Alerts">
+        <Panel title="Alerts">
           <div className="space-y-2.5">
             <Alert>
               <AlertTitle>Heads up</AlertTitle>
@@ -220,10 +220,10 @@ export function ThemePreviewClient() {
               <AlertDescription>Check the required fields and try again.</AlertDescription>
             </Alert>
           </div>
-        </Block>
+        </Panel>
 
         {/* Form panel — same primitives as the submit/admin job forms */}
-        <Block title="Form" description="Input, NativeSelect, TagCombobox, Textarea" className="xl:col-span-2">
+        <Panel title="Form" description="The submit and admin job forms" className="xl:col-span-2">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="preview-title" required>Job title</Label>
@@ -254,12 +254,12 @@ export function ThemePreviewClient() {
               />
             </div>
           </div>
-        </Block>
+        </Panel>
 
         {/* Metric cards — rendered as shipped, complete with its own surface,
             not re-wrapped in Block: how it sits next to Block's card chrome
             is itself part of what this page is for judging. */}
-        <div className="xl:col-span-4">
+        <div className="xl:col-span-2">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Metric cards · components/admin/analytics/metric-cards.tsx, unmodified
           </p>
@@ -267,7 +267,7 @@ export function ThemePreviewClient() {
         </div>
 
         {/* Admin table snippet */}
-        <Block title="Table" description="GridRow + StatusDot, as used in Jobs / Submissions" className="xl:col-span-2" bodyClassName="p-0">
+        <Panel title="Table" description="GridRow + StatusDot" className="xl:col-span-2" >
           <div className="overflow-hidden rounded-b-lg border-t border-border">
             <GridRow columnsClassName="grid-cols-[minmax(0,1fr)_92px]" header>
               <div className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -289,10 +289,10 @@ export function ThemePreviewClient() {
               </GridRow>
             ))}
           </div>
-        </Block>
+        </Panel>
 
         {/* Chart — same ChartContainer/--chart-* wiring as the analytics dashboard */}
-        <Block title="Chart" description="Interest by job type, --chart-3" className="xl:col-span-2">
+        <Panel title="Chart" description="Interest by job type" className="xl:col-span-2">
           <ChartContainer config={chartConfig} className="w-full" style={{ height: 200 }}>
             <BarChart accessibilityLayer data={previewJobTypeChart} margin={{ top: 12 }}>
               <CartesianGrid vertical={false} />
@@ -307,18 +307,17 @@ export function ThemePreviewClient() {
               <Bar dataKey="events" fill="var(--color-events)" radius={6} isAnimationActive={false} />
             </BarChart>
           </ChartContainer>
-        </Block>
+        </Panel>
 
         {/* Pagination — the admin tables' version. Page 6 of 12 so both
             ellipses render; local dev rarely has enough rows to page. */}
-        <Block
+        <Panel
           title="Pagination"
           description="components/admin/table/admin-pagination.tsx, as used by Jobs / Submissions"
-          className="xl:col-span-4"
-          bodyClassName="flex justify-center"
+          className="xl:col-span-2"
         >
           <AdminPagination currentPage={6} totalPages={12} baseUrl="#" />
-        </Block>
+        </Panel>
       </div>
     </div>
   )

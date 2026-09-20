@@ -73,12 +73,9 @@ export function ColorSection() {
   return (
     <section className="space-y-8">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">1. Colour</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Every value below is read live from the rendered DOM — a swatch is painted with the
-          token&apos;s actual Tailwind class, then its resolved color is pulled back out via{' '}
-          <code>getComputedStyle</code> and converted to sRGB hex through a canvas round-trip.
-          Nothing here is typed in by hand.
+        <p className="text-[13px] leading-relaxed text-slate-500">
+          Painted with each token&apos;s real Tailwind class, then read back via{' '}
+          <code>getComputedStyle</code> — nothing typed by hand.
         </p>
       </header>
 
