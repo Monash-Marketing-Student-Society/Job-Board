@@ -102,7 +102,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack, preview = fals
                 initial={preview ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="text-lg sm:text-xl font-bold text-slate-900 leading-tight"
+                className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight"
               >
                 {job.title}
               </motion.h1>
