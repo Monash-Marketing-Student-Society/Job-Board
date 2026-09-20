@@ -29,6 +29,10 @@ import { cn } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import { previewJobs, previewMetricTiles, previewJobTypeChart, previewSubmissions } from './mock-data'
 import { BorderComparison } from './border-comparison'
+import { UndocumentedBlock, UtilityLayerBlock } from './undocumented'
+import { TokenControls } from '../components/token-controls'
+import { NotesExport } from '../components/note'
+import { Usage } from '../components/usage'
 
 const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select job type' },
@@ -110,15 +114,19 @@ export function ThemePreviewClient() {
 
   return (
     <div className="space-y-8 pb-24">
-      <header className="space-y-2 border-b border-border pb-6">
-        <h1 className="text-3xl font-semibold text-foreground">Theme preview</h1>
+      <header className="space-y-3 border-b border-border pb-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-3xl font-semibold text-foreground">Theme preview</h1>
+          <NotesExport />
+        </div>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Real UI blocks — a job card, a form, an admin table row, a chart — composed on one dense
-          canvas instead of shown one at a time. <a href="/admin/style" className="underline underline-offset-2 hover:text-foreground">Reference</a> proves what a
-          single token resolves to; this is for judging how a set of them reads once actual
-          components sit next to each other. Nothing here writes to Supabase — every block below
-          renders from fixture data in <code className="rounded bg-muted px-1 py-0.5 text-xs">mock-data.ts</code>.
+          Real components on one canvas, for judging how they read together.{' '}
+          <a href="/admin/style" className="underline underline-offset-2 hover:text-foreground">
+            Reference
+          </a>{' '}
+          proves what a single token resolves to. Fixture data only — nothing writes to Supabase.
         </p>
+        <TokenControls />
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -131,6 +139,23 @@ export function ThemePreviewClient() {
           className="xl:col-span-4"
         >
           <BorderComparison />
+        </Block>
+
+        {/* Previously undocumented — see undocumented.tsx. */}
+        <Block
+          title="Not previously documented"
+          description="Components and global styles neither style page covered."
+          className="xl:col-span-4"
+        >
+          <UndocumentedBlock />
+        </Block>
+
+        <Block
+          title="The @utility layer"
+          description="A second button and card system, defined in globals.css, that no component imports."
+          className="xl:col-span-4"
+        >
+          <UtilityLayerBlock />
         </Block>
 
         {/* Palette — full width, first, everything else is built from these. */}
@@ -177,8 +202,9 @@ export function ThemePreviewClient() {
         </Block>
 
         {/* Real job cards, side by side, one selected */}
-        <Block title="Job card" description="components/jobs/job-card.tsx, unmodified" className="xl:col-span-2">
+        <Block title="Job card" description="Unmodified" className="xl:col-span-2">
           <div className="space-y-2">
+            <Usage file="components/jobs/job-card.tsx" />
             {previewJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -193,6 +219,7 @@ export function ThemePreviewClient() {
         {/* Buttons & badges */}
         <Block title="Buttons & badges">
           <div className="space-y-4">
+            <Usage file="components/ui/button.tsx" />
             <div className="flex flex-wrap gap-2">
               <Button size="sm">Primary</Button>
               <Button size="sm" variant="secondary">Secondary</Button>

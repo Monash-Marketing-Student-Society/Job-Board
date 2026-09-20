@@ -44,11 +44,17 @@ export interface BorderUsageReport {
   axes: BorderAxisReport[]
 }
 
+export interface RouteUsageReport {
+  files: { file: string; routes: string[] }[]
+  allRoutes: string[]
+}
+
 export interface StyleAuditSnapshot {
   generatedAt: string
   rawPalette: RawPaletteReport
   variantUsage: VariantUsageReport[]
   borderUsage: BorderUsageReport
+  routeUsage: RouteUsageReport
 }
 
 export const styleAudit = rawSnapshot as StyleAuditSnapshot

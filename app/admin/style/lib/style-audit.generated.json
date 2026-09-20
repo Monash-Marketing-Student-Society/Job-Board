@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T00:46:43.277Z",
+  "generatedAt": "2026-09-20T01:13:37.336Z",
   "rawPalette": {
     "files": [
       {
@@ -1668,6 +1668,1012 @@
         "distinct": 4,
         "total": 27
       }
+    ]
+  },
+  "routeUsage": {
+    "files": [
+      {
+        "file": "app/admin/analytics/page.tsx",
+        "routes": [
+          "/admin/analytics"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/[id]/edit/page.tsx",
+        "routes": [
+          "/admin/jobs/[id]/edit"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/new/page.tsx",
+        "routes": [
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "app/admin/jobs/page.tsx",
+        "routes": [
+          "/admin/jobs"
+        ]
+      },
+      {
+        "file": "app/admin/layout.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "app/admin/login/page.tsx",
+        "routes": [
+          "/admin/login"
+        ]
+      },
+      {
+        "file": "app/admin/page.tsx",
+        "routes": [
+          "/admin"
+        ]
+      },
+      {
+        "file": "app/admin/reset-password/page.tsx",
+        "routes": [
+          "/admin/reset-password"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/[id]/preview/draft-preview.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/[id]/preview/page.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "app/admin/submissions/page.tsx",
+        "routes": [
+          "/admin/submissions"
+        ]
+      },
+      {
+        "file": "app/admin/users/page.tsx",
+        "routes": [
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "app/jobs/[id]/page.tsx",
+        "routes": [
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "app/jobs/page.tsx",
+        "routes": [
+          "/jobs"
+        ]
+      },
+      {
+        "file": "app/layout.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "app/page.tsx",
+        "routes": [
+          "/"
+        ]
+      },
+      {
+        "file": "app/privacy/page.tsx",
+        "routes": [
+          "/privacy"
+        ]
+      },
+      {
+        "file": "app/submit/edit/page.tsx",
+        "routes": [
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "app/submit/page.tsx",
+        "routes": [
+          "/submit"
+        ]
+      },
+      {
+        "file": "app/terms/page.tsx",
+        "routes": [
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/admin/admin-nav.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/chart-viewers-over-time.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/dashboard-section.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/delta.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/funnel.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/interest-table.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/metric-cards.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/panel.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/period-picker.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/ranked-bars.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/analytics/sparkline.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/auth-backdrop.tsx",
+        "routes": [
+          "/admin/login",
+          "/admin/reset-password"
+        ]
+      },
+      {
+        "file": "components/admin/bulk-import.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/index.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/job-form.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/job-table.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "components/admin/logo-upload-field.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/admin/rich-text-editor.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/admin/submissions-table.tsx",
+        "routes": [
+          "/admin/submissions"
+        ]
+      },
+      {
+        "file": "components/admin/table/admin-pagination.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/grid-row.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/icon-action-button.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/index.ts",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/select-checkbox.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/status-dot.tsx",
+        "routes": [
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/admin/table/table-styles.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/bottom-blur.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/footer.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/jobs/apply-confirm-prompt.tsx",
+        "routes": [
+          "/",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "components/jobs/apply-link.tsx",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "components/jobs/job-card.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/jobs/job-detail-panel.tsx",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/jobs/job-submission-form.tsx",
+        "routes": [
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/jobs/jobs-header.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/legal/legal-page.tsx",
+        "routes": [
+          "/privacy",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/Logo.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/navbar.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/shadcn/popover.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/shadcn/tooltip.tsx",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "components/site-main.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/smooth-scroll.tsx",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      },
+      {
+        "file": "components/ui/alert.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/badge.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/button.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/card.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/confirm-dialog.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/index.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/input.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/label.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/modal.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/native-select.tsx",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "components/ui/pagination.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/segmented-tabs.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview"
+        ]
+      },
+      {
+        "file": "components/ui/tag-combobox.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "components/ui/textarea.tsx",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "hooks/use-dwell-tracking.ts",
+        "routes": [
+          "/",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "lib/admin-data.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users"
+        ]
+      },
+      {
+        "file": "lib/analytics/buckets.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/constants.ts",
+        "routes": [
+          "/",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/growth.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/metrics.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/pending-applies.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/period.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/analytics/queries.ts",
+        "routes": [
+          "/admin/analytics"
+        ]
+      },
+      {
+        "file": "lib/analytics/track.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/analytics/trend.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/excel-template.ts",
+        "routes": [
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new"
+        ]
+      },
+      {
+        "file": "lib/sanitize.ts",
+        "routes": [
+          "/",
+          "/admin/submissions/[id]/preview",
+          "/jobs"
+        ]
+      },
+      {
+        "file": "lib/supabase/admin.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/supabase/client.ts",
+        "routes": [
+          "/",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/jobs",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/supabase/server.ts",
+        "routes": [
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs/[id]"
+        ]
+      },
+      {
+        "file": "lib/tags.ts",
+        "routes": [
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/types.ts",
+        "routes": [
+          "/",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/jobs",
+          "/jobs/[id]",
+          "/submit",
+          "/submit/edit"
+        ]
+      },
+      {
+        "file": "lib/utils.ts",
+        "routes": [
+          "/",
+          "/admin",
+          "/admin/analytics",
+          "/admin/jobs",
+          "/admin/jobs/[id]/edit",
+          "/admin/jobs/new",
+          "/admin/login",
+          "/admin/reset-password",
+          "/admin/submissions",
+          "/admin/submissions/[id]/preview",
+          "/admin/users",
+          "/jobs",
+          "/jobs/[id]",
+          "/privacy",
+          "/submit",
+          "/submit/edit",
+          "/terms"
+        ]
+      }
+    ],
+    "allRoutes": [
+      "/",
+      "/admin",
+      "/admin/analytics",
+      "/admin/jobs",
+      "/admin/jobs/[id]/edit",
+      "/admin/jobs/new",
+      "/admin/login",
+      "/admin/reset-password",
+      "/admin/submissions",
+      "/admin/submissions/[id]/preview",
+      "/admin/users",
+      "/jobs",
+      "/jobs/[id]",
+      "/privacy",
+      "/submit",
+      "/submit/edit",
+      "/terms"
     ]
   }
 }

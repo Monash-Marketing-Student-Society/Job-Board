@@ -9,9 +9,8 @@ export function ShadowSection() {
       <header>
         <h2 className="text-2xl font-semibold text-foreground">5. Shadow</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          No bespoke shadow tokens are defined in app/globals.css — these are Tailwind&apos;s
-          unmodified default scale. The app&apos;s own <code>.card</code> utility uses{' '}
-          <code>shadow-xs</code>.
+          Tailwind&apos;s default scale — no shadow tokens are defined. The <code>.card</code>{' '}
+          utility uses <code>shadow-xs</code>.
         </p>
       </header>
 

@@ -196,6 +196,139 @@ async function scanBorderUsage(allFiles) {
   return { axes }
 }
 
+
+/**
+ * Route provenance — which live routes actually reach a given source file.
+ *
+ * Asked naively ("which files mention <Badge>") this produces a list of
+ * components, which is not the question: nobody visits components/ui. The
+ * question the style pages ask is "where on the site does this show up",
+ * and answering it means walking the import graph out from each route's
+ * page.tsx (plus the layouts that wrap it) until it closes.
+ *
+ * Resolution covers the two import forms this repo uses — the `@/` alias
+ * and relative paths — against .ts/.tsx, with /index fallback. Anything
+ * else (bare package imports) is a dependency, not app code, and is
+ * skipped. Dynamic imports and any path built at runtime are invisible
+ * here, so this undercounts rather than inventing a route.
+ */
+const ROUTE_ENTRY_FILES = ['page.tsx', 'layout.tsx']
+
+function routeFromFile(relPath) {
+  const dir = path.dirname(relPath)
+  const segments = dir.split(path.sep).slice(1) // drop leading "app"
+  // Route groups — (marketing) — are organisational, not URL segments.
+  const url = segments.filter((seg) => !(seg.startsWith('(') && seg.endsWith(')')))
+  return '/' + url.join('/')
+}
+
+async function resolveImport(spec, fromFile) {
+  let base
+  if (spec.startsWith('@/')) base = path.join(PROJECT_ROOT, spec.slice(2))
+  else if (spec.startsWith('.')) base = path.resolve(path.dirname(fromFile), spec)
+  else return null
+
+  const candidates = [
+    base + '.tsx',
+    base + '.ts',
+    path.join(base, 'index.tsx'),
+    path.join(base, 'index.ts'),
+  ]
+  for (const candidate of candidates) {
+    try {
+      await readFile(candidate, 'utf-8')
+      return candidate
+    } catch {
+      // Not this extension; try the next.
+    }
+  }
+  return null
+}
+
+const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s*['"]([^'"]+)['"]/g
+
+async function filesReachedFrom(entryFile, cache) {
+  const seen = new Set()
+  const queue = [entryFile]
+
+  while (queue.length) {
+    const current = queue.pop()
+    if (seen.has(current)) continue
+    seen.add(current)
+
+    let source = cache.get(current)
+    if (source === undefined) {
+      try {
+        source = await readFile(current, 'utf-8')
+      } catch {
+        source = ''
+      }
+      cache.set(current, source)
+    }
+
+    IMPORT_RE.lastIndex = 0
+    let match
+    const specs = []
+    while ((match = IMPORT_RE.exec(source))) specs.push(match[1])
+
+    for (const spec of specs) {
+      const resolved = await resolveImport(spec, current)
+      if (resolved && !seen.has(resolved)) queue.push(resolved)
+    }
+  }
+
+  return seen
+}
+
+async function scanRouteProvenance(allFiles) {
+  const appDir = path.join(PROJECT_ROOT, 'app')
+  const entries = allFiles.filter(
+    (f) => f.startsWith(appDir + path.sep) && ROUTE_ENTRY_FILES.includes(path.basename(f))
+  )
+
+  // A layout wraps every route beneath it, so its imports belong to all of
+  // them — otherwise the header and nav components look route-less.
+  const pages = entries.filter((f) => path.basename(f) === 'page.tsx')
+  const layouts = entries.filter((f) => path.basename(f) === 'layout.tsx')
+  const cache = new Map()
+  const byFile = new Map()
+
+  for (const page of pages) {
+    const rel = path.relative(PROJECT_ROOT, page)
+    const route = routeFromFile(rel)
+    if (route.startsWith('/admin/style')) continue // the style pages, not the app
+
+    const pageDir = path.dirname(page)
+    const applicable = [
+      page,
+      ...layouts.filter((l) => pageDir.startsWith(path.dirname(l) + path.sep) || path.dirname(l) === pageDir),
+    ]
+
+    const reached = new Set()
+    for (const entry of applicable) {
+      for (const f of await filesReachedFrom(entry, cache)) reached.add(f)
+    }
+
+    for (const f of reached) {
+      const relFile = path.relative(PROJECT_ROOT, f)
+      if (relFile.startsWith('app' + path.sep + 'admin' + path.sep + 'style')) continue
+      if (!byFile.has(relFile)) byFile.set(relFile, new Set())
+      byFile.get(relFile).add(route)
+    }
+  }
+
+  const files = [...byFile.entries()]
+    .map(([file, routes]) => ({
+      file,
+      routes: [...routes].sort(),
+    }))
+    .sort((a, b) => a.file.localeCompare(b.file))
+
+  const allRoutes = [...new Set(files.flatMap((f) => f.routes))].sort()
+
+  return { files, allRoutes }
+}
+
 // Best-effort JSX scan: finds `<ComponentName ...>` opening tags and reads a
 // `variant="x"` (or size="x") attribute out of the tag's attribute text. It
 // does not parse JSX into an AST, so a variant built from a runtime
@@ -258,12 +391,14 @@ async function main() {
     scanVariantUsage(allFiles),
     scanBorderUsage(allFiles),
   ])
+  const routeUsage = await scanRouteProvenance(allFiles)
 
   const snapshot = {
     generatedAt: new Date().toISOString(),
     rawPalette,
     variantUsage,
     borderUsage,
+    routeUsage,
   }
 
   await writeFile(OUTPUT_FILE, JSON.stringify(snapshot, null, 2) + '\n', 'utf-8')

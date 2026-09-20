@@ -10,9 +10,9 @@ export function RadiusSection() {
       <header>
         <h2 className="text-2xl font-semibold text-foreground">4. Radius</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          app/globals.css overrides <code>sm</code> through <code>4xl</code> as a scale derived from a
-          single <code>--radius</code> base (currently read below); <code>xs</code> and <code>full</code>{' '}
-          are untouched Tailwind defaults.
+          <code>sm</code>–<code>4xl</code> are a calc() scale off one <code>--radius</code> base, so
+          the slider above moves all of them. <code>xs</code> and <code>full</code> are Tailwind
+          defaults.
         </p>
       </header>
 
