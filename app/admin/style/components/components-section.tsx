@@ -26,10 +26,9 @@ export function ComponentsSection({ variantReports }: { variantReports: VariantU
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
-    <section className="space-y-10">
+    <section className="space-y-6">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">6. Components</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-slate-500">
           Live instances, not recreations. &ldquo;Unused&rdquo; is a static scan that can miss a
           variant chosen at runtime — a lead, not a verdict.
         </p>

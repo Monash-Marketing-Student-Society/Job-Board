@@ -37,13 +37,13 @@ function Item({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+    <div className="space-y-3 rounded-xl bg-slate-50 p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h4 className="text-xs font-semibold text-foreground">{title}</h4>
+        <h3 className="text-[13px] font-medium text-slate-900">{title}</h3>
         <Note id={noteId} label={title} />
       </div>
-      <div className="py-1">{children}</div>
-      {warning && <p className="text-[10px] leading-snug text-warning">{warning}</p>}
+      <div>{children}</div>
+      {warning && <p className="text-[11px] leading-snug text-slate-500">{warning}</p>}
       {file && <Usage file={file} />}
     </div>
   )
@@ -54,12 +54,12 @@ export function UndocumentedBlock() {
   const [modalOpen, setModalOpen] = useState(false)
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Item
         title="Segmented tabs"
         file="components/ui/segmented-tabs.tsx"
         noteId="segmented-tabs"
-        warning="Hard-codes bg-slate-100 / bg-white / text-slate-900 — the token sliders cannot move it."
+        warning="Hard-coded slate — the sliders cannot move it."
       >
         <div className={segmentedTabsListClassName}>
           {['pending', 'approved', 'rejected'].map((t) => (
@@ -131,7 +131,7 @@ export function UndocumentedBlock() {
       <Item
         title="Focus ring"
         noteId="focus-ring"
-        warning="Global rule in globals.css — *:focus-visible, ring-2 ring-ring with an offset."
+        warning="Global rule: *:focus-visible, ring-2 with an offset."
       >
         <div className="flex flex-wrap gap-2">
           <Button size="sm">Tab to me</Button>
@@ -144,7 +144,7 @@ export function UndocumentedBlock() {
       <Item
         title="Page texture"
         noteId="noise"
-        warning="An inline SVG fractal-noise data URI on body at 0.04 opacity — easy to lose in a background refactor."
+        warning="An inline SVG noise data URI on body, 0.04 opacity."
       >
         <div className="h-12 rounded-md border border-border bg-background" />
       </Item>
@@ -160,11 +160,9 @@ export function UndocumentedBlock() {
 export function UtilityLayerBlock() {
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Defined in <code>globals.css</code> as <code>@utility</code> blocks. These duplicate what{' '}
-        <code>components/ui</code> already provides — <code>.btn-primary</code> and{' '}
-        <code>&lt;Button variant=&quot;primary&quot;&gt;</code> are two implementations of one
-        button — and no component imports them.
+      <p className="text-[13px] leading-relaxed text-slate-500">
+        <code>.btn-primary</code> and <code>&lt;Button variant=&quot;primary&quot;&gt;</code> are two
+        implementations of one button. Any divergence has to be fixed twice.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -185,7 +183,7 @@ export function UtilityLayerBlock() {
         </button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid items-start gap-2 sm:grid-cols-3">
         <div className="card p-3">
           <p className="text-xs font-medium text-foreground">.card</p>
           <p className="text-[11px] text-muted-foreground">shadow-xs, not the Card component</p>
@@ -197,11 +195,7 @@ export function UtilityLayerBlock() {
         <input className="input-base" placeholder=".input-base" />
       </div>
 
-      <p className="text-[10px] text-warning">
-        <code>.btn-*</code> resolve radius from <code>rounded-md</code> and colour from the tokens,
-        so the sliders do move them — but any divergence from{' '}
-        <code>&lt;Button&gt;</code> has to be fixed twice.
-      </p>
+
     </div>
   )
 }

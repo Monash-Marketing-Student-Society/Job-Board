@@ -62,7 +62,7 @@ export function Note({ id, label }: { id: string; label: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[10px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        className="text-[11px] text-slate-400 underline underline-offset-2 hover:text-slate-700"
       >
         + note
       </button>
@@ -76,9 +76,9 @@ export function Note({ id, label }: { id: string; label: string }) {
         onChange={(e) => save(e.target.value)}
         placeholder={`Note on ${label}…`}
         rows={2}
-        className="w-full rounded border border-border bg-card px-2 py-1 text-[11px] leading-snug text-foreground"
+        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12px] leading-snug text-slate-700"
       />
-      {value && <p className="text-[10px] text-muted-foreground">Saved in this browser only.</p>}
+      {value && <p className="text-[10px] text-slate-400">Saved in this browser only.</p>}
     </div>
   )
 }
@@ -112,7 +112,7 @@ export function NotesExport() {
     <button
       type="button"
       onClick={copyAll}
-      className="rounded border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+      className="w-full rounded-lg bg-white/10 px-3 py-1.5 text-[12px] font-medium text-white hover:bg-white/15"
     >
       {copied ? 'Copied' : `Copy all notes (${entries.length})`}
     </button>

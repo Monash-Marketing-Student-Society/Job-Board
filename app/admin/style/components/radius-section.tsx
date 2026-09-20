@@ -6,10 +6,9 @@ import { Button, Input } from '@/components/ui'
 
 export function RadiusSection() {
   return (
-    <section className="space-y-6">
+    <section className="space-y-5">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">4. Radius</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-slate-500">
           <code>sm</code>–<code>4xl</code> are a calc() scale off one <code>--radius</code> base, so
           the slider above moves all of them. <code>xs</code> and <code>full</code> are Tailwind
           defaults.
@@ -56,10 +55,10 @@ export function RadiusSection() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Base <code>--radius</code>:{' '}
         <Probe className="hidden" probe={rootVarProbe(['--radius'])} render={(v) => <code>{v['--radius']}</code>} />
-      </p>
+      </div>
     </section>
   )
 }

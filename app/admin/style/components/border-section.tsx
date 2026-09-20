@@ -60,10 +60,9 @@ function AxisTable({ report }: { report: BorderUsageReport }) {
 
 export function BorderSection({ report }: { report: BorderUsageReport }) {
   return (
-    <section className="space-y-6">
+    <section className="space-y-5">
       <header>
-        <h2 className="text-2xl font-semibold text-foreground">8. Borders</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-slate-500">
           No single border rule exists yet. The table below counts how many distinct values each
           axis of a bordered surface currently holds, across <code>app/</code>,{' '}
           <code>components/</code>, and <code>lib/</code>, excluding this route. To judge the

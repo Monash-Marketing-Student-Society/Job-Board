@@ -56,23 +56,13 @@ function ColorControl({
   const isHex = value.startsWith('#')
 
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="color"
-        aria-label={`${token.label} colour`}
-        value={isHex ? value : '#888888'}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-10 shrink-0 cursor-pointer rounded border border-border bg-transparent"
-      />
-      <input
-        type="text"
-        aria-label={`${token.label} value`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        spellCheck={false}
-        className="min-w-0 flex-1 rounded border border-border bg-card px-2 py-1 font-mono text-[11px] text-foreground"
-      />
-    </div>
+    <input
+      type="color"
+      aria-label={`${token.label} colour`}
+      value={isHex ? value : '#888888'}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-6 w-6 shrink-0 cursor-pointer rounded-full border border-white/20 bg-transparent"
+    />
   )
 }
 
@@ -86,21 +76,16 @@ function LengthControl({
   onChange: (next: string) => void
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="range"
-        aria-label={`${token.label} size`}
-        min={token.min ?? 0}
-        max={token.max ?? 2}
-        step={token.step ?? 0.0625}
-        value={remOf(value)}
-        onChange={(e) => onChange(`${e.target.value}rem`)}
-        className="min-w-0 flex-1 accent-primary"
-      />
-      <span className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
-        {value}
-      </span>
-    </div>
+    <input
+      type="range"
+      aria-label={`${token.label} size`}
+      min={token.min ?? 0}
+      max={token.max ?? 2}
+      step={token.step ?? 0.0625}
+      value={remOf(value)}
+      onChange={(e) => onChange(`${e.target.value}rem`)}
+      className="h-1 w-full cursor-pointer accent-white"
+    />
   )
 }
 
@@ -175,51 +160,51 @@ export function TokenControls() {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Adjust tokens</h3>
-        <p className="text-xs text-muted-foreground">
-          Live preview only — nothing is saved to <code>globals.css</code>.
-        </p>
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/40">
+          Tokens
+        </h2>
+        {changed.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOverrides({})}
+            className="text-[11px] text-white/50 underline underline-offset-2 hover:text-white"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
-      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+      <div className="space-y-2.5">
         {ADJUSTABLE_TOKENS.map((token) => {
           const value = overrides[token.name] ?? token.initial
           const isChanged = value !== token.initial
+
           return (
             <div key={token.name} className="space-y-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <label className="text-xs font-medium text-foreground">
-                  {token.label}{' '}
-                  <code className="text-[10px] font-normal text-muted-foreground">
-                    {token.name}
-                  </code>
-                </label>
-                {isChanged && (
-                  <button
-                    type="button"
-                    onClick={() => clear(token.name)}
-                    className="text-[10px] text-primary underline underline-offset-2"
-                  >
-                    reset
-                  </button>
-                )}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] text-white/70">{token.label}</span>
+                <div className="flex items-center gap-2">
+                  {isChanged && (
+                    <button
+                      type="button"
+                      onClick={() => clear(token.name)}
+                      className="text-[10px] text-white/40 hover:text-white"
+                      aria-label={`Reset ${token.label}`}
+                    >
+                      ↺
+                    </button>
+                  )}
+                  {token.kind === 'color' ? (
+                    <ColorControl token={token} value={value} onChange={(v) => set(token.name, v)} />
+                  ) : (
+                    <span className="font-mono text-[11px] tabular-nums text-white/50">{value}</span>
+                  )}
+                </div>
               </div>
-
-              {token.kind === 'length' ? (
+              {token.kind === 'length' && (
                 <LengthControl token={token} value={value} onChange={(v) => set(token.name, v)} />
-              ) : (
-                <ColorControl token={token} value={value} onChange={(v) => set(token.name, v)} />
-              )}
-
-              <p className="text-[10px] leading-snug text-muted-foreground">
-                Moves {token.reaches}.
-              </p>
-              {token.misses && (
-                <p className="text-[10px] leading-snug text-warning">
-                  Will not move {token.misses}.
-                </p>
               )}
             </div>
           )
@@ -227,32 +212,18 @@ export function TokenControls() {
       </div>
 
       {changed.length > 0 && (
-        <div className="space-y-2 rounded-md border border-warning/30 bg-warning/10 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium text-foreground">
-              {changed.length} token{changed.length === 1 ? '' : 's'} overridden — this is not what
-              the site ships.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={copyDiff}
-                className="rounded border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-              >
-                {copied ? 'Copied' : 'Copy CSS'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setOverrides({})}
-                className="rounded border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-              >
-                Reset all
-              </button>
-            </div>
-          </div>
-          <pre className="overflow-x-auto rounded bg-background p-2 font-mono text-[11px] leading-relaxed text-foreground">
-            {diff}
-          </pre>
+        <div className="space-y-2 rounded-xl bg-white/5 p-3">
+          <p className="text-[11px] leading-snug text-white/60">
+            {changed.length} override{changed.length === 1 ? '' : 's'} — preview only, not what the
+            site ships.
+          </p>
+          <button
+            type="button"
+            onClick={copyDiff}
+            className="w-full rounded-lg bg-white px-3 py-1.5 text-[12px] font-medium text-slate-900 hover:bg-white/90"
+          >
+            {copied ? 'Copied' : 'Copy CSS'}
+          </button>
         </div>
       )}
     </div>

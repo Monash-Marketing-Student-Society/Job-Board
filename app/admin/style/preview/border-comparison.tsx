@@ -167,22 +167,19 @@ export function BorderComparison() {
                 </span>
                 <h4 className="text-sm font-semibold text-foreground">{t.name}</h4>
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">{t.summary}</p>
+              <p className="text-[12px] leading-relaxed text-slate-500">{t.summary}</p>
             </div>
 
             {/* The grey stage: these surfaces sit on bg-background in the real
                 admin, and several of them were only ever reviewed on white. */}
-            <div className="rounded-lg border border-border bg-background p-4">
+            <div className="rounded-xl bg-background p-4">
               <Screen treatment={t} />
             </div>
 
-            <ul className="space-y-0.5 text-[11px] text-muted-foreground/80">
-              {t.sources.map((s) => (
-                <li key={s}>
-                  <code>{s}</code>
-                </li>
-              ))}
-            </ul>
+            <p className="text-[11px] leading-relaxed text-slate-400">
+              <code>{t.sources[0]}</code>
+              {t.sources.length > 1 && ` +${t.sources.length - 1} more`}
+            </p>
           </div>
         ))}
       </div>

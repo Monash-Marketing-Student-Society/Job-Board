@@ -31,54 +31,34 @@ function isLinkable(route: string) {
 
 export function Usage({ file }: { file: string }) {
   const entry = styleAudit.routeUsage.files.find((f) => f.file === file)
-
-  if (!entry || entry.routes.length === 0) {
-    return (
-      <p className="text-[10px] text-muted-foreground">
-        <code>{file}</code> — no live route reaches this.
-      </p>
-    )
-  }
-
-  const publicRoutes = entry.routes.filter(isPublic)
-  const adminRoutes = entry.routes.filter((r) => !isPublic(r))
+  const routes = entry?.routes ?? []
+  const publicRoutes = routes.filter(isPublic)
+  const shown = publicRoutes.slice(0, 3)
+  const rest = routes.length - shown.length
 
   return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-1">
-        {publicRoutes.map((route) =>
-          isLinkable(route) ? (
+    <p className="text-[11px] leading-relaxed text-slate-400">
+      <code className="text-slate-400">{file}</code>
+      {routes.length === 0 && ' · no live route'}
+      {shown.length > 0 && ' · '}
+      {shown.map((route, i) => (
+        <span key={route}>
+          {i > 0 && ', '}
+          {isLinkable(route) ? (
             <a
-              key={route}
               href={`${PROD_ORIGIN}${route === '/' ? '' : route}`}
               target="_blank"
               rel="noreferrer"
-              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary underline underline-offset-2"
-            >
-              {route} ↗
-            </a>
-          ) : (
-            <span
-              key={route}
-              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary"
+              className="text-slate-500 underline underline-offset-2 hover:text-slate-800"
             >
               {route}
-            </span>
-          )
-        )}
-        {adminRoutes.map((route) => (
-          <span
-            key={route}
-            className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-          >
-            {route}
-          </span>
-        ))}
-      </div>
-      <p className="text-[10px] text-muted-foreground/70">
-        <code>{file}</code>
-        {publicRoutes.length > 0 && ' · purple routes are public'}
-      </p>
-    </div>
+            </a>
+          ) : (
+            <span className="text-slate-500">{route}</span>
+          )}
+        </span>
+      ))}
+      {rest > 0 && ` +${rest} more`}
+    </p>
   )
 }
