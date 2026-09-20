@@ -1,6 +1,6 @@
 'use client'
 
-import type { RawPaletteReport, VariantUsageReport } from './lib/scan'
+import type { BorderUsageReport, RawPaletteReport, VariantUsageReport } from './lib/scan'
 import { ColorSection } from './components/color-section'
 import { RawPaletteSection } from './components/raw-palette-section'
 import { TypeSection } from './components/type-section'
@@ -8,15 +8,18 @@ import { RadiusSection } from './components/radius-section'
 import { ShadowSection } from './components/shadow-section'
 import { ComponentsSection } from './components/components-section'
 import { DropdownMenuSection } from './components/dropdown-menu-section'
+import { BorderSection } from './components/border-section'
 
 export function StyleGuideClient({
   rawPalette,
   generatedAt,
   variantReports,
+  borderUsage,
 }: {
   rawPalette: RawPaletteReport
   generatedAt: string
   variantReports: VariantUsageReport[]
+  borderUsage: BorderUsageReport
 }) {
   return (
     <div className="mx-auto max-w-3xl space-y-16 pb-24">
@@ -39,6 +42,7 @@ export function StyleGuideClient({
       <ShadowSection />
       <ComponentsSection variantReports={variantReports} />
       <DropdownMenuSection />
+      <BorderSection report={borderUsage} />
     </div>
   )
 }

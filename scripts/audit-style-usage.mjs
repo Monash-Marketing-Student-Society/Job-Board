@@ -9,6 +9,9 @@
  *     semantic token layer in app/globals.css is being bypassed.
  *   - variant/size usage for the components documented in section 6, so
  *     the page can flag a variant nothing in the app reaches for.
+ *   - border/radius usage per axis (colour, width, radius, ring) — section 8,
+ *     which asks how many distinct values each axis of a bordered surface
+ *     currently holds.
  *
  * Run `npm run audit:style` to refresh the snapshot by hand, or `npm run
  * build`, which runs it as `prebuild`. The page reads the committed JSON
@@ -46,6 +49,42 @@ const RAW_CLASS_RE = new RegExp(
   `\\b(bg|text|border|from|to|via|ring|fill|stroke|divide|outline|decoration|shadow|accent|caret)-(${RAW_PALETTE_FAMILIES.join('|')})-([0-9]{2,3})\\b`,
   'g'
 )
+
+/**
+ * Border/radius usage, for section 8 ("Borders"). Section 2 already catches
+ * the raw-palette half of this (`border-slate-200` is a slate hit), but the
+ * question section 8 asks is a different one: across every axis that makes
+ * up a bordered surface — colour, width, corner radius, and whether the edge
+ * is drawn with `border` or `ring` at all — how many distinct values are in
+ * play? A single value per axis is the goal; the counts below are what says
+ * how far off that is. Buckets are deliberately coarse: the page compares
+ * whole treatments, not individual utilities.
+ */
+const BORDER_AXES = [
+  {
+    axis: 'color',
+    label: 'Border colour',
+    re: /(?<![\w-])border-(?:border|border-light|input|ring|primary|secondary|muted|accent|transparent|current|foreground|success|warning|destructive|card|popover|sidebar(?:-border)?|(?:slate|zinc|neutral|stone|gray|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}|\[[^\]\s]+\])(?:\/\d{1,3})?(?![\w-])/g,
+  },
+  {
+    // Bare `border` (Tailwind's 1px default) counts here too — it is the
+    // width the app mostly uses, so a list without it makes the two dozen
+    // explicit widths look like the whole story.
+    axis: 'width',
+    label: 'Border width',
+    re: /(?<![\w-])border(?:-[xytrbles])?(?:-(?:0|2|4|8|\[[0-9.]+px\]))?(?![\w-])/g,
+  },
+  {
+    axis: 'radius',
+    label: 'Corner radius',
+    re: /(?<![\w-])rounded(?:-[trbl]{1,2})?(?:-(?:none|xs|sm|md|lg|xl|2xl|3xl|4xl|full|\[[^\]\s]+\]))?(?![\w-])/g,
+  },
+  {
+    axis: 'method',
+    label: 'Edge drawn with',
+    re: /(?<![\w-])ring-(?:0|[1-9]|\[[0-9.]+px\])(?![\w-])/g,
+  },
+]
 
 // Component/variant registry for the usage audit. Kept in sync by hand with
 // VARIANT_AUDIT_TARGETS in app/admin/style/lib/tokens.ts — this script runs
@@ -126,6 +165,37 @@ async function scanRawPaletteUsage(allFiles) {
   return { files, totalInstances, totalFiles: files.length, byFamily }
 }
 
+async function scanBorderUsage(allFiles) {
+  const sources = await Promise.all(allFiles.map((f) => readFile(f, 'utf-8')))
+  const axes = []
+
+  for (const { axis, label, re } of BORDER_AXES) {
+    const counts = new Map()
+
+    for (const source of sources) {
+      re.lastIndex = 0
+      let match
+      while ((match = re.exec(source))) {
+        counts.set(match[0], (counts.get(match[0]) ?? 0) + 1)
+      }
+    }
+
+    const values = [...counts.entries()]
+      .map(([className, count]) => ({ className, count }))
+      .sort((a, b) => b.count - a.count || a.className.localeCompare(b.className))
+
+    axes.push({
+      axis,
+      label,
+      values,
+      distinct: values.length,
+      total: values.reduce((sum, v) => sum + v.count, 0),
+    })
+  }
+
+  return { axes }
+}
+
 // Best-effort JSX scan: finds `<ComponentName ...>` opening tags and reads a
 // `variant="x"` (or size="x") attribute out of the tag's attribute text. It
 // does not parse JSX into an AST, so a variant built from a runtime
@@ -183,15 +253,17 @@ async function main() {
     allFiles.push(...(await walk(path.join(PROJECT_ROOT, root))))
   }
 
-  const [rawPalette, variantUsage] = await Promise.all([
+  const [rawPalette, variantUsage, borderUsage] = await Promise.all([
     scanRawPaletteUsage(allFiles),
     scanVariantUsage(allFiles),
+    scanBorderUsage(allFiles),
   ])
 
   const snapshot = {
     generatedAt: new Date().toISOString(),
     rawPalette,
     variantUsage,
+    borderUsage,
   }
 
   await writeFile(OUTPUT_FILE, JSON.stringify(snapshot, null, 2) + '\n', 'utf-8')
