@@ -75,7 +75,7 @@ export function Modal({
       <div
         ref={panelRef}
         className={cn(
-          'relative w-full max-w-md bg-white rounded-2xl border border-slate-200',
+          'relative w-full max-w-md bg-white rounded-lg border border-slate-200',
           'shadow-[0_10px_40px_rgba(0,0,0,0.18)] overflow-hidden',
           className
         )}
