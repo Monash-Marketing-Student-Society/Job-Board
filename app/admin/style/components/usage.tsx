@@ -32,33 +32,44 @@ function isLinkable(route: string) {
 export function Usage({ file }: { file: string }) {
   const entry = styleAudit.routeUsage.files.find((f) => f.file === file)
   const routes = entry?.routes ?? []
-  const publicRoutes = routes.filter(isPublic)
-  const shown = publicRoutes.slice(0, 3)
-  const rest = routes.length - shown.length
+
+  // Public routes lead because they are the ones anyone can go and look at,
+  // but admin routes are still named. Showing only public routes and
+  // counting the rest meant an admin-only component — every table icon, the
+  // whole tooltip layer — rendered as a bare "+10 more", which answers
+  // nothing.
+  const ordered = [...routes.filter(isPublic), ...routes.filter((r) => !isPublic(r))]
+  const shown = ordered.slice(0, 3)
+  const rest = ordered.length - shown.length
 
   return (
     <p className="text-[11px] leading-relaxed text-slate-400">
       <code className="text-slate-400">{file}</code>
-      {routes.length === 0 && ' · no live route'}
-      {shown.length > 0 && ' · '}
-      {shown.map((route, i) => (
-        <span key={route}>
-          {i > 0 && ', '}
-          {isLinkable(route) ? (
-            <a
-              href={`${PROD_ORIGIN}${route === '/' ? '' : route}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-slate-500 underline underline-offset-2 hover:text-slate-800"
-            >
-              {route}
-            </a>
-          ) : (
-            <span className="text-slate-500">{route}</span>
-          )}
-        </span>
-      ))}
-      {rest > 0 && ` +${rest} more`}
+      {routes.length === 0 ? (
+        ' · no live route'
+      ) : (
+        <>
+          {' · '}
+          {shown.map((route, i) => (
+            <span key={route}>
+              {i > 0 && ', '}
+              {isLinkable(route) ? (
+                <a
+                  href={`${PROD_ORIGIN}${route === '/' ? '' : route}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-slate-500 underline underline-offset-2 hover:text-slate-800"
+                >
+                  {route}
+                </a>
+              ) : (
+                <span className="text-slate-500">{route}</span>
+              )}
+            </span>
+          ))}
+          {rest > 0 && ` +${rest} more`}
+        </>
+      )}
     </p>
   )
 }
