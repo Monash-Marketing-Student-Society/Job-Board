@@ -22,6 +22,7 @@ import { NotesExport } from './note'
 const TABS = [
   { href: '/admin/style', label: 'Reference', hint: 'What each token resolves to' },
   { href: '/admin/style/preview', label: 'Preview', hint: 'How they read together' },
+  { href: '/admin/style/notifications', label: 'Notifications', hint: 'Every toast, and when it fires' },
 ]
 
 export function StyleShell({ children }: { children: React.ReactNode }) {
