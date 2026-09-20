@@ -204,7 +204,7 @@ export default function AdminLoginPage() {
       {/* relative + z-10: the backdrop is fixed at z-0, which paints above the
           admin shell's background but has to stay below the card. */}
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-card rounded-lg border border-border shadow-sm p-8">
+        <div className="auth-card">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Admin Login</h1>
             <p className="text-muted-foreground mt-1">

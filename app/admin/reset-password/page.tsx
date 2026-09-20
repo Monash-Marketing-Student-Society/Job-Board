@@ -16,23 +16,39 @@ export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [accountEmail, setAccountEmail] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
 
     // supabase-js parses the #access_token=...&type=recovery fragment on load
     // and fires PASSWORD_RECOVERY once the recovery session is established.
-    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+    // Which account this link belongs to. A committee often has several
+    // mailboxes in play at once -- a personal address, the club's, the
+    // partnerships one -- and a recovery link carries no visible clue which it
+    // was issued for. Naming it here means nobody sets a password on the wrong
+    // account and then cannot explain why the old one still will not sign in.
+    const captureEmail = (session: { user?: { email?: string } } | null) => {
+      const email = session?.user?.email
+      if (email) setAccountEmail(email)
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setStatus('ready')
+        captureEmail(session)
       }
     })
 
     // Fallback: if a session already exists by the time this runs (e.g. the
     // auth event fired before the listener was attached), allow reset too.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setStatus((s) => (s === 'checking' ? 'ready' : s))
-      else setTimeout(() => setStatus((s) => (s === 'checking' ? 'invalid' : s)), 2000)
+      if (session) {
+        setStatus((s) => (s === 'checking' ? 'ready' : s))
+        captureEmail(session)
+      } else {
+        setTimeout(() => setStatus((s) => (s === 'checking' ? 'invalid' : s)), 2000)
+      }
     })
 
     return () => listener.subscription.unsubscribe()
@@ -72,12 +88,18 @@ export default function ResetPasswordPage() {
       {/* relative + z-10: the backdrop is fixed at z-0, which paints above the
           admin shell's background but has to stay below the card. */}
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-card rounded-lg border border-border shadow-sm p-8">
+        <div className="auth-card">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Reset Password</h1>
             <p className="text-muted-foreground mt-1">
               Choose a new password for your admin account
             </p>
+            {accountEmail && (
+              <p className="mt-3 text-sm">
+                <span className="text-muted-foreground">for </span>
+                <span className="font-semibold text-foreground break-all">{accountEmail}</span>
+              </p>
+            )}
           </div>
 
           {status === 'checking' && (
