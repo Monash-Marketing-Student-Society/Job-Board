@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button, Input, Alert, AlertDescription } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { AuthBackdrop } from '@/components/admin/auth-backdrop'
 
@@ -14,7 +15,6 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [accountEmail, setAccountEmail] = useState('')
 
@@ -56,14 +56,12 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      toast.error('Password must be at least 6 characters.')
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      toast.error('Passwords do not match.')
       return
     }
 
@@ -74,9 +72,10 @@ export default function ResetPasswordPage() {
       if (updateError) throw updateError
 
       setSuccess(true)
+      toast.success('Password updated.')
       setTimeout(() => router.push('/admin/login'), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password')
+      toast.error(err instanceof Error ? err.message : 'Could not update the password.')
     } finally {
       setIsSubmitting(false)
     }
@@ -110,11 +109,9 @@ export default function ResetPasswordPage() {
 
           {status === 'invalid' && (
             <>
-              <Alert variant="destructive" className="mb-6">
-                <AlertDescription>
-                  This password reset link is invalid or has expired. Please request a new one.
-                </AlertDescription>
-              </Alert>
+              <p className="text-sm text-muted-foreground text-center mb-6">
+                This password reset link is invalid or has expired. Please request a new one.
+              </p>
               <Link href="/admin/login">
                 <Button variant="primary" className="w-full">Back to Login</Button>
               </Link>
@@ -123,13 +120,8 @@ export default function ResetPasswordPage() {
 
           {status === 'ready' && !success && (
             <>
-              {error && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium mb-1.5">
                     New Password
@@ -141,7 +133,6 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimum 6 characters"
                     required
-                    minLength={6}
                     autoComplete="new-password"
                   />
                 </div>
@@ -157,7 +148,6 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your new password"
                     required
-                    minLength={6}
                     autoComplete="new-password"
                   />
                 </div>
@@ -170,11 +160,9 @@ export default function ResetPasswordPage() {
           )}
 
           {success && (
-            <Alert variant="success">
-              <AlertDescription>
-                Password updated. Redirecting you to sign in&hellip;
-              </AlertDescription>
-            </Alert>
+            <p className="text-sm text-muted-foreground text-center">
+              Password updated. Redirecting you to sign in&hellip;
+            </p>
           )}
         </div>
 
