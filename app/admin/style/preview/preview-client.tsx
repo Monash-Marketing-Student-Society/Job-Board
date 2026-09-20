@@ -146,10 +146,10 @@ export function ThemePreviewClient() {
         {/* Typography */}
         <Panel title="Typography" className="xl:col-span-2">
           <div className="space-y-3">
-            <p className="font-heading text-3xl font-bold leading-tight text-foreground">
+            <p className="font-heading text-3xl font-semibold leading-tight text-foreground">
               Marketing Intern
             </p>
-            <p className="font-heading text-base font-semibold text-foreground">
+            <p className="font-heading text-base font-medium text-foreground">
               Acme Retail Co. · Melbourne, VIC
             </p>
             <p className="text-sm leading-relaxed text-foreground">
