@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Button, Input, Alert, AlertDescription } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { gmailComposeHref } from '@/lib/utils'
 import { AuthBackdrop } from '@/components/admin/auth-backdrop'
@@ -45,8 +46,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   oauth: 'Google sign-in did not complete.',
 }
 
-type Notice = { type: 'error' | 'success'; text: string } | null
-
 /**
  * Supabase and Google errors are written for developers and run long. Take the
  * first sentence and fall back to our own wording past a sane length, so an
@@ -71,14 +70,6 @@ export default function AdminLoginPage() {
   const [isSendingReset, setIsSendingReset] = useState(false)
   const [recoveryEmail, setRecoveryEmail] = useState('')
 
-  // One slot, not two. Previously an error and a reset confirmation were
-  // separate pieces of state rendering separate alerts, so the card could show
-  // both at once -- a success and a failure stacked above the form, describing
-  // two different attempts.
-  const [notice, setNotice] = useState<Notice>(
-    errorParam ? { type: 'error', text: ERROR_MESSAGES[errorParam] ?? 'Sign-in failed.' } : null
-  )
-
   // Fetched rather than hard-coded: the committee can repoint it from
   // /admin/users, and a locked-out person reading a stale address here would
   // be writing to a mailbox nobody checks. Silent on failure -- it is a
@@ -102,11 +93,14 @@ export default function AdminLoginPage() {
    *
    * Without this the message is part of the address: it survives a refresh,
    * comes back on a browser Back, and would still be sitting there after a
-   * successful sign-in and sign-out. The notice should describe the attempt
+   * successful sign-in and sign-out. The message should describe the attempt
    * just made, not the one made ten minutes ago.
    */
   useEffect(() => {
     if (!errorParam) return
+    // A fixed id so React's double-invoked effects in development, and any
+    // re-render of this page, cannot stack the same message twice.
+    toast.error(ERROR_MESSAGES[errorParam] ?? 'Sign-in failed.', { id: 'sign-in-error' })
     const params = new URLSearchParams(searchParams.toString())
     params.delete('error')
     const query = params.toString()
@@ -115,7 +109,6 @@ export default function AdminLoginPage() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
-    setNotice(null)
 
     try {
       const supabase = createClient()
@@ -135,7 +128,7 @@ export default function AdminLoginPage() {
       if (oauthError) throw oauthError
       // On success the browser navigates to Google; nothing below runs.
     } catch (err) {
-      setNotice({ type: 'error', text: shortMessage(err, 'Could not start Google sign-in') })
+      toast.error(shortMessage(err, 'Could not start Google sign-in'))
       setIsGoogleLoading(false)
     }
   }
@@ -143,7 +136,6 @@ export default function AdminLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setNotice(null)
 
     try {
       const supabase = createClient()
@@ -171,7 +163,7 @@ export default function AdminLoginPage() {
       router.push(redirectTo)
       router.refresh()
     } catch (err) {
-      setNotice({ type: 'error', text: shortMessage(err, 'Sign-in failed.') })
+      toast.error(shortMessage(err, 'Sign-in failed.'))
     } finally {
       setIsLoading(false)
     }
@@ -179,20 +171,19 @@ export default function AdminLoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setNotice({ type: 'error', text: 'Enter your email first.' })
+      toast.error('Enter your email first.')
       return
     }
     setIsSendingReset(true)
-    setNotice(null)
     try {
       const supabase = createClient()
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/admin/reset-password`,
       })
       if (resetError) throw resetError
-      setNotice({ type: 'success', text: 'Reset link sent, if that account exists.' })
+      toast.success('Reset link sent, if that account exists.')
     } catch (err) {
-      setNotice({ type: 'error', text: shortMessage(err, 'Could not send the reset email.') })
+      toast.error(shortMessage(err, 'Could not send the reset email.'))
     } finally {
       setIsSendingReset(false)
     }
@@ -211,15 +202,6 @@ export default function AdminLoginPage() {
               Sign in to access the admin dashboard
             </p>
           </div>
-
-          {notice && (
-            <Alert
-              variant={notice.type === 'success' ? 'success' : 'destructive'}
-              className="mb-6"
-            >
-              <AlertDescription>{notice.text}</AlertDescription>
-            </Alert>
-          )}
 
           <Button
             type="button"
@@ -253,10 +235,7 @@ export default function AdminLoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  setNotice(null)
-                }}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@example.com"
                 required
                 autoComplete="email"
@@ -271,10 +250,7 @@ export default function AdminLoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setNotice(null)
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
