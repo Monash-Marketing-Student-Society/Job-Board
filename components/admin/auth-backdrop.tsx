@@ -1,11 +1,10 @@
 /**
  * Decorative, blurred facsimile of the Manage Jobs dashboard, sat behind the
- * sign-in card.
+ * cards on the two signed-out admin screens: sign-in and password reset.
  *
- * The rows are invented, and deliberately generic. /admin/login is public and
+ * The rows are invented, and deliberately generic. Both pages are public and
  * unauthenticated, so rendering the real dashboard here would put the job
- * table in the page source of the one page that exists to keep people out of
- * it. `filter: blur()` is a paint-time effect, not redaction: the text
+ * table in the page source of the pages that exist to keep people out of it. `filter: blur()` is a paint-time effect, not redaction: the text
  * underneath stays selectable, searchable and readable in devtools. Anything
  * shown here therefore has to be safe to publish, which is why none of it is
  * real. If somebody strips the blur, they should see obvious placeholder
@@ -27,7 +26,7 @@ const ROWS = [
   { title: 'Digital Marketing Assistant', org: 'Finance Group', status: 'Inactive', date: '18 May 2026' },
 ]
 
-export function LoginBackdrop() {
+export function AuthBackdrop() {
   return (
     <div
       aria-hidden="true"
