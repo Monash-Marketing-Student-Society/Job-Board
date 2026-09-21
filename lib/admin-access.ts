@@ -26,9 +26,17 @@ export function normalizeEmail(email: string): string {
 
 /**
  * Parse ADMIN_AUTO_APPROVE_DOMAINS: a comma-separated list such as
- * "monashmss.com, monashclubs.org". Unset or empty means invite-only, which is
- * the safe default — an unconfigured deployment grants nobody anything rather
- * than everybody everything.
+ * "monashmss.com". Unset or empty means invite-only, which is the safe
+ * default — an unconfigured deployment grants nobody anything rather than
+ * everybody everything.
+ *
+ * A listed domain admits every address on it, so it belongs here only if the
+ * committee controls the whole domain. The example deliberately no longer
+ * reads "monashmss.com, monashclubs.org": the second is shared Monash Clubs /
+ * MSA infrastructure, and listing it grants the dashboard to any club officer
+ * who happens to have an address there. The one monashclubs.org address that
+ * does need access, mmss@, holds it as the recovery admin — checked before
+ * this list, so it needs no domain entry.
  */
 export function parseAutoApproveDomains(raw: string | undefined): string[] {
   if (!raw) return []
