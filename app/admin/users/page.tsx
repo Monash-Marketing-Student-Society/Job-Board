@@ -235,84 +235,88 @@ export default function AdminUsersPage() {
         </p>
       </div>
 
-      {/* Invite */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 max-w-xl">
-        <h2 className="text-base font-semibold text-slate-700 font-heading">Invite an admin</h2>
-        <p className="text-sm text-slate-500 mt-1 mb-4">
-          They&apos;ll be able to sign in with Google straight away, and will also get an email
-          link if they&apos;d rather set a password.
-        </p>
-
-        <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <Label htmlFor="email" required>
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@monashmss.com"
-              required
-              className="mt-1.5"
-            />
-          </div>
-          <Button type="submit" variant="primary" loading={isInviting} className="sm:mb-0">
-            Send invite
-          </Button>
-        </form>
-
-        {roster.autoApproveDomains.length > 0 && (
-          <p className="text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
-            Anyone with an address on{' '}
-            <span className="font-medium text-slate-700">
-              {roster.autoApproveDomains.map((domain) => `@${domain}`).join(', ')}
-            </span>{' '}
-            is granted admin access automatically on their first Google sign-in — no invitation
-            needed.
+      {/* The two account-level settings, paired. They are a matched set —
+          one grants access, the other guarantees it — and reading as one row
+          says so. Each card is a flex column with its footnote pushed to the
+          bottom, so the two forms line up whatever the prose above them
+          does. */}
+      <div className="grid gap-6 mb-6 lg:grid-cols-2">
+        {/* Invite */}
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-slate-700 font-heading">Invite an admin</h2>
+          <p className="text-sm text-slate-500 mt-1 mb-4">
+            They can sign in with Google straight away, or set a password from the email link.
           </p>
-        )}
-      </div>
 
-      {/* Recovery admin */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 max-w-xl">
-        <h2 className="text-base font-semibold text-slate-700 font-heading">Recovery admin</h2>
-        <p className="text-sm text-slate-500 mt-1 mb-4">
-          The address that can always get back in. If every other way into the dashboard
-          lapses, whoever can read this inbox resets its password and regains access. Keep it
-          on a mailbox the president and vice president hold, rather than a personal account.
-        </p>
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <Label htmlFor="email" required>
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@monashmss.com"
+                required
+                className="mt-1.5"
+              />
+            </div>
+            <Button type="submit" variant="primary" loading={isInviting} className="sm:mb-0">
+              Send invite
+            </Button>
+          </form>
 
-        <form onSubmit={handleSaveRecovery} className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <Label htmlFor="recovery-email" required>
-              Email
-            </Label>
-            <Input
-              id="recovery-email"
-              type="email"
-              value={recoveryDraft}
-              onChange={(e) => setRecoveryDraft(e.target.value)}
-              placeholder="mmss@monashclubs.org"
-              required
-              className="mt-1.5"
-            />
-          </div>
-          <Button
-            type="submit"
-            variant="secondary"
-            loading={isSavingRecovery}
-            disabled={!recoveryDraft || recoveryDraft === roster.recoveryAdminEmail}
-          >
-            Save
-          </Button>
-        </form>
+          {roster.autoApproveDomains.length > 0 && (
+            <p className="text-xs text-slate-500 mt-auto pt-4 border-t border-slate-100">
+              Anyone at{' '}
+              <span className="font-medium text-slate-700">
+                {roster.autoApproveDomains.map((domain) => `@${domain}`).join(', ')}
+              </span>{' '}
+              gets access on their first Google sign-in, no invite needed.
+            </p>
+          )}
+        </div>
 
-        <p className="text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
-          Changing this grants the new address admin access straight away. It does not remove
-          the old one, so a typo here cannot lock anyone out.
-        </p>
+        {/* Recovery admin */}
+        <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-slate-700 font-heading">Recovery admin</h2>
+          <p className="text-sm text-slate-500 mt-1 mb-4">
+            The address that can always get back in. Keep it on a shared committee mailbox, not a
+            personal account.
+          </p>
+
+          <form onSubmit={handleSaveRecovery} className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <Label htmlFor="recovery-email" required>
+                Email
+              </Label>
+              <Input
+                id="recovery-email"
+                type="email"
+                value={recoveryDraft}
+                onChange={(e) => setRecoveryDraft(e.target.value)}
+                placeholder="mmss@monashclubs.org"
+                required
+                className="mt-1.5"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              loading={isSavingRecovery}
+              disabled={!recoveryDraft || recoveryDraft === roster.recoveryAdminEmail}
+            >
+              Save
+            </Button>
+          </form>
+
+          <p className="text-xs text-slate-500 mt-auto pt-4 border-t border-slate-100">
+            Grants the new address access immediately. The old one keeps it, so a typo cannot lock
+            anyone out.
+          </p>
+        </div>
       </div>
 
       {/* Current admins */}
