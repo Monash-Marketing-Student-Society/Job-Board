@@ -232,7 +232,6 @@ export function BulkImport() {
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null)
 
   const handleDownloadTemplate = async () => {
-    toast.error('')
     try {
       const buffer = await generateTemplate()
       const blob = new Blob([buffer], {
@@ -253,7 +252,6 @@ export function BulkImport() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    toast.error('')
     setImportResult(null)
     setPreview(null)
     setParseErrors([])
@@ -282,7 +280,6 @@ export function BulkImport() {
     if (!preview || preview.length === 0) return
 
     setIsUploading(true)
-    toast.error('')
 
     try {
       const supabase = createClient()
@@ -331,7 +328,6 @@ export function BulkImport() {
   const handleCancel = () => {
     setPreview(null)
     setParseErrors([])
-    toast.error('')
     setImportResult(null)
   }
 
