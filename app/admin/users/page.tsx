@@ -237,9 +237,7 @@ export default function AdminUsersPage() {
 
       {/* The two account-level settings, paired. They are a matched set —
           one grants access, the other guarantees it — and reading as one row
-          says so. Each card is a flex column with its footnote pushed to the
-          bottom, so the two forms line up whatever the prose above them
-          does. */}
+          says so. Grid stretch keeps the two cards the same height. */}
       <div className="grid gap-6 mb-6 lg:grid-cols-2">
         {/* Invite */}
         <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -267,16 +265,6 @@ export default function AdminUsersPage() {
               Send invite
             </Button>
           </form>
-
-          {roster.autoApproveDomains.length > 0 && (
-            <p className="text-xs text-slate-500 mt-auto pt-4 border-t border-slate-100">
-              Anyone at{' '}
-              <span className="font-medium text-slate-700">
-                {roster.autoApproveDomains.map((domain) => `@${domain}`).join(', ')}
-              </span>{' '}
-              gets access on their first Google sign-in, no invite needed.
-            </p>
-          )}
         </div>
 
         {/* Recovery admin */}
@@ -311,11 +299,6 @@ export default function AdminUsersPage() {
               Save
             </Button>
           </form>
-
-          <p className="text-xs text-slate-500 mt-auto pt-4 border-t border-slate-100">
-            Grants the new address access immediately. The old one keeps it, so a typo cannot lock
-            anyone out.
-          </p>
         </div>
       </div>
 
