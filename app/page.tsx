@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import { liveJobs } from '@/lib/jobs-query'
 import { JobDetailPanel } from '@/components/jobs/job-detail-panel'
 import { JobsHeader } from '@/components/jobs/jobs-header'
 import { JobCard } from '@/components/jobs/job-card'
@@ -52,7 +53,7 @@ export default function HomePage() {
       const from = (currentPage - 1) * JOBS_PER_PAGE
       const to = from + JOBS_PER_PAGE - 1
       const { data, count } = await applySearchFilters(
-        supabase.from('jobs').select('*', { count: 'exact' })
+        liveJobs(supabase.from('jobs').select('*', { count: 'exact' }))
           .eq('is_sponsored', true)
           .order('posted_at', { ascending: false, nullsFirst: false })
           .order('created_at', { ascending: false })
@@ -69,14 +70,13 @@ export default function HomePage() {
       const to = from + JOBS_PER_PAGE - 1
       const [{ data: sponsored }, { data: regular, count }] = await Promise.all([
         applySearchFilters(
-          supabase.from('jobs').select('*')
+          liveJobs(supabase.from('jobs').select('*'))
             .eq('is_sponsored', true)
             .order('posted_at', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
         ),
         applySearchFilters(
-          supabase.from('jobs').select('*', { count: 'exact' })
-            .eq('is_active', true)
+          liveJobs(supabase.from('jobs').select('*', { count: 'exact' }))
             .eq('is_sponsored', false)
             .order('posted_at', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
@@ -128,7 +128,7 @@ export default function HomePage() {
     } else {
       // Job not in current page — fetch it directly and show in the panel
       const supabase = createClient()
-      supabase.from('jobs').select('*').eq('id', linkedJobId).single().then(({ data }) => {
+      liveJobs(supabase.from('jobs').select('*')).eq('id', linkedJobId).single().then(({ data }) => {
         if (data) {
           setSelectedJob(data as Job)
           setShowDetail(true)
