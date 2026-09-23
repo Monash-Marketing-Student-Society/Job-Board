@@ -108,7 +108,17 @@ const MAX_REDIRECTS = 3
  */
 export async function fetchPublicUrl(
   initial: URL,
-  init: { timeoutMs: number; headers: Record<string, string> }
+  init: {
+    timeoutMs: number
+    headers: Record<string, string>
+    /** Defaults to GET. A POST body is re-sent unchanged on every redirect
+     *  hop -- fine for the controlled, same-endpoint APIs this is used
+     *  against (a sync adapter's own list/detail calls), where a redirect is
+     *  unexpected in the first place; not a general-purpose redirect+resend
+     *  implementation. */
+    method?: string
+    body?: string
+  }
 ): Promise<Response | null> {
   let url = initial
 
@@ -124,6 +134,8 @@ export async function fetchPublicUrl(
       res = await fetch(url.toString(), {
         signal: controller.signal,
         headers: init.headers,
+        method: init.method,
+        body: init.body,
         redirect: 'manual',
       })
     } catch {
