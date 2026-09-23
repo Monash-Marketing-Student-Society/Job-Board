@@ -52,3 +52,5 @@ supabase/snippets/
 .claude/launch.json
 .claude/worktrees/
 supabase/functions/.env
+
+.trigger
