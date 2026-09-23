@@ -1,0 +1,28 @@
+{
+  "id": 4727235005,
+  "title": "Account Manager",
+  "location": {
+    "name": "Sydney, Australia"
+  },
+  "content": "&lt;p&gt;&lt;strong&gt;&lt;span data-contrast=&quot;none&quot;&gt;Business unit:\u202fOgilvy Advertising&lt;/span&gt;&lt;/strong&gt;&lt;span data-ccp-props=&quot;{&amp;quot;201341983&amp;quot;:0,&amp;quot;335559685&amp;quot;:278,&amp;quot;335559740&amp;quot;:288}&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;&lt;span data-contrast=&quot;none&quot;&gt;Team: Account Management&lt;/span&gt;&lt;/strong&gt;&lt;span data-ccp-props=&quot;{&amp;quot;201341983&amp;quot;:0,&amp;quot;335559685&amp;quot;:278,&amp;quot;335559740&amp;quot;:288}&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;&lt;span data-contrast=&quot;none&quot;&gt;Location:\u202fSydney&lt;/span&gt;&lt;/strong&gt;&lt;span data-ccp-props=&quot;{&amp;quot;201341983&amp;quot;:0,&amp;quot;335559685&amp;quot;:27&lt;/div&gt;",
+  "absolute_url": "https://job-boards.greenhouse.io/ogilvyaus/jobs/4727235005",
+  "application_deadline": null,
+  "updated_at": "2026-08-25T01:21:05-04:00",
+  "departments": [
+    {
+      "id": 4029919005,
+      "name": "Account/Client Services",
+      "child_ids": [],
+      "parent_id": null
+    }
+  ],
+  "offices": [
+    {
+      "id": 4019589005,
+      "name": "Ogilvy Sydney",
+      "location": "Sydney, New South Wales, Australia",
+      "child_ids": [],
+      "parent_id": 4019587005
+    }
+  ]
+}
