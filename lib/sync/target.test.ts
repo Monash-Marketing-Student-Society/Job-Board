@@ -47,6 +47,21 @@ describe('targets — the named TDD cases', () => {
     ).toBe('pass')
   })
 
+  // Australian and UK employers spell it "Programme" -- every Unilever
+  // early-careers title in the live feed does.
+  it('accepts the Commonwealth spelling "Programme" on the business-program branch', () => {
+    expect(targets(job({ title: 'Commercial Graduate Programme', jobType: null, location: 'Sydney', tags: [] }))).toBe('pass')
+    expect(targets(job({ title: '2027 Graduate Programme', jobType: null, location: 'Melbourne', tags: [] }))).toBe('pass')
+    expect(
+      targets(job({ title: 'Graduate Development Programme', jobType: null, location: 'Melbourne', tags: [] }))
+    ).toBe('pass')
+  })
+
+  it('does not let "programme" alone stand in for a graduate program', () => {
+    // No "graduate" anywhere: neither gate should treat a bare programme as one.
+    expect(targets(job({ title: 'Leadership Programme', jobType: null, location: 'Sydney', tags: [] }))).toBe('unsure')
+  })
+
   it('"Remote - Australia" returns unsure, even though level and function both pass', () => {
     expect(
       targets(job({ title: 'Marketing Graduate Program', jobType: 'graduate', location: 'Remote - Australia', tags: ['Brand'] }))

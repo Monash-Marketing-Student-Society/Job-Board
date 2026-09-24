@@ -94,12 +94,16 @@ const MARKETING_ADJACENT_FUNCTIONS: JobFunction[] = JOB_FUNCTIONS.filter(
 // in the title) so it doesn't swallow unrelated postings. This is why
 // rotational intakes at the banks and the big four qualify even when their
 // title carries no marketing-adjacent tag at all.
+//
+// `program(me)?` because Australian and UK employers write "Programme" --
+// every Unilever early-careers title does (checked against the live feed,
+// 24 Sep 2026). The American-only pattern sent those to review as unsure.
 const GENERAL_BUSINESS_PROGRAM_PATTERNS = [
   /\bbusiness\s+graduate\b/i,
   /\bcommercial\s+graduate\b/i,
   /\bgraduate\s+rotational\b/i,
-  /\bgraduate\s+development\s+program\b/i,
-  /\bgraduate\s+program\b/i,
+  /\bgraduate\s+development\s+program(me)?\b/i,
+  /\bgraduate\s+program(me)?\b/i,
 ]
 
 function isGeneralBusinessProgram(title: string): boolean {
