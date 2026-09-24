@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { SubmissionsTable } from '@/components/admin/submissions-table'
+import { StagedJobsTable, type StagedJobRow } from '@/components/admin/staged-jobs-table'
 import { getSubmissionStatusCounts } from '@/lib/admin-data'
 import { tableCardClassName } from '@/components/admin/table/table-styles'
 import type { JobSubmission } from '@/lib/types'
@@ -9,6 +10,36 @@ export const metadata = {
 }
 
 const PAGE_SIZE = 20
+
+/** A nightly run holds well under this; past it, the oldest wait for the next page load. */
+const STAGED_LIMIT = 100
+
+/**
+ * Pending synced jobs for the review section. Read through the admin's own
+ * session: staged_jobs and sources both carry an admin SELECT policy (0029,
+ * 0030). A failure hides the section rather than the whole page -- the human
+ * queue above it must keep working even if the sync tables misbehave.
+ */
+async function getPendingStagedJobs(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<StagedJobRow[]> {
+  const { data, error } = await supabase
+    .from('staged_jobs')
+    .select('id, created_at, risk_reasons, normalised, sources(name, slug, tier)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(STAGED_LIMIT)
+
+  if (error || !data) return []
+  return data.map((row) => {
+    const src = Array.isArray(row.sources) ? row.sources[0] : row.sources
+    return {
+      id: row.id,
+      created_at: row.created_at,
+      risk_reasons: row.risk_reasons ?? [],
+      normalised: row.normalised as StagedJobRow['normalised'],
+      source: (src as StagedJobRow['source']) ?? null,
+    }
+  })
+}
 
 interface PageProps {
   searchParams: Promise<{ page?: string; view?: string }>
@@ -37,7 +68,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
 
   // Run alongside the page query rather than after it — independent reads,
   // no reason to wait on one to start the other.
-  const [submissionsResult, statusCounts] = await Promise.all([
+  const [submissionsResult, statusCounts, stagedJobs] = await Promise.all([
     submissionsQuery,
     // `count` below is already an exact total for the unfiltered set
     // (PostgREST computes it over the full match, not just the returned
@@ -46,6 +77,9 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
     // to counting just the current page — a number that looks like a total
     // but silently isn't one is worse than no number.
     getSubmissionStatusCounts(showArchived).catch(() => null),
+    // The archive view is for human submissions only; synced jobs have no
+    // archive, so the section is simply absent there.
+    showArchived ? Promise.resolve([] as StagedJobRow[]) : getPendingStagedJobs(supabase),
   ])
 
   const { data: submissions, count } = submissionsResult as {
@@ -91,6 +125,12 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
           counts={counts}
         />
       </div>
+
+      {!showArchived && (
+        <div className={`${tableCardClassName} mt-6`}>
+          <StagedJobsTable rows={stagedJobs} />
+        </div>
+      )}
     </div>
   )
 }
