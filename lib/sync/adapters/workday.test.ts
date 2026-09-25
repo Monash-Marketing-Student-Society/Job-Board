@@ -96,6 +96,57 @@ describe('workdayAdapter', () => {
     expect(posting.read.has('closing_at')).toBe(false)
   })
 
+  it('GETs the detail endpoint -- the opposite method to the list, which is POST', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(workdayList)).mockResolvedValue(jsonResponse(workdayDetail))
+
+    await workdayAdapter.fetch(SOURCE)
+
+    const [, listInit] = vi.mocked(fetch).mock.calls[0]
+    const [, detailInit] = vi.mocked(fetch).mock.calls[1]
+    expect(listInit?.method).toBe('POST')
+    expect(detailInit?.method).toBe('GET')
+    expect(detailInit?.body).toBeUndefined()
+  })
+
+  // The real failure, reproduced exactly: Workday answers a wrong-method
+  // detail call with HTTP 400 AND a parseable JSON error body. That body used
+  // to be returned as if it were the posting, and the adapter crashed on
+  // `detail.jobPostingInfo.location`, failing every posting in the source.
+  it('skips a posting whose detail call returns a 400 with a JSON error body, instead of crashing', async () => {
+    const workday400 = new Response(
+      JSON.stringify({ errorCode: 'HTTP_400', errorCaseId: 'X', httpStatus: 400, message: '', messageParams: {} }),
+      { status: 400, headers: { 'content-type': 'application/json' } }
+    )
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(workdayList))
+      .mockResolvedValueOnce(workday400)
+      // A fresh Response per call: a body can only be read once, so one
+      // shared instance would make the third call fail for the wrong reason.
+      .mockImplementation(async () => jsonResponse(workdayDetail))
+
+    const postings = await workdayAdapter.fetch(SOURCE)
+
+    expect(postings).toHaveLength(workdayList.jobPostings.length - 1)
+  })
+
+  it('skips a 200 detail response that has no jobPostingInfo', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(workdayList))
+      .mockResolvedValueOnce(jsonResponse({ userAuthenticated: false }))
+      .mockImplementation(async () => jsonResponse(workdayDetail))
+
+    const postings = await workdayAdapter.fetch(SOURCE)
+
+    expect(postings).toHaveLength(workdayList.jobPostings.length - 1)
+  })
+
+  it('treats a 400 on the list request as a transport failure', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ errorCode: 'HTTP_400' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    )
+    await expect(workdayAdapter.fetch(SOURCE)).rejects.toThrow(/list request failed/)
+  })
+
   it('skips a posting whose detail call fails, without failing the whole source', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse(workdayList))
