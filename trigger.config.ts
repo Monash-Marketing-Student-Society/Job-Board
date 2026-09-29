@@ -19,4 +19,13 @@ export default defineConfig({
     },
   },
   dirs: ["./src/trigger"],
+  build: {
+    // Installed as real packages in the deploy image, not inlined into the
+    // bundle. jsdom (via isomorphic-dompurify, which lib/sanitize.ts uses to
+    // clean synced job descriptions) reads its own CSS file from its package
+    // directory at import time; inlined, that path doesn't exist and every
+    // task fails to load ("ENOENT ... browser/default-stylesheet.css").
+    // `deploy --dry-run` only bundles, never imports, so it can't catch this.
+    external: ["isomorphic-dompurify", "jsdom"],
+  },
 });
