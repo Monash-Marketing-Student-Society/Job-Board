@@ -328,3 +328,107 @@ export function rejectionEmail(data: SubmissionData, adminNote?: string | null):
     ${emailFooter()}
   `)
 }
+
+// ─── Template 4: Sync run digest (internal, to partnerships@) ───────────────
+
+/**
+ * Escapes text for an HTML body. The other templates interpolate values an
+ * admin or employer typed into a form; the digest carries titles scraped from
+ * third-party career sites, so it must never trust them as markup.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+export interface SyncDigestData {
+  queueUrl: string
+  /** e.g. "Wed, 30 Sept" -- the run's date in Melbourne time. */
+  runLabel: string
+  held: Array<{ title: string; company: string; location: string | null; source: string; reasons: string[] }>
+  sources: Array<{ name: string; seen: number; held: number; rejected: number; deduped: number; created: number }>
+  problems: Array<{ name: string; issue: string }>
+}
+
+export function syncDigestEmail(data: SyncDigestData): string {
+  const heldRows = data.held
+    .map(
+      (job) => `
+        <tr>
+          <td style="padding:14px 0;border-bottom:1px solid #e8e0f5;">
+            <p style="margin:0;font-size:15px;font-weight:700;color:#1a1a2e;font-family:'Montserrat',Arial,sans-serif;">${escapeHtml(job.title)}</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#5b2d8e;font-family:'Roboto',Arial,sans-serif;">${escapeHtml(
+              [job.company, job.location, job.source].filter(Boolean).join(' · ')
+            )}</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#8a6d1a;font-family:'Roboto',Arial,sans-serif;">Held: ${escapeHtml(job.reasons.join(', '))}</p>
+          </td>
+        </tr>`
+    )
+    .join('')
+
+  const problemRows = data.problems
+    .map(
+      (p) => `
+        <tr>
+          <td style="padding:10px 0;color:#1a1a2e;font-size:14px;font-family:'Roboto',Arial,sans-serif;width:160px;vertical-align:top;font-weight:600;">${escapeHtml(p.name)}</td>
+          <td style="padding:10px 0;color:#b42318;font-size:14px;font-family:'Roboto',Arial,sans-serif;vertical-align:top;">${escapeHtml(p.issue)}</td>
+        </tr>`
+    )
+    .join('')
+
+  const sourceRows = data.sources
+    .map(
+      (s) => `
+        <tr>
+          <td style="padding:8px 0;color:#1a1a2e;font-size:13px;font-family:'Roboto',Arial,sans-serif;">${escapeHtml(s.name)}</td>
+          <td style="padding:8px 0;color:#6b6b8a;font-size:13px;font-family:'Roboto',Arial,sans-serif;text-align:right;">${s.seen} seen · ${s.held} held · ${s.created} published · ${s.rejected} off-target · ${s.deduped} duplicate</td>
+        </tr>`
+    )
+    .join('')
+
+  return wrap(`
+    ${emailHeader(
+      data.held.length > 0 ? `${data.held.length} synced job${data.held.length === 1 ? '' : 's'} to review` : 'Job sync needs a look',
+      `Nightly sync, ${escapeHtml(data.runLabel)}. Nothing held here is visible to students until someone approves it.`
+    )}
+
+    ${
+      data.held.length > 0
+        ? `<tr>
+      <td style="background:#ffffff;padding:32px 40px 8px;">
+        ${sectionLabel('Held for review')}
+        <table width="100%" cellpadding="0" cellspacing="0">${heldRows}</table>
+      </td>
+    </tr>`
+        : ''
+    }
+
+    ${
+      data.problems.length > 0
+        ? `<tr>
+      <td style="background:#ffffff;padding:28px 40px 8px;">
+        ${sectionLabel('Sources that need attention')}
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e8e0f5;border-bottom:1px solid #e8e0f5;">${problemRows}</table>
+      </td>
+    </tr>`
+        : ''
+    }
+
+    <tr>
+      <td style="background:#ffffff;padding:28px 40px 36px;">
+        ${ctaButton(data.queueUrl, 'Open the review queue')}
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#f8f5ff;border-top:1px solid #e8e0f5;border-radius:0 0 12px 12px;padding:24px 40px 28px;">
+        ${sectionLabel('This run')}
+        <table width="100%" cellpadding="0" cellspacing="0">${sourceRows}</table>
+      </td>
+    </tr>
+  `)
+}

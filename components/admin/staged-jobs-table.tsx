@@ -14,6 +14,7 @@ import {
 } from '@/components/shadcn/dropdown-menu'
 import { GridRow, IconActionButton, SelectCheckbox, softButtonClassName, headerLabelClassName } from './table'
 import { cn, formatDate, decodeHtmlEntities, toApplicationHref } from '@/lib/utils'
+import { riskReasonLabel } from '@/lib/sync/risk'
 
 /**
  * Synced jobs held for review (staged_jobs), shown under the human
@@ -49,20 +50,6 @@ export interface StagedJobRow {
 /** Literal for Tailwind's JIT scanner: checkbox / job / source / closes / actions. */
 const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
 
-const RISK_LABELS: Record<string, string> = {
-  tier_b_or_c: 'Aggregator source',
-  missing_title: 'No title',
-  missing_company: 'No company',
-  no_direct_link: 'Not a direct link',
-  missing_job_type: 'Job type unknown',
-  missing_closing_date: 'No closing date',
-  inferred_closing_date: 'Closing date guessed',
-  inferred_location: 'Location guessed',
-  inferred_job_type: 'Job type guessed',
-  classifier_unsure: 'Unsure it fits',
-  new_adapter: 'New source',
-  review_only_mode: 'Review-only source',
-}
 
 const REJECT_REASONS: Array<{ value: string; label: string }> = [
   { value: 'irrelevant', label: 'Not relevant' },
@@ -111,7 +98,7 @@ function RiskChips({ reasons }: { reasons: string[] }) {
     <div className="mt-1.5 flex flex-wrap gap-1">
       {chips.map((reason) => (
         <Badge key={reason} variant="warning" className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
-          {RISK_LABELS[reason] ?? reason}
+          {riskReasonLabel(reason)}
         </Badge>
       ))}
     </div>

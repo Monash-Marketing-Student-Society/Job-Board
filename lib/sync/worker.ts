@@ -61,6 +61,7 @@ export async function runOneSource(db: SupabaseClient, source: LoadedSource, opt
 
 export interface WorkerSummary {
   slug: string
+  name: string
   counts: SourceRunResult['counts']
   error: string | null
   zeroGuardTripped: boolean
@@ -71,7 +72,7 @@ export async function runAllSources(db: SupabaseClient, opts: WorkerOptions): Pr
   const summaries: WorkerSummary[] = []
   for (const source of sources) {
     const r = await runOneSource(db, source, opts)
-    summaries.push({ slug: source.slug, counts: r.counts, error: r.error, zeroGuardTripped: r.zeroGuardTripped })
+    summaries.push({ slug: source.slug, name: source.name, counts: r.counts, error: r.error, zeroGuardTripped: r.zeroGuardTripped })
   }
   return summaries
 }
