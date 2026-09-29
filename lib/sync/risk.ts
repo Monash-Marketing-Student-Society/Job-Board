@@ -29,6 +29,30 @@ export type RiskReason =
   | 'new_adapter'
   | 'review_only_mode'
 
+/**
+ * Human wording for each reason -- shared by the admin queue's chips and the
+ * run digest, so the two can't describe the same hold differently.
+ */
+export const RISK_REASON_LABELS: Record<RiskReason, string> = {
+  tier_b_or_c: 'Aggregator source',
+  missing_title: 'No title',
+  missing_company: 'No company',
+  no_direct_link: 'Not a direct link',
+  missing_job_type: 'Job type unknown',
+  missing_closing_date: 'No closing date',
+  inferred_closing_date: 'Closing date guessed',
+  inferred_location: 'Location guessed',
+  inferred_job_type: 'Job type guessed',
+  classifier_unsure: 'Unsure it fits',
+  new_adapter: 'New source',
+  review_only_mode: 'Review-only source',
+}
+
+/** A stored reason may predate a rename, so fall back to the raw value. */
+export function riskReasonLabel(reason: string): string {
+  return (RISK_REASON_LABELS as Record<string, string>)[reason] ?? reason
+}
+
 /** The first N jobs from a new or repaired adapter always get a human look. */
 export const NEW_ADAPTER_REVIEW_COUNT = 10
 

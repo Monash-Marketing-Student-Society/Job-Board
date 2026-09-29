@@ -1,6 +1,8 @@
 import { schedules, task, logger } from '@trigger.dev/sdk'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runAllSources, type WorkerSummary } from '@/lib/sync/worker'
+import { sendRunDigest } from '@/lib/sync/digest'
+import { sendEmail } from '@/lib/email'
 
 /**
  * The sync worker: every enabled nightly source through the pipeline in
@@ -17,9 +19,28 @@ import { runAllSources, type WorkerSummary } from '@/lib/sync/worker'
  * admin sets `config.auto_publish = true` on its row, which the phase-2 soak
  * decides. Held postings land in staged_jobs for /admin/submissions.
  *
- * No digest email yet -- that's phase 2's, alongside the sources page.
- * Every run's counts are on its sync_runs row and in this task's output.
+ * After a real run (never a dry one) a digest goes to partnerships@ if
+ * anything was held or any source broke -- see lib/sync/digest.ts. It needs
+ * SYNC_DIGEST=1 and RESEND_API_KEY in the Trigger.dev environment; without
+ * them the run still completes and the output says the digest was skipped.
  */
+
+async function runAndDigest(opts: { dryRun: boolean; slug?: string }) {
+  const db = createAdminClient()
+  const startedAt = new Date()
+  const summaries = await runAllSources(db, opts)
+  log(summaries, opts.dryRun)
+
+  if (opts.dryRun) return { summaries, digest: 'skipped_dry_run' as const }
+  const digest = await sendRunDigest(db, summaries, startedAt, {
+    enabled: process.env.SYNC_DIGEST === '1',
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://jobs.monashmss.com',
+    send: (m) => sendEmail({ from: m.from, to: m.to, subject: m.subject, html: m.html, text: m.text }, 'sync digest'),
+  })
+  if (typeof digest === 'object') logger.error('Digest email failed', { error: digest.failed })
+  else logger.info('Digest', { outcome: digest })
+  return { summaries, digest }
+}
 
 function log(summaries: WorkerSummary[], dryRun: boolean) {
   for (const s of summaries) {
@@ -34,11 +55,7 @@ export const syncTask = schedules.task({
   id: 'job-board-sync',
   cron: { pattern: '0 2 * * *', timezone: 'Australia/Melbourne' },
   maxDuration: 3600,
-  run: async () => {
-    const summaries = await runAllSources(createAdminClient(), { dryRun: false })
-    log(summaries, false)
-    return { summaries }
-  },
+  run: async () => runAndDigest({ dryRun: false }),
 })
 
 export const syncManualTask = task({
@@ -49,8 +66,6 @@ export const syncManualTask = task({
     // almost always "does this new source parse?", and the safe answer to
     // a missing flag is "write nothing".
     const dryRun = payload.dryRun !== false
-    const summaries = await runAllSources(createAdminClient(), { dryRun, slug: payload.slug })
-    log(summaries, dryRun)
-    return { dryRun, summaries }
+    return { dryRun, ...(await runAndDigest({ dryRun, slug: payload.slug })) }
   },
 })
