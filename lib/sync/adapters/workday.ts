@@ -63,17 +63,24 @@ interface WorkdayDetailResponse {
   }
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T | null> {
-  // Workday's CXS API is POST-only -- confirmed against the real endpoint
-  // (23 Sep 2026): a plain GET returns HTTP 400. lib/ssrf.ts's
-  // fetchPublicUrl() gained an optional method/body for exactly this caller.
+/**
+ * The two CXS endpoints take opposite methods -- verified against the real
+ * API, 24 Sep 2026:
+ *   list   (`/jobs`)          POST with a JSON body; a GET returns 400
+ *   detail (`/job/<path>`)    GET;                   a POST returns 400
+ *
+ * A non-2xx response returns null even when its body parses: Workday's 400
+ * carries a JSON error object ({"errorCode":"HTTP_400",...}), and treating
+ * that as a successful payload is exactly what used to crash the adapter.
+ */
+async function fetchJson<T>(url: string, init: { method: 'GET' } | { method: 'POST'; body: unknown }): Promise<T | null> {
   const res = await fetchPublicUrl(new URL(url), {
     timeoutMs: REQUEST_TIMEOUT_MS,
     headers: REQUEST_HEADERS,
-    method: 'POST',
-    body: JSON.stringify(body),
+    method: init.method,
+    body: init.method === 'POST' ? JSON.stringify(init.body) : undefined,
   })
-  if (!res) return null
+  if (!res || !res.ok) return null
   try {
     return (await res.json()) as T
   } catch {
@@ -81,17 +88,20 @@ async function postJson<T>(url: string, body: unknown): Promise<T | null> {
   }
 }
 
-function fetchList(endpoint: string, offset: number): Promise<WorkdayListResponse | null> {
-  return postJson<WorkdayListResponse>(`${endpoint}/jobs`, {
-    appliedFacets: {},
-    limit: PAGE_SIZE,
-    offset,
-    searchText: '',
+async function fetchList(endpoint: string, offset: number): Promise<WorkdayListResponse | null> {
+  const page = await fetchJson<WorkdayListResponse>(`${endpoint}/jobs`, {
+    method: 'POST',
+    body: { appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' },
   })
+  return page && Array.isArray(page.jobPostings) ? page : null
 }
 
-function fetchDetail(endpoint: string, externalPath: string): Promise<WorkdayDetailResponse | null> {
-  return postJson<WorkdayDetailResponse>(`${endpoint}${externalPath}`, {})
+async function fetchDetail(endpoint: string, externalPath: string): Promise<WorkdayDetailResponse | null> {
+  const detail = await fetchJson<WorkdayDetailResponse>(`${endpoint}${externalPath}`, { method: 'GET' })
+  // Shape-checked, not just parse-checked: a posting with no jobPostingInfo
+  // (or no apply URL) is skipped, never allowed to throw out of the adapter
+  // and fail every other posting from the same source.
+  return detail?.jobPostingInfo?.externalUrl ? detail : null
 }
 
 export const workdayAdapter: Adapter = {
