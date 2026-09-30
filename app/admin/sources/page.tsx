@@ -1,6 +1,14 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { SourcesTable, type SourceView } from '@/components/admin/sources-table'
+import { AutoPublishedTable, type AutoPublishedRow } from '@/components/admin/auto-published-table'
 import { tableCardClassName } from '@/components/admin/table/table-styles'
+import {
+  AUTO_PUBLISHED_COLUMNS,
+  AUTO_PUBLISHED_WINDOW_DAYS,
+  autoPublishedSince,
+  sourceNameFor,
+  type AutoPublishedJob,
+} from '@/lib/sync/auto-published'
 import {
   ADMIN_SOURCE_COLUMNS,
   countPublishedBySlug,
@@ -17,6 +25,9 @@ export const metadata = {
 
 /** Recent runs per source: enough to see a pattern, not a history view. */
 const RUNS_PER_SOURCE = 5
+
+/** A week of auto-publishing is far below this; past it the oldest drop off until the next load. */
+const AUTO_PUBLISHED_LIMIT = 200
 
 /** Window for the approve/reject tally -- covers a five-day soak with room either side. */
 const REVIEW_WINDOW_DAYS = 14
@@ -43,12 +54,19 @@ export default async function AdminSourcesPage() {
   const now = new Date()
   const since = new Date(now.getTime() - REVIEW_WINDOW_DAYS * 86_400_000).toISOString()
 
-  const [sourcesResult, reviewsResult, publishedResult] = await Promise.all([
+  const [sourcesResult, reviewsResult, publishedResult, autoResult] = await Promise.all([
     supabase.from('sources').select(ADMIN_SOURCE_COLUMNS).order('name'),
     // Pending of any age, plus whatever was decided inside the window.
     supabase.from('staged_jobs').select('source_id, status').or(`status.eq.pending,updated_at.gte.${since}`),
     // The same count risk.ts's new-adapter hold uses: every job a source has put on the board.
     supabase.from('jobs').select('source').like('source', 'sync:%'),
+    // Live or not: a job already taken down still belongs in the week's record.
+    supabase
+      .from('jobs')
+      .select(AUTO_PUBLISHED_COLUMNS)
+      .gte('auto_published_at', autoPublishedSince(now))
+      .order('auto_published_at', { ascending: false })
+      .limit(AUTO_PUBLISHED_LIMIT),
   ])
 
   if (sourcesResult.error) {
@@ -79,6 +97,19 @@ export default async function AdminSourcesPage() {
     }
   })
 
+  const namesBySlug = new Map(sources.map((s) => [s.slug, s.name]))
+  const autoPublished: AutoPublishedRow[] = ((autoResult.data ?? []) as AutoPublishedJob[]).map((job) => ({
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    url: job.url,
+    closingAt: job.closing_at,
+    isActive: job.is_active,
+    publishedAt: job.auto_published_at,
+    sourceName: sourceNameFor(job.source, namesBySlug),
+  }))
+
   return (
     <div>
       <div className="mb-6">
@@ -90,6 +121,10 @@ export default async function AdminSourcesPage() {
 
       <div className={tableCardClassName}>
         <SourcesTable rows={rows} reviewWindowDays={REVIEW_WINDOW_DAYS} />
+      </div>
+
+      <div className={`${tableCardClassName} mt-6`}>
+        <AutoPublishedTable rows={autoPublished} windowDays={AUTO_PUBLISHED_WINDOW_DAYS} />
       </div>
     </div>
   )
