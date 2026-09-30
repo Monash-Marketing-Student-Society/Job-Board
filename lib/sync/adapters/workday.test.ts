@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import dns from 'dns/promises'
-import { workdayAdapter } from './workday'
+import { workdayAdapter, resolveFacetIds, locationFacetConfig, type WorkdayFacet } from './workday'
+import marsListWithFacets from './__fixtures__/workday-list-facets.json'
 import workdayList from './__fixtures__/workday-list.json'
 import workdayDetail from './__fixtures__/workday-detail.json'
 import type { SourceRow } from './types'
@@ -191,5 +192,102 @@ describe('workdayAdapter', () => {
 
     await expect(workdayAdapter.fetch({ ...SOURCE, endpoint: 'https://internal.test/wday/cxs/x/y' })).rejects.toThrow()
     expect(fetch).not.toHaveBeenCalled() // fetchPublicUrl's own SSRF guard blocks it before any request goes out
+  })
+
+  describe('config.location_facet', () => {
+    const MARS: SourceRow = {
+      ...SOURCE,
+      slug: 'mars',
+      name: 'Mars',
+      endpoint: 'https://mars.wd3.myworkdayjobs.com/wday/cxs/mars/External',
+      config: { vendor: 'workday', location_facet: { parameter: 'locations', prefix: 'AUS-' } },
+    }
+    const AU_IDS = [
+      'f7694590cd5001399e6bf542b00d358e',
+      'f7694590cd5001c5b304f342b00d0c8e',
+      'f7694590cd50016992ec0043b00da38e',
+    ]
+
+    /** Probe (empty facets) returns the real Mars facets; filtered pages return one short page. */
+    function scriptMars(probe: unknown = marsListWithFacets) {
+      const lists: Array<Record<string, unknown>> = []
+      vi.mocked(fetch).mockImplementation(async (url, init) => {
+        if (String(url).endsWith('/jobs')) {
+          const body = JSON.parse(init?.body as string)
+          lists.push(body)
+          if (Object.keys(body.appliedFacets).length === 0) return jsonResponse(probe)
+          return jsonResponse({ total: 1, jobPostings: [workdayList.jobPostings[0]] })
+        }
+        return jsonResponse(workdayDetail)
+      })
+      return lists
+    }
+
+    it('reads the facets from an unfiltered page, then pages with every matching id', async () => {
+      const lists = scriptMars()
+      const postings = await workdayAdapter.fetch(MARS)
+
+      expect(lists[0].appliedFacets).toEqual({})
+      expect(lists[1]).toEqual({ appliedFacets: { locations: AU_IDS }, limit: 20, offset: 0, searchText: '' })
+      expect(lists).toHaveLength(2)
+      expect(postings).toHaveLength(1)
+    })
+
+    it('returns nothing, without an error, when the facet exists but has no matching value this week', async () => {
+      const lists = scriptMars({ ...marsListWithFacets, facets: [
+        { facetParameter: 'locations', values: [{ descriptor: 'GBR-London', id: 'x' }] },
+      ] })
+      expect(await workdayAdapter.fetch(MARS)).toEqual([])
+      expect(lists).toHaveLength(1)
+    })
+
+    it('throws when the tenant has no facet by that name -- a config error must not read as an empty board', async () => {
+      scriptMars()
+      const wrong = { ...MARS, config: { vendor: 'workday', location_facet: { parameter: 'locationCountry', prefix: 'Australia' } } }
+      await expect(workdayAdapter.fetch(wrong)).rejects.toThrow(/no "locationCountry" facet/)
+    })
+
+    it('leaves an unconfigured source exactly as before: one list call with empty facets', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(workdayList)).mockResolvedValue(jsonResponse(workdayDetail))
+      await workdayAdapter.fetch(SOURCE)
+      expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string).appliedFacets).toEqual({})
+    })
+  })
+})
+
+describe('resolveFacetIds', () => {
+  const facets = marsListWithFacets.facets as unknown as WorkdayFacet[]
+
+  it('finds values inside a nested facet group, by descriptor prefix, case-insensitively', () => {
+    expect(resolveFacetIds(facets, { parameter: 'locations', prefix: 'aus-' })).toHaveLength(3)
+  })
+
+  it('distinguishes a missing parameter (null) from no matching value ([])', () => {
+    expect(resolveFacetIds(facets, { parameter: 'locationCountry', prefix: 'Australia' })).toBeNull()
+    expect(resolveFacetIds(facets, { parameter: 'locations', prefix: 'NZL-' })).toEqual([])
+  })
+
+  it('matches a top-level facet too (the P&G shape)', () => {
+    const pg: WorkdayFacet[] = [
+      { facetParameter: 'locationCountry', values: [{ descriptor: 'Australia', id: 'd903' }, { descriptor: 'Austria', id: 'a1' }] },
+    ]
+    expect(resolveFacetIds(pg, { parameter: 'locationCountry', prefix: 'Australia' })).toEqual(['d903'])
+  })
+})
+
+describe('locationFacetConfig', () => {
+  const src = (config: Record<string, unknown>) => ({ ...({} as SourceRow), slug: 'x', config })
+
+  it('is null when unset and parses a valid value', () => {
+    expect(locationFacetConfig(src({}))).toBeNull()
+    expect(locationFacetConfig(src({ location_facet: { parameter: 'locations', prefix: 'AUS-' } }))).toEqual({
+      parameter: 'locations',
+      prefix: 'AUS-',
+    })
+  })
+
+  it('throws on a malformed value instead of silently fetching the whole tenant', () => {
+    expect(() => locationFacetConfig(src({ location_facet: { parameter: 'locations' } }))).toThrow(/malformed/)
+    expect(() => locationFacetConfig(src({ location_facet: 'AUS' }))).toThrow(/malformed/)
   })
 })

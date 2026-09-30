@@ -1,0 +1,79 @@
+{
+  "total": 788,
+  "facets": [
+    {
+      "facetParameter": "timeType",
+      "descriptor": "Full/Part-time",
+      "values": [
+        {
+          "descriptor": "Full time",
+          "id": "7823fa2239f20167429c0fa76f0b6300",
+          "count": 707
+        },
+        {
+          "descriptor": "Part time",
+          "id": "7823fa2239f20109587f0fa76f0b6200",
+          "count": 18
+        }
+      ]
+    },
+    {
+      "facetParameter": "locationMainGroup",
+      "values": [
+        {
+          "facetParameter": "locations",
+          "descriptor": "Locations",
+          "values": [
+            {
+              "descriptor": "AUS-New South Wales-Asquith",
+              "id": "f7694590cd5001399e6bf542b00d358e",
+              "count": 3
+            },
+            {
+              "descriptor": "AUS-New South Wales-Sydney",
+              "id": "f7694590cd5001c5b304f342b00d0c8e",
+              "count": 1
+            },
+            {
+              "descriptor": "AUS-New South Wales-Wyong",
+              "id": "f7694590cd50016992ec0043b00da38e",
+              "count": 1
+            },
+            {
+              "descriptor": "ARE-Dubai-Dubai",
+              "id": "f7694590cd5001a2e914f342b00d0d8e",
+              "count": 3
+            },
+            {
+              "descriptor": "GBR-Batley-West Yorkshire",
+              "id": "f7694590cd50018f3b175a48b00d839a",
+              "count": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "jobPostings": [
+    {
+      "title": "Supplier Quality Assurance Specialist",
+      "externalPath": "/job/IND-Maharashtra-Mumbai/Supplier-Quality-Assurance_R165250-1",
+      "timeType": "Full time",
+      "locationsText": "IND-Maharashtra-Mumbai",
+      "postedOn": "Posted Today",
+      "bulletFields": [
+        "R165250"
+      ]
+    },
+    {
+      "title": "Site Project Engineer",
+      "externalPath": "/job/GBR-Leicestershire-Melton-Mowbray/Site-Project-Engineer_R159274-1",
+      "timeType": "Full time",
+      "locationsText": "GBR-Leicestershire-Melton Mowbray",
+      "postedOn": "Posted Today",
+      "bulletFields": [
+        "R159274"
+      ]
+    }
+  ]
+}
