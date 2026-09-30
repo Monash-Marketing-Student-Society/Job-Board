@@ -15,7 +15,7 @@ import {
 import { RichTextEditor } from './rich-text-editor'
 import { LogoUploadField } from './logo-upload-field'
 import { createClient } from '@/lib/supabase/client'
-import { isValidApplicationUrl } from '@/lib/utils'
+import { isValidApplicationUrl, isPastDateInput } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
@@ -80,6 +80,17 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
 
     if (!isValidApplicationUrl(formData.url.trim())) {
       toast.error('Application URL must be a valid http(s) link or an email address.')
+      setIsSubmitting(false)
+      return
+    }
+
+    // The board hides any job past its closing date, so an active job saved
+    // with one in the past is live in the admin list but invisible to
+    // students -- usually a mistyped year. Inactive jobs are left alone.
+    if (formData.is_active && isPastDateInput(formData.closing_at)) {
+      toast.error('That closing date has already passed, so this job won\u2019t show on the board.', {
+        description: 'Check the year, or untick Active to save it as an inactive listing.',
+      })
       setIsSubmitting(false)
       return
     }

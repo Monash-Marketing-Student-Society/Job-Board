@@ -102,6 +102,22 @@ export function isJobExpired(closingAt: string | null | undefined): boolean {
 }
 
 /**
+ * True when a date-input value (YYYY-MM-DD) is before today in the admin's
+ * own timezone. Used to stop an active job being saved with a closing date
+ * that has already passed: since the board hides jobs past closing_at
+ * (lib/jobs-query.ts), such a job is saved as "active" but never appears --
+ * which is exactly how a year typo (2026 for 2027) looks like a broken board.
+ * Compared as local calendar dates, not instants, so a job closing today
+ * still counts as open.
+ */
+export function isPastDateInput(value: string, today: Date = new Date()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+  return value < todayStr
+}
+
+/**
  * Calculate days until closing
  */
 export function daysUntilClosing(closingAt: string | null | undefined): number | null {
