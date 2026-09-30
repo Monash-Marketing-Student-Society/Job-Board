@@ -14,6 +14,7 @@ function useNavItems(pendingSubmissions: number) {
   return [
     { href: '/admin/jobs', label: 'Jobs' },
     { href: '/admin/submissions', label: 'Submissions', badge: pendingSubmissions },
+    { href: '/admin/sources', label: 'Sources' },
     { href: '/admin/analytics', label: 'Analytics' },
     { href: '/admin/users', label: 'Admins' },
   ]
