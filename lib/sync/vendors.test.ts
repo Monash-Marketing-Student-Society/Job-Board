@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { vendorFor } from './vendors'
 import { workdayAdapter } from './adapters/workday'
+import { greenhouseAdapter } from './adapters/greenhouse'
 import type { SourceRow, RawPosting } from './adapters/types'
 import workdayDetail from './adapters/__fixtures__/workday-detail.json'
 
@@ -19,6 +20,10 @@ describe('vendorFor', () => {
     expect(vendorFor(source({ vendor: 'workday' })).adapter).toBe(workdayAdapter)
   })
 
+  it('resolves greenhouse to its adapter', () => {
+    expect(vendorFor(source({ vendor: 'greenhouse' })).adapter).toBe(greenhouseAdapter)
+  })
+
   it("normalises a Workday RawPosting using the posting's own company, not the response's", () => {
     const posting: RawPosting = {
       sourceJobId: 'R-1188260',
@@ -35,6 +40,6 @@ describe('vendorFor', () => {
 
   it('throws a clear error for a missing or unknown vendor rather than half-working', () => {
     expect(() => vendorFor(source({}))).toThrow(/no known vendor/)
-    expect(() => vendorFor(source({ vendor: 'greenhouse' }))).toThrow(/no known vendor/)
+    expect(() => vendorFor(source({ vendor: 'phenom' }))).toThrow(/no known vendor/)
   })
 })

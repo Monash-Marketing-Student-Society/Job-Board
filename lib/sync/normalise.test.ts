@@ -83,6 +83,12 @@ describe('normaliseGreenhousePosting', () => {
     expect(confidence.job_type).toBeUndefined()
   })
 
+  it('reads first_published as posted_at when the list endpoint supplies it', () => {
+    expect(job.posted_at).toBeNull() // the detail fixture has no first_published
+    const listed = { ...greenhouseDetail, first_published: '2026-09-28T02:15:37-04:00' }
+    expect(normaliseGreenhousePosting(listed, 'Ogilvy').job.posted_at).toBe('2026-09-28T02:15:37-04:00')
+  })
+
   it('maps a real employment_type value when present', () => {
     const withType = { ...greenhouseDetail, employment_type: 'Full-time' }
     const result = normaliseGreenhousePosting(withType, 'Ogilvy')

@@ -6,14 +6,20 @@
  * incompatible shapes -- so a source row also carries `config.vendor`.
  * Adding a vendor is one entry here plus its adapter and normaliser.
  *
- * Greenhouse has a normaliser (lib/sync/normalise.ts) but no adapter yet, so
- * it isn't registered: a source configured for it fails loudly with an
+ * A source whose `config.vendor` isn't listed here fails loudly with an
  * unknown-vendor error instead of half-working.
  */
 
+import { greenhouseAdapter } from './adapters/greenhouse'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
-import { normaliseWorkdayPosting, type NormaliseResult, type WorkdayRawPosting } from './normalise'
+import {
+  normaliseGreenhousePosting,
+  normaliseWorkdayPosting,
+  type GreenhouseRawPosting,
+  type NormaliseResult,
+  type WorkdayRawPosting,
+} from './normalise'
 
 export interface Vendor {
   adapter: Adapter
@@ -24,6 +30,10 @@ const VENDORS: Record<string, Vendor> = {
   workday: {
     adapter: workdayAdapter,
     normalise: (posting) => normaliseWorkdayPosting(posting.raw as unknown as WorkdayRawPosting, posting.company),
+  },
+  greenhouse: {
+    adapter: greenhouseAdapter,
+    normalise: (posting) => normaliseGreenhousePosting(posting.raw as unknown as GreenhouseRawPosting, posting.company),
   },
 }
 
