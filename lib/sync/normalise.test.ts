@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseWorkdayPosting, normaliseGreenhousePosting, inferJobFunctions } from './normalise'
+import { normaliseWorkdayPosting, normaliseGreenhousePosting, inferJobFunctions, tidyWorkdayLocation } from './normalise'
 import workdayDetail from './adapters/__fixtures__/workday-detail.json'
 import greenhouseDetail from './adapters/__fixtures__/greenhouse-detail.json'
 
@@ -134,5 +134,29 @@ describe('inferJobFunctions', () => {
     // in a way that changes the outcome versus the title alone.
     const tags = inferJobFunctions(greenhouseDetail.title, null)
     expect(tags).toEqual(['Sales'])
+  })
+})
+
+describe('tidyWorkdayLocation', () => {
+  it("rewrites Mars's country-state-city code to a place name", () => {
+    expect(tidyWorkdayLocation('AUS-Victoria-Melbourne')).toBe('Melbourne, Victoria')
+    expect(tidyWorkdayLocation('AUS-New South Wales-Sydney')).toBe('Sydney, New South Wales')
+  })
+
+  it('leaves every other shape alone', () => {
+    expect(tidyWorkdayLocation('SYDNEY GO')).toBe('SYDNEY GO')
+    expect(tidyWorkdayLocation('North Rocks, Sydney, Australia')).toBe('North Rocks, Sydney, Australia')
+    expect(tidyWorkdayLocation('2 Locations')).toBe('2 Locations')
+    expect(tidyWorkdayLocation(null)).toBeNull()
+  })
+})
+
+describe('normaliseWorkdayPosting with a tenant that omits endDate', () => {
+  it('gives closing_at null, never undefined', () => {
+    const info = { ...workdayDetail.jobPostingInfo } as Record<string, unknown>
+    delete info.endDate
+    const { job, confidence } = normaliseWorkdayPosting({ jobPostingInfo: info } as never, 'P&G')
+    expect(job.closing_at).toBeNull()
+    expect(confidence.closing_at).toBeUndefined()
   })
 })

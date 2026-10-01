@@ -20,15 +20,18 @@
  * -- the "wd3" data-centre number varies unpredictably per company and isn't
  * derivable from the tenant name, so it has to be configured, not guessed.
  *
- * Not attempted here: server-side location-facet filtering (Workday's list
- * endpoint accepts `appliedFacets`, and the TDD notes both Workday and
- * Greenhouse support it). The facet id scheme is per-tenant opaque GUIDs
- * (see the fixture's sibling `facets` block, trimmed out here) with no
- * documented way to derive "Melbourne" or "Sydney" from a tenant alone, so
- * this fetches every posting and leaves city filtering to lib/sync/target.ts,
- * which already has to run regardless. A correctness/efficiency split, not a
- * correctness gap -- worth revisiting once real facet ids are seen for a
- * specific tenant.
+ * Location facets, for global tenants. An early-careers tenant like
+ * Unilever's is small enough to read whole, but P&G's and Mars's are ~800
+ * postings each -- 800 detail calls a night for a handful of Australian jobs.
+ * `config.location_facet = { parameter, prefix }` narrows the list server-side:
+ * the facet ids are opaque per-tenant GUIDs, so instead of storing them the
+ * adapter reads the first page's `facets` block and selects every value of
+ * `parameter` whose descriptor starts with `prefix`. Verified 30 Sep 2026:
+ *   P&G   pg.wd5 / 1000        { parameter: 'locationCountry', prefix: 'Australia' }  -> 5
+ *   Mars  mars.wd3 / External  { parameter: 'locations',       prefix: 'AUS-' }       -> 12
+ * Resolving at run time means a newly opened Australian office is included
+ * without a config edit. City filtering stays with lib/sync/target.ts either
+ * way; the facet only saves requests.
  */
 
 import { fetchPublicUrl } from '../../ssrf'
@@ -50,6 +53,63 @@ interface WorkdayListPosting {
 interface WorkdayListResponse {
   total: number
   jobPostings: WorkdayListPosting[]
+  /** Present on list responses; only the first page's is read. */
+  facets?: WorkdayFacet[]
+}
+
+interface WorkdayFacetValue {
+  descriptor: string
+  id: string
+}
+
+/** A facet's values are either selectable values or, for a group, nested facets. */
+export interface WorkdayFacet {
+  facetParameter: string
+  values: Array<WorkdayFacetValue | WorkdayFacet>
+}
+
+export interface LocationFacetConfig {
+  parameter: string
+  prefix: string
+}
+
+function isFacet(v: WorkdayFacetValue | WorkdayFacet): v is WorkdayFacet {
+  return typeof (v as WorkdayFacet).facetParameter === 'string' && Array.isArray((v as WorkdayFacet).values)
+}
+
+/**
+ * The ids of every `parameter` value whose descriptor starts with `prefix`
+ * (case-insensitive), searching nested facet groups. `null` when the tenant
+ * has no facet by that name at all -- a config error, not an empty result.
+ */
+export function resolveFacetIds(facets: WorkdayFacet[], { parameter, prefix }: LocationFacetConfig): string[] | null {
+  let found = false
+  const ids: string[] = []
+  const want = prefix.toLowerCase()
+  const walk = (list: WorkdayFacet[]) => {
+    for (const facet of list) {
+      if (facet.facetParameter === parameter) {
+        found = true
+        for (const v of facet.values) {
+          if (!isFacet(v) && v.descriptor?.toLowerCase().startsWith(want)) ids.push(v.id)
+        }
+      }
+      walk(facet.values.filter(isFacet))
+    }
+  }
+  walk(facets)
+  return found ? ids : null
+}
+
+/** `config.location_facet`, or null when unset. Throws on a malformed value rather than ignoring it. */
+export function locationFacetConfig(source: SourceRow): LocationFacetConfig | null {
+  const raw = source.config.location_facet
+  if (raw === undefined || raw === null) return null
+  const c = raw as Partial<LocationFacetConfig>
+  if (typeof c.parameter !== 'string' || !c.parameter || typeof c.prefix !== 'string' || !c.prefix) {
+    throw new Error(`Source "${source.slug}" has a malformed config.location_facet: ${JSON.stringify(raw)}`)
+  }
+  return { parameter: c.parameter, prefix: c.prefix }
 }
 
 interface WorkdayDetailResponse {
@@ -88,10 +148,14 @@ async function fetchJson<T>(url: string, init: { method: 'GET' } | { method: 'PO
   }
 }
 
-async function fetchList(endpoint: string, offset: number): Promise<WorkdayListResponse | null> {
+async function fetchList(
+  endpoint: string,
+  offset: number,
+  appliedFacets: Record<string, string[]>
+): Promise<WorkdayListResponse | null> {
   const page = await fetchJson<WorkdayListResponse>(`${endpoint}/jobs`, {
     method: 'POST',
-    body: { appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' },
+    body: { appliedFacets, limit: PAGE_SIZE, offset, searchText: '' },
   })
   return page && Array.isArray(page.jobPostings) ? page : null
 }
@@ -110,9 +174,26 @@ export const workdayAdapter: Adapter = {
   async fetch(source: SourceRow): Promise<RawPosting[]> {
     const postings: RawPosting[] = []
     let offset = 0
+    let appliedFacets: Record<string, string[]> = {}
+
+    const facetConfig = locationFacetConfig(source)
+    if (facetConfig) {
+      // One unfiltered page, read only for its facets block.
+      const probe = await fetchList(source.endpoint, 0, {})
+      if (!probe) throw new Error(`Workday list request failed for ${source.slug} while reading facets`)
+      const ids = resolveFacetIds(probe.facets ?? [], facetConfig)
+      if (ids === null) {
+        throw new Error(`Workday tenant for ${source.slug} has no "${facetConfig.parameter}" facet; check config.location_facet`)
+      }
+      // The parameter exists but nothing matches: no postings there right
+      // now. Workday omits zero-count values, so this is a quiet week, not a
+      // broken config -- the zero guard judges it against usual_count.
+      if (ids.length === 0) return postings
+      appliedFacets = { [facetConfig.parameter]: ids }
+    }
 
     for (;;) {
-      const page = await fetchList(source.endpoint, offset)
+      const page = await fetchList(source.endpoint, offset, appliedFacets)
       if (!page) throw new Error(`Workday list request failed for ${source.slug} at offset ${offset}`)
 
       for (const listed of page.jobPostings) {

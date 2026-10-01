@@ -135,6 +135,19 @@ export interface WorkdayRawPosting {
  * that gate's title fallback list includes 'graduate'/'grad' rather than
  * relying on job_type alone.
  */
+/**
+ * Some tenants label locations as a code, not a place: Mars's are
+ * `AUS-Victoria-Melbourne` (country-state-city). That string would be shown
+ * on the board as-is, so it's rewritten to `Melbourne, Victoria`. Anything
+ * not in that exact shape is returned unchanged -- P&G's `SYDNEY GO` (a site
+ * code) is left for a reviewer rather than guessed at.
+ */
+export function tidyWorkdayLocation(location: string | null | undefined): string | null {
+  if (!location) return null
+  const coded = /^[A-Z]{3}-([^-]+)-(.+)$/.exec(location.trim())
+  return coded ? `${coded[2].trim()}, ${coded[1].trim()}` : location
+}
+
 export function normaliseWorkdayPosting(raw: WorkdayRawPosting, company: string): NormaliseResult {
   const info = raw.jobPostingInfo
   const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
@@ -154,14 +167,15 @@ export function normaliseWorkdayPosting(raw: WorkdayRawPosting, company: string)
   const job: NormalisedJob = {
     title: info.title,
     company,
-    location: info.location,
+    location: tidyWorkdayLocation(info.location),
     work_mode: null, // Workday's per-posting response carries no work-mode signal
     job_type: jobType,
     url: info.externalUrl,
     description,
     tags,
     posted_at: null, // postedOn is relative text ("Posted 9 Days Ago"), not a usable date
-    closing_at: info.endDate,
+    // `?? null`: P&G's detail omits endDate entirely rather than sending null.
+    closing_at: info.endDate ?? null,
   }
 
   return { job, confidence }
