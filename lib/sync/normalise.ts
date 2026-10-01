@@ -190,6 +190,8 @@ export interface GreenhouseRawPosting {
   absolute_url: string
   application_deadline: string | null
   employment_type?: string | null
+  /** ISO timestamp with offset; on the list endpoint, absent from the older detail fixture. */
+  first_published?: string | null
 }
 
 /**
@@ -233,7 +235,7 @@ export function normaliseGreenhousePosting(raw: GreenhouseRawPosting, company: s
     url: raw.absolute_url,
     description,
     tags,
-    posted_at: null,
+    posted_at: raw.first_published ?? null,
     closing_at: raw.application_deadline,
   }
 
