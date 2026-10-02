@@ -46,7 +46,7 @@ describe('approveStaged', () => {
   it('claims BEFORE publishing: the job insert comes after the claim', async () => {
     const { db, log } = fakeDb(happy())
     await approveStaged(db, 's1', 'admin-1')
-    expect(log.map((c) => c.table)).toEqual(['staged_jobs', 'jobs', 'job_fingerprints'])
+    expect(log.map((c) => c.table)).toEqual(['staged_jobs', 'company_logos', 'jobs', 'job_fingerprints'])
   })
 
   it('publishes as an active, non-sponsored sync:<slug> job, not auto-published', async () => {
@@ -63,6 +63,15 @@ describe('approveStaged', () => {
       is_sponsored: false,
       auto_published_at: null,
     })
+  })
+
+  it('prefers an admin-approved company logo over the source domain', async () => {
+    const approved = 'https://cdn.brandfetch.io/domain/unilever.com.au/w/128/h/128/fallback/lettermark/icon?c=x'
+    const base = happy()
+    const { db, log } = fakeDb((table, ops) => (table === 'company_logos' ? { data: { logo_url: approved } } : base(table, ops)))
+    await approveStaged(db, 's1', 'admin-1')
+    const job = argOf(log.find((c) => c.table === 'jobs')!.ops, 'insert')
+    expect(job.company_logo_url).toBe(approved)
   })
 
   it('gives the job its logo from the source domain', async () => {

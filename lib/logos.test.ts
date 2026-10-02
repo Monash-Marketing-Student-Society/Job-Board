@@ -8,6 +8,7 @@ import {
   comparableName,
   normaliseDomain,
   parseBrandSearch,
+  parseBrandfetchInput,
   sourceLogoUrl,
 } from './logos'
 
@@ -126,5 +127,47 @@ describe('autoMatch', () => {
 
   it('is null for an empty name', () => {
     expect(autoMatch('  ', ogilvy)).toBeNull()
+  })
+})
+
+describe('parseBrandfetchInput', () => {
+  const byDomain = (d: string) => ({ logoUrl: brandfetchLogoUrl(d), domain: d })
+
+  it('takes a bare domain', () => {
+    expect(parseBrandfetchInput(' ogilvy.com ')).toEqual(byDomain('ogilvy.com'))
+  })
+
+  it('takes a Brandfetch brand page', () => {
+    expect(parseBrandfetchInput('https://brandfetch.com/www.commbank.com.au?view=logos')).toEqual(byDomain('commbank.com.au'))
+  })
+
+  it('takes Logo API links by domain, with or without the /domain/ prefix, and drops their client id', () => {
+    expect(parseBrandfetchInput('https://cdn.brandfetch.io/ogilvy.com/w/400?c=someoneelse')).toEqual(byDomain('ogilvy.com'))
+    expect(parseBrandfetchInput('https://cdn.brandfetch.io/domain/pg.com/fallback/404?c=x')).toEqual(byDomain('pg.com'))
+  })
+
+  it('keeps a copied asset link as that file, with our client id in place of theirs', () => {
+    expect(
+      parseBrandfetchInput('https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=1bxid64Mup7aczewSAYMX&t=1740370812106')
+    ).toEqual({
+      logoUrl: `https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=${BRANDFETCH_CLIENT_ID}`,
+      domain: null,
+    })
+  })
+
+  it('rejects anything that is not a Brandfetch logo', () => {
+    for (const bad of [
+      '',
+      'not a link',
+      'https://media.licdn.com/dms/image/v2/logo.png',
+      'https://evil.example/cdn.brandfetch.io/ogilvy.com',
+      'https://brandfetch.com/',
+      'https://cdn.brandfetch.io/',
+      'https://cdn.brandfetch.io/<script>/x',
+      'ogilvy.com/path',
+      'javascript:alert(1)',
+    ]) {
+      expect(parseBrandfetchInput(bad)).toBeNull()
+    }
   })
 })

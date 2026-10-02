@@ -145,6 +145,16 @@ describe('supabaseDeps writes', () => {
     expect(bare.company_logo_url).toBeNull()
   })
 
+  it('publish prefers an admin-approved company logo over the source domain', async () => {
+    const approved = 'https://cdn.brandfetch.io/domain/unilever.com.au/w/128/h/128/fallback/lettermark/icon?c=x'
+    const { db, log } = fakeDb((table) =>
+      table === 'company_logos' ? { data: { logo_url: approved } } : { data: { id: 'j1' } }
+    )
+    await supabaseDeps(db, { ...SOURCE, config: { domain: 'unilever.com' } }).publish(ROW)
+    const job = log.find((c) => c.table === 'jobs')!.ops.find((o) => o.name === 'insert')!.args[0] as Record<string, unknown>
+    expect(job.company_logo_url).toBe(approved)
+  })
+
   it('enrich on a job updates only url and description, and only where source LIKE sync:%', async () => {
     const { db, log } = fakeDb()
     await supabaseDeps(db, SOURCE).enrich({ kind: 'job', id: 'j1', source: 'sync:adzuna', tier: 'B' }, ROW.normalised)
