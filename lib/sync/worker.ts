@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { SourceRow } from './adapters/types'
 import { emptyCounts, processSource, zeroGuardTripped } from './run'
+import { checkConsent } from './robots'
 import { dryRunDeps, recordSourceRun, supabaseDeps, type SourceRunResult } from './supabase-deps'
 import { vendorFor } from './vendors'
 
@@ -48,6 +49,10 @@ export async function runOneSource(db: SupabaseClient, source: LoadedSource, opt
 
   try {
     const vendor = vendorFor(source)
+    // Consent before any read: a source whose employer hasn't signalled it is
+    // happy to be found fails visibly here, with the reason as its run error.
+    const consent = await checkConsent(source, vendor.consentTarget(source))
+    if (!consent.ok) throw new Error(consent.reason)
     const real = supabaseDeps(db, source)
     const counts = await processSource(source, vendor.adapter, vendor.normalise, opts.dryRun ? dryRunDeps(real) : real)
     result = { counts, error: null, zeroGuardTripped: zeroGuardTripped(counts.seen, source.usual_count) }

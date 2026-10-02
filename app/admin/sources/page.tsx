@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { hasExplicitConsent } from '@/lib/sync/robots'
 import { SourcesTable, type SourceView } from '@/components/admin/sources-table'
 import { AutoPublishedTable, type AutoPublishedRow } from '@/components/admin/auto-published-table'
 import { SourceRequestsTable, type SourceRequestRow } from '@/components/admin/source-requests-table'
@@ -94,6 +95,7 @@ export default async function AdminSourcesPage() {
       tier: source.tier,
       endpoint: source.endpoint,
       vendor: typeof source.config.vendor === 'string' ? source.config.vendor : null,
+      explicitConsent: hasExplicitConsent(source),
       enabled: source.enabled,
       autoPublish: source.config.auto_publish === true,
       usualCount: source.usual_count,

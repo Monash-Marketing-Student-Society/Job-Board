@@ -24,16 +24,37 @@ import {
 export interface Vendor {
   adapter: Adapter
   normalise: (posting: RawPosting) => NormaliseResult
+  /** The public page whose robots.txt rules stand for the employer's consent (lib/sync/robots.ts). */
+  consentTarget: (source: SourceRow) => URL
+}
+
+/**
+ * Workday: the endpoint is `https://<host>/wday/cxs/<tenant>/<site>`, and the
+ * employer's robots.txt names the public site as `/<site>/` (Unilever:
+ * `Allow: /Unilever_Early_Careers/`; Mars: `Disallow: /External/`).
+ */
+export function workdayConsentTarget(source: SourceRow): URL {
+  const url = new URL(source.endpoint)
+  const site = url.pathname.split('/').filter(Boolean).pop()
+  if (!site) throw new Error(`Source "${source.slug}" has a Workday endpoint with no site segment`)
+  return new URL(`/${site}/`, url.origin)
+}
+
+/** Greenhouse: the board API path the adapter reads, on boards-api.greenhouse.io. */
+export function greenhouseConsentTarget(source: SourceRow): URL {
+  return new URL(`${source.endpoint.replace(/\/$/, '')}/jobs`)
 }
 
 const VENDORS: Record<string, Vendor> = {
   workday: {
     adapter: workdayAdapter,
     normalise: (posting) => normaliseWorkdayPosting(posting.raw as unknown as WorkdayRawPosting, posting.company),
+    consentTarget: workdayConsentTarget,
   },
   greenhouse: {
     adapter: greenhouseAdapter,
     normalise: (posting) => normaliseGreenhousePosting(posting.raw as unknown as GreenhouseRawPosting, posting.company),
+    consentTarget: greenhouseConsentTarget,
   },
 }
 
