@@ -28,6 +28,16 @@ describe('detectAts: Workday', () => {
     )
   })
 
+  it('reads tenant and site from the myworkdaysite domain (Mondelēz, News Corp)', () => {
+    expect(detectAts('https://wd3.myworkdaysite.com/recruiting/mdlz/External/login')?.endpoint).toBe(
+      'https://wd3.myworkdaysite.com/wday/cxs/mdlz/External'
+    )
+    expect(
+      detectAts('https://wd1.myworkdaysite.com/en-US/recruiting/newscorpaustralia/News_Corp_Australia_Careers/jobs')?.endpoint
+    ).toBe('https://wd1.myworkdaysite.com/wday/cxs/newscorpaustralia/News_Corp_Australia_Careers')
+    expect(detectAts('https://wd3.myworkdaysite.com/en-US')).toBeNull()
+  })
+
   it('refuses a bare Workday host with no site', () => {
     expect(detectAts('https://mars.wd3.myworkdayjobs.com/')).toBeNull()
     expect(detectAts('https://mars.wd3.myworkdayjobs.com/en-US')).toBeNull()

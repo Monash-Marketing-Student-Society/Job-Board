@@ -36,6 +36,8 @@ import type { Adapter, RawPosting, SourceRow } from './types'
 const REQUEST_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)' }
 const REQUEST_TIMEOUT_MS = 15_000
 export const MAX_PAGES = 50
+/** A sitemap index may list this many child sitemaps; more throws rather than fanning out. */
+export const MAX_CHILD_SITEMAPS = 10
 const DEFAULT_POSTINGS_PATH = '/jobs/'
 
 /** `config.postings_path`, defaulting to `/jobs/`. Throws on a malformed value. */
@@ -62,16 +64,29 @@ export function urlFilter(source: SourceRow): RegExp | null {
   }
 }
 
-/** Every `<loc>` in a urlset sitemap, entity-decoded. */
-export function sitemapUrls(xml: string): string[] {
-  if (/<sitemapindex[\s>]/i.test(xml)) {
-    throw new Error('sitemap is a sitemap index; point the source at the child sitemap that lists postings')
-  }
+export function isSitemapIndex(xml: string): boolean {
+  return /<sitemapindex[\s>]/i.test(xml)
+}
+
+function locs(xml: string): string[] {
   const urls: string[] = []
   for (const m of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
     urls.push(m[1].replace(/&amp;/g, '&'))
   }
   return urls
+}
+
+/** Every `<loc>` in a urlset sitemap, entity-decoded. Throws on an index: those are expanded by the adapter, once. */
+export function sitemapUrls(xml: string): string[] {
+  if (isSitemapIndex(xml)) {
+    throw new Error('sitemap is a sitemap index; point the source at the child sitemap that lists postings')
+  }
+  return locs(xml)
+}
+
+/** The child sitemaps a sitemap index lists, entity-decoded. */
+export function sitemapIndexChildren(xml: string): string[] {
+  return locs(xml)
 }
 
 /** The first JobPosting node in a page's JSON-LD blocks, or null. */
@@ -108,8 +123,38 @@ export const sitemapJsonLdAdapter: Adapter = {
       throw new Error(`Sitemap request failed for ${source.slug} (HTTP ${sitemap.status || 'no response'})`)
     }
 
+    // A sitemap index (Coles: sitemap_index.xml -> sitemap1.xml, sitemap2.xml)
+    // is expanded one level. Its postings are split across the children and
+    // the split moves as jobs come and go, so no single child is complete.
+    // Same host only, at most MAX_CHILD_SITEMAPS, and a child that fails
+    // fails the run -- half a sitemap must not read as half the jobs closing.
+    let urlsets = [sitemap.text]
+    if (isSitemapIndex(sitemap.text)) {
+      const children: URL[] = []
+      for (const loc of sitemapIndexChildren(sitemap.text)) {
+        try {
+          const child = new URL(loc)
+          if (child.host === sitemapUrl.host) children.push(child)
+        } catch {
+          // an unparseable <loc> is skipped
+        }
+      }
+      if (children.length > MAX_CHILD_SITEMAPS) {
+        throw new Error(`Sitemap index for ${source.slug} lists ${children.length} sitemaps, over the ${MAX_CHILD_SITEMAPS} limit`)
+      }
+      urlsets = []
+      for (const child of children) {
+        const res = await fetchText(child)
+        if (res.text === null) {
+          throw new Error(`Child sitemap ${child.pathname} failed for ${source.slug} (HTTP ${res.status || 'no response'})`)
+        }
+        urlsets.push(res.text)
+      }
+    }
+
     const candidates: URL[] = []
-    for (const loc of sitemapUrls(sitemap.text)) {
+    const seen = new Set<string>()
+    for (const loc of urlsets.flatMap((xml) => sitemapUrls(xml))) {
       let url: URL
       try {
         url = new URL(loc)
@@ -119,6 +164,8 @@ export const sitemapJsonLdAdapter: Adapter = {
       // Same host only: a sitemap can't point the worker at another site.
       if (url.host !== sitemapUrl.host || !url.pathname.startsWith(path)) continue
       if (filter && !filter.test(url.pathname)) continue
+      if (seen.has(url.href)) continue
+      seen.add(url.href)
       candidates.push(url)
     }
     if (candidates.length > MAX_PAGES) {
