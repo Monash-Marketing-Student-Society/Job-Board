@@ -94,3 +94,21 @@ describe('resolveCity', () => {
     expect(resolveCity('Kewell Street warehouse')).toBe('unknown')
   })
 })
+
+describe('resolveCity: ANZ location strings (careers.anz.com, 2 Oct 2026)', () => {
+  it('reads Mel and Syd abbreviations as Melbourne and Sydney', () => {
+    expect(resolveCity('Mel, Syd, Adel, Brisb, Perth, AU')).toBe('melbourne')
+    expect(resolveCity('Syd, AU')).toBe('sydney')
+  })
+
+  it('reads a Philippines country code as overseas', () => {
+    expect(resolveCity('Quezon City, PH')).toBe('other')
+    expect(resolveCity('Manila')).toBe('other')
+  })
+
+  it('still reads other cities as other, and plain Melbourne as Melbourne', () => {
+    expect(resolveCity('Auckland, NZ')).toBe('other')
+    expect(resolveCity('Melbourne, Sydney, Brisbane, AU')).toBe('melbourne')
+  })
+})
+

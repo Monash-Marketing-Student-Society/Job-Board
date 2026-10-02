@@ -34,6 +34,25 @@ describe('findJobPosting', () => {
 })
 
 describe('mapJobPostingToData', () => {
+  it('reads an object-valued addressCountry by its name instead of printing [object Object]', () => {
+    // Kraft Heinz's JSON-LD (jobs.kraftheinz.com, 2 Oct 2026).
+    const result = mapJobPostingToData({
+      '@type': 'JobPosting',
+      title: 'Sensory Specialist',
+      jobLocation: { '@type': 'Place', address: { addressLocality: 'Freshwater Place', addressRegion: 'VIC', addressCountry: { '@type': 'Country', name: 'AU' } } },
+    })
+    expect(result.location).toBe('Freshwater Place, VIC, AU')
+  })
+
+  it('drops an address part that is neither text nor a named object', () => {
+    const result = mapJobPostingToData({
+      '@type': 'JobPosting',
+      title: 'Role',
+      jobLocation: { address: { addressLocality: 'Sydney', addressCountry: { code: 'AU' } } },
+    })
+    expect(result.location).toBe('Sydney')
+  })
+
   it('reads title, company and logo from a complete node', () => {
     const result = mapJobPostingToData({
       title: 'Marketing Graduate',

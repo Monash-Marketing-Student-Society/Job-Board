@@ -15,8 +15,10 @@ import { matchesAny } from './text-match'
 
 export type CityResolution = 'melbourne' | 'sydney' | 'other' | 'unknown'
 
-const MELBOURNE_ALIASES = ['melbourne', 'naarm']
-const SYDNEY_ALIASES = ['sydney']
+// 'mel'/'melb' and 'syd': ANZ lists its 2028 Graduate Program as "Mel, Syd,
+// Adel, Brisb, Perth, AU" -- without them it read as Perth and was rejected.
+const MELBOURNE_ALIASES = ['melbourne', 'naarm', 'mel', 'melb']
+const SYDNEY_ALIASES = ['sydney', 'syd']
 
 // Deliberately not exhaustive -- the postcode ranges below are the complete
 // fallback for a suburb this list doesn't happen to name. This only needs to
@@ -71,6 +73,8 @@ const OVERSEAS_SIGNALS = [
   'united kingdom', 'uk', 'london', 'england', 'scotland', 'wales',
   'united states', 'usa', 'new zealand', 'nz',
   'singapore', 'india', 'philippines', 'malaysia', 'indonesia', 'china', 'japan',
+  // ANZ writes "City, CC": "Quezon City, PH" otherwise resolved to unknown.
+  'ph', 'manila', 'quezon city',
 ]
 
 function extractPostcodes(text: string): number[] {

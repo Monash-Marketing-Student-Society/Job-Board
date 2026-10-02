@@ -129,6 +129,22 @@ describe('jobPostingFromMicrodata (real Deloitte page)', () => {
     expect((parsed.jobLocation as Array<{ address: { addressLocality: string } }>)[0].address.addressLocality).toBe('Sydney')
   })
 
+  it("reads ANZ's streetAddress-only location, and finds Melbourne inside it", () => {
+    // careers.anz.com (same SuccessFactors platform as Deloitte), 2 Oct 2026.
+    const addr = (place: string) =>
+      `<span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"><meta itemprop="streetAddress" content="${place}"></span>`
+    const html =
+      '<div itemscope itemtype="http://schema.org/JobPosting"><span itemprop="jobLocation" itemscope itemtype="http://schema.org/Place">' +
+      addr('Dunedin, NZ') + addr('Melbourne, VIC') +
+      '</span><meta itemprop="validThrough" content="Tue Oct 06 18:30:00 UTC 2026"><span itemprop="title">Graduate</span></div>'
+    const parsed = jobPostingFromMicrodata(html)!
+    expect(parsed.jobLocation).toEqual([
+      { '@type': 'Place', address: { addressLocality: 'Melbourne, VIC' } },
+      { '@type': 'Place', address: { addressLocality: 'Dunedin, NZ' } },
+    ])
+    expect(parsed.validThrough).toBe('2026-10-06T18:30:00.000Z')
+  })
+
   it('is null for a page with no JobPosting, or one without a title', () => {
     expect(jobPostingFromMicrodata('<html><body>Search jobs</body></html>')).toBeNull()
     expect(jobPostingFromMicrodata('<div itemscope itemtype="https://schema.org/JobPosting"><span itemprop="title"> </span></div>')).toBeNull()
