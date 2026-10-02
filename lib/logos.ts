@@ -120,3 +120,55 @@ export function autoMatch(company: string, matches: BrandMatch[]): BrandMatch | 
   if (same.length !== 1) return null
   return same[0].quality >= AUTO_MIN_QUALITY ? same[0] : null
 }
+
+const BRANDFETCH_SITE_HOSTS = new Set(['brandfetch.com', 'www.brandfetch.com'])
+const BRANDFETCH_CDN_HOST = 'cdn.brandfetch.io'
+
+/**
+ * What an admin pastes when a suggested logo is wrong, turned into a logo URL
+ * that carries our client ID. Accepts:
+ *   - a bare domain                          (ogilvy.com)
+ *   - a Brandfetch brand page                (https://brandfetch.com/ogilvy.com)
+ *   - a Logo API link by domain              (https://cdn.brandfetch.io/ogilvy.com?c=...)
+ *   - an asset link copied off Brandfetch    (https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=...)
+ * The last kind names one specific logo file rather than a domain, so it is
+ * kept as that file with its query replaced by our ID (someone else's `c=`
+ * would bill their quota and can be revoked). Anything else is null: only
+ * Brandfetch-hosted logos go through this page.
+ */
+export function parseBrandfetchInput(input: string): { logoUrl: string; domain: string | null } | null {
+  const raw = input.trim()
+  if (!raw) return null
+
+  if (!/^https?:\/\//i.test(raw)) {
+    const domain = normaliseDomain(raw)
+    return domain && !raw.includes('/') ? { logoUrl: brandfetchLogoUrl(domain)!, domain } : null
+  }
+
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return null
+  }
+  const host = url.hostname.toLowerCase()
+  const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent)
+
+  if (BRANDFETCH_SITE_HOSTS.has(host)) {
+    const domain = normaliseDomain(segments[0])
+    return domain ? { logoUrl: brandfetchLogoUrl(domain)!, domain } : null
+  }
+
+  if (host !== BRANDFETCH_CDN_HOST || segments.length === 0) return null
+
+  const named = segments[0] === 'domain' ? segments[1] : segments[0]
+  const domain = named && named.includes('.') ? normaliseDomain(named) : null
+  if (domain) return { logoUrl: brandfetchLogoUrl(domain)!, domain }
+
+  // A Brandfetch brand/asset id (they start "id"): keep the file, swap in our ID.
+  if (!/^id[A-Za-z0-9_-]+$/.test(segments[0])) return null
+  return {
+    logoUrl: `https://${BRANDFETCH_CDN_HOST}/${segments.map(encodeURIComponent).join('/')}?c=${BRANDFETCH_CLIENT_ID}`,
+    domain: null,
+  }
+}

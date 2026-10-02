@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
 import type { NormalisedJob } from './normalise'
@@ -64,6 +65,8 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
   const src = sourceOf(row)
   const slug = src?.slug ?? null
   const j = row.normalised
+  // An admin-approved logo (/admin/logos) wins; otherwise the source's own domain.
+  const logoUrl = (await approvedLogoFor(db, j.company)) ?? sourceLogoUrl(src?.config)
 
   const { data: job, error: insertError } = slug
     ? await db
@@ -73,7 +76,7 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
           external_id: row.external_id,
           title: j.title,
           company: j.company,
-          company_logo_url: sourceLogoUrl(src?.config),
+          company_logo_url: logoUrl,
           location: j.location,
           work_mode: j.work_mode,
           job_type: j.job_type,

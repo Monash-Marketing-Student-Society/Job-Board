@@ -14,6 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import type { SourceRow } from './adapters/types'
 import { rollingMedian, zeroGuardTripped, type RunCounts, type StagedInsert, type StoredMatch, type SyncDeps } from './run'
@@ -55,14 +56,19 @@ async function matchFromFingerprint(
   return null
 }
 
-function jobInsert(source: SourceRow, row: StagedInsert) {
+/** An admin-approved logo (/admin/logos) wins; otherwise the source's own domain. */
+async function logoFor(db: SupabaseClient, source: SourceRow, company: string): Promise<string | null> {
+  return (await approvedLogoFor(db, company)) ?? sourceLogoUrl(source.config)
+}
+
+function jobInsert(source: SourceRow, row: StagedInsert, logoUrl: string | null) {
   const j = row.normalised
   return {
     source: `sync:${source.slug}`,
     external_id: row.externalId,
     title: j.title,
     company: j.company,
-    company_logo_url: sourceLogoUrl(source.config),
+    company_logo_url: logoUrl,
     location: j.location,
     work_mode: j.work_mode,
     job_type: j.job_type,
@@ -144,7 +150,7 @@ export function supabaseDeps(db: SupabaseClient, source: SourceRow): SyncDeps {
     async publish(row) {
       const { data, error } = await db
         .from('jobs')
-        .insert({ ...jobInsert(source, row), auto_published_at: new Date().toISOString() })
+        .insert({ ...jobInsert(source, row, await logoFor(db, source, row.normalised.company)), auto_published_at: new Date().toISOString() })
         .select('id')
         .single()
       if (error) throw new Error(`publish: ${error.message}`)
