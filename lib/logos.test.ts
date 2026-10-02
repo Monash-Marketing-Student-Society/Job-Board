@@ -9,6 +9,7 @@ import {
   normaliseDomain,
   parseBrandSearch,
   parseBrandfetchInput,
+  parseLogoInput,
   sourceLogoUrl,
 } from './logos'
 
@@ -168,6 +169,60 @@ describe('parseBrandfetchInput', () => {
       'javascript:alert(1)',
     ]) {
       expect(parseBrandfetchInput(bad)).toBeNull()
+    }
+  })
+})
+
+describe('parseLogoInput', () => {
+  const NOW = new Date('2026-10-02T03:00:00Z')
+  const LINKEDIN =
+    'https://media.licdn.com/dms/image/v2/D560BAQHsq-9WUnexGg/company-logo_200_200/company-logo_200_200/0/1714699432894/talaria_asset_management_logo?e=2147483647&v=beta&t=abc'
+  const INSTAGRAM_7_OCT = 'https://instagram.fmel17-1.fna.fbcdn.net/v/t51.2885-19/1_n.jpg?_nc_ht=x&oe=6AC4FDD4&_nc_sid=10d13b'
+
+  it('still takes every Brandfetch form, with no expiry', () => {
+    expect(parseLogoInput('ogilvy.com', NOW)).toEqual({
+      ok: true,
+      logo: { logoUrl: brandfetchLogoUrl('ogilvy.com'), domain: 'ogilvy.com', expiresAt: null },
+    })
+  })
+
+  it('takes a long-lived LinkedIn logo link as-is, with its expiry', () => {
+    const result = parseLogoInput(LINKEDIN, NOW)
+    expect(result).toMatchObject({ ok: true, logo: { logoUrl: LINKEDIN, domain: null } })
+    expect(result.ok && result.logo.expiresAt?.getUTCFullYear()).toBe(2038)
+  })
+
+  it('takes an image link with no expiry, e.g. Google Play or our own bucket', () => {
+    for (const link of [
+      'https://play-lh.googleusercontent.com/AZEIGHgTZc-T2LXJ6N4GeiA9GSMbQI_SYS4WZ1kew58',
+      'https://olyzdpqfecawcueffrsq.supabase.co/storage/v1/object/public/company-logos/a.png',
+    ]) {
+      expect(parseLogoInput(link, NOW)).toMatchObject({ ok: true, logo: { logoUrl: link, expiresAt: null } })
+    }
+  })
+
+  it('refuses a signed link that expires within 30 days, naming the date', () => {
+    const result = parseLogoInput(INSTAGRAM_7_OCT, NOW)
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.reason).toMatch(/expires on 7 Oct 2026.*upload/)
+  })
+
+  it('refuses an already-expired LinkedIn link', () => {
+    const result = parseLogoInput('https://media.licdn.com/dms/image/x/logo?e=1775088000&v=beta', NOW)
+    expect(!result.ok && result.reason).toMatch(/expired on/)
+  })
+
+  it('refuses pages, plain http, and junk', () => {
+    for (const bad of [
+      'https://www.facebook.com/melbournesocialco',
+      'https://au.linkedin.com/company/mcmpr',
+      'https://www.instagram.com/mangocomms/',
+      'http://example.com/logo.png',
+      'javascript:alert(1)',
+      'not a link',
+      'https://brandfetch.com/',
+    ]) {
+      expect(parseLogoInput(bad, NOW).ok).toBe(false)
     }
   })
 })

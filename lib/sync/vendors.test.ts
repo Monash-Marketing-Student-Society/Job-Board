@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { vendorFor, workdayConsentTarget, greenhouseConsentTarget, sitemapJsonLdConsentTarget } from './vendors'
+import {
+  vendorFor,
+  workdayConsentTarget,
+  greenhouseConsentTarget,
+  oracleConsentTarget,
+  sitemapJsonLdConsentTarget,
+} from './vendors'
 import { workdayAdapter } from './adapters/workday'
 import { greenhouseAdapter } from './adapters/greenhouse'
 import { sitemapJsonLdAdapter } from './adapters/sitemap-jsonld'
@@ -60,13 +66,18 @@ describe('consent targets', () => {
     expect(greenhouseConsentTarget(ogilvy).toString()).toBe('https://boards-api.greenhouse.io/v1/boards/ogilvyaus/jobs')
   })
 
+  it('Oracle checks the public careers site', () => {
+    const twe = { ...source({ vendor: 'oracle' }), endpoint: 'https://ebpm.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1' }
+    expect(oracleConsentTarget(twe).toString()).toBe('https://ebpm.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/')
+  })
+
   it('sitemap + JSON-LD checks the postings path, not the sitemap', () => {
     const myer = { ...source({ vendor: 'sitemap_jsonld' }), endpoint: 'https://careers.myergroup.com.au/sitemap.xml' }
     expect(sitemapJsonLdConsentTarget(myer).toString()).toBe('https://careers.myergroup.com.au/jobs/')
   })
 
   it('every registered vendor declares one', () => {
-    for (const vendor of ['workday', 'greenhouse', 'sitemap_jsonld']) {
+    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld']) {
       expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
     }
   })

@@ -3,35 +3,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { UploadSimpleIcon } from '@phosphor-icons/react'
 import { Button, Input, Label } from '@/components/ui'
-import { createClient } from '@/lib/supabase/client'
+import { LOGO_MIME_TO_EXT, uploadLogoFile } from '@/lib/logo-upload'
 import { autoMatch, brandfetchLogoUrl, brandSearchUrl, parseBrandSearch, type BrandMatch } from '@/lib/logos'
 
 /**
  * Shared by the admin job form and the public /submit form (same pairing
  * as RichTextEditor, which /submit also reaches into components/admin for)
- * — both just need "a URL, or a file that becomes a URL" and had drifted
- * into two copies of the same upload logic before this.
- *
- * Mirrors the `company-logos` storage bucket's own file_size_limit /
- * allowed_mime_types (supabase/migrations/0014_add_company_logo_storage.sql)
- * — checked client-side too so a bad file is rejected before the upload
- * round-trip instead of only after. The public form's anon uploads are
- * covered by 0015_public_logo_upload.sql; admin uploads by 0014's own
- * is_admin() policy.
+ * — both just need "a URL, or a file that becomes a URL". The upload itself,
+ * and the bucket's type/size rules, live in lib/logo-upload.ts (also used by
+ * /admin/logos). The public form's anon uploads are covered by
+ * 0015_public_logo_upload.sql; admin uploads by 0014's own is_admin() policy.
  */
-const LOGO_MAX_BYTES = 2 * 1024 * 1024
 const PREVIEW_DEBOUNCE_MS = 400
 const SEARCH_DEBOUNCE_MS = 400
 const SEARCH_MIN_CHARS = 2
-// No SVG: the bucket is public and anon can upload to it, so accepting an
-// executable document format would let anyone host script at a URL on the
-// project's own Supabase origin. See the note in 0014 for the full reasoning.
-// An employer with an SVG logo can still paste its URL into the same field.
-const LOGO_MIME_TO_EXT: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-}
 
 interface LogoUploadFieldProps {
   id: string
@@ -145,35 +130,11 @@ export function LogoUploadField({ id, name, label, value, onChange, required, co
     if (!file) return
 
     setUploadError('')
-
-    const ext = LOGO_MIME_TO_EXT[file.type]
-    if (!ext) {
-      setUploadError('Unsupported file type. Use PNG, JPEG or WebP — or paste a URL instead.')
-      return
-    }
-    if (file.size > LOGO_MAX_BYTES) {
-      setUploadError('File is too large. Max 2MB.')
-      return
-    }
-
     setIsUploading(true)
-    try {
-      const supabase = createClient()
-      const path = `${crypto.randomUUID()}.${ext}`
-      const { error: uploadErr } = await supabase.storage
-        .from('company-logos')
-        .upload(path, file, { contentType: file.type })
-
-      if (uploadErr) throw uploadErr
-
-      const { data } = supabase.storage.from('company-logos').getPublicUrl(path)
-      onChange(data.publicUrl, 'user')
-    } catch (err) {
-      console.error('Error uploading logo:', err)
-      setUploadError(err instanceof Error ? err.message : 'Failed to upload logo')
-    } finally {
-      setIsUploading(false)
-    }
+    const result = await uploadLogoFile(file)
+    setIsUploading(false)
+    if (result.ok) onChange(result.url, 'user')
+    else setUploadError(result.error)
   }
 
   return (

@@ -1,7 +1,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { LogoApprovals } from '@/components/admin/logo-approvals'
 import { buildLogoReviewRows, type ReviewApproved, type ReviewJob } from '@/lib/logo-review'
-import { EMPLOYERS } from './employers'
+import { comparableName } from '@/lib/logos'
+import { EMPLOYERS, HIDDEN_COMPANIES } from './employers'
 
 export const metadata = {
   title: 'Logos | Admin | MMSS Job Board',
@@ -28,7 +29,10 @@ export default async function AdminLogosPage() {
   // Before 0040 is applied the table is missing; show the list with nothing approved rather than failing.
   const approved = approvedResult.error ? [] : ((approvedResult.data ?? []) as ReviewApproved[])
 
-  const rows = buildLogoReviewRows(EMPLOYERS, (jobsResult.data ?? []) as ReviewJob[], approved)
+  const hidden = new Set(HIDDEN_COMPANIES.map(comparableName))
+  const rows = buildLogoReviewRows(EMPLOYERS, (jobsResult.data ?? []) as ReviewJob[], approved).filter(
+    (r) => !hidden.has(r.key)
+  )
 
   return (
     <div>
@@ -36,11 +40,11 @@ export default async function AdminLogosPage() {
         <h1 className="text-[22px] font-bold text-slate-800 font-heading">Company logos</h1>
         <p className="text-sm text-slate-500 mt-1">
           Approve a logo for each company. Approving updates that company&apos;s jobs now, and every job the sync
-          brings in for it later. If the suggestion is wrong, pick another or paste a Brandfetch link.
+          brings in for it later. If the suggestion is wrong, pick another, paste a link to the logo, or upload it.
         </p>
         {approvedResult.error && (
           <p className="text-sm text-destructive mt-2">
-            Approvals can&apos;t be saved yet: the company_logos table is missing (migration 0040).
+            Approvals can&apos;t be saved yet: the company_logos table is missing (migrations 0040 and 0041).
           </p>
         )}
       </div>

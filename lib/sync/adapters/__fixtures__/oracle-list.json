@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "TotalJobsCount": 4,
+      "requisitionList": [
+        {
+          "Id": "1005220",
+          "Title": "Regional Sales Manager-AZ",
+          "PrimaryLocation": "AZ, United States",
+          "PrimaryLocationCountry": "US",
+          "PostedDate": "2026-10-01",
+          "PostingEndDate": null,
+          "JobSchedule": null,
+          "ShortDescriptionStr": "The Regional Sales Manager is responsible for leading sales execution across a geographic territory based in Arizona. This role delivers sales, distribution, and depletion objectives through disciplined account management, distributor partnership performance, and strong execution of national and regional sales programs. "
+        },
+        {
+          "Id": "1005149",
+          "Title": "Senior HSEW Systems & Risk Specialist",
+          "PrimaryLocation": "Adelaide, SA, Australia",
+          "PrimaryLocationCountry": "AU",
+          "PostedDate": "2026-09-30",
+          "PostingEndDate": null,
+          "JobSchedule": null,
+          "ShortDescriptionStr": "Lead the governance, development, and continuous improvement of TWE’s global Health, Safety, Environment, and Wellness (HSEW) management systems and risk frameworks"
+        },
+        {
+          "Id": "1005164",
+          "Title": "P&C Business Partner",
+          "PrimaryLocation": "Melbourne, VIC, Australia",
+          "PrimaryLocationCountry": "AU",
+          "PostedDate": "2026-09-29",
+          "PostingEndDate": null,
+          "JobSchedule": null,
+          "ShortDescriptionStr": "Seeking an experienced People & Culture (P&C) Business Partner to join the team based in Melbourne. You’ll partner with senior leaders to shape culture, support transformation, drive performance and deliver exceptional employee experiences.  "
+        },
+        {
+          "Id": "1005213",
+          "Title": "Senior Data Engineer",
+          "PrimaryLocation": "200000 Shanghai, China",
+          "PrimaryLocationCountry": "CN",
+          "PostedDate": "2026-09-30",
+          "PostingEndDate": null,
+          "JobSchedule": null,
+          "ShortDescriptionStr": ""
+        }
+      ]
+    }
+  ]
+}
