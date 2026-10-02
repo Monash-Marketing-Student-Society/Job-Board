@@ -15,6 +15,7 @@ import { jobAdderAdapter, type JobAdderRawPosting } from './adapters/jobadder'
 import { oracleAdapter, oracleSite } from './adapters/oracle'
 import { pageupAdapter, type PageUpItem } from './adapters/pageup'
 import { sitemapJsonLdAdapter, postingsPath } from './adapters/sitemap-jsonld'
+import { smartRecruitersAdapter } from './adapters/smartrecruiters'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
 import {
@@ -23,9 +24,11 @@ import {
   normaliseJsonLdPosting,
   normaliseOraclePosting,
   normalisePageUpPosting,
+  normaliseSmartRecruitersPosting,
   normaliseWorkdayPosting,
   type GreenhouseRawPosting,
   type OracleRawPosting,
+  type SmartRecruitersRawPosting,
   type NormaliseResult,
   type WorkdayRawPosting,
 } from './normalise'
@@ -85,6 +88,15 @@ export function pageUpConsentTarget(source: SourceRow): URL {
   return new URL(`/${client}/${site}/`, url.origin)
 }
 
+/**
+ * SmartRecruiters: the API postings path it reads. api.smartrecruiters.com
+ * disallows all crawlers but LinkedInBot, so this check fails unless the
+ * source records the employer's explicit consent -- by design.
+ */
+export function smartRecruitersConsentTarget(source: SourceRow): URL {
+  return new URL(`${source.endpoint.replace(/\/$/, '')}/postings`)
+}
+
 export function jobAdderConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/RenderJobList`)
 }
@@ -116,6 +128,12 @@ const VENDORS: Record<string, Vendor> = {
     adapter: pageupAdapter,
     normalise: (posting) => normalisePageUpPosting(posting.raw as unknown as PageUpItem, posting.company),
     consentTarget: pageUpConsentTarget,
+  },
+  smartrecruiters: {
+    adapter: smartRecruitersAdapter,
+    normalise: (posting) =>
+      normaliseSmartRecruitersPosting(posting.raw as unknown as SmartRecruitersRawPosting, posting.company, posting.applyUrl),
+    consentTarget: smartRecruitersConsentTarget,
   },
   sitemap_jsonld: {
     adapter: sitemapJsonLdAdapter,

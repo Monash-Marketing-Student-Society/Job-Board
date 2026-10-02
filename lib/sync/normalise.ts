@@ -26,6 +26,7 @@ import { matchesAny } from './text-match'
 import { mapJobPostingToData } from '../prefill/extract'
 import type { PageUpItem } from './adapters/pageup'
 import type { JobAdderRawPosting } from './adapters/jobadder'
+import type { SmartRecruitersDetail, SmartRecruitersListRow } from './adapters/smartrecruiters'
 import type { JobType, WorkMode } from '../types'
 
 export interface NormalisedJob {
@@ -475,6 +476,60 @@ export function normalisePageUpPosting(raw: PageUpItem, company: string): Normal
     tags,
     posted_at: feedDate(raw.pubDate),
     closing_at: closingAt,
+  }
+  return { job, confidence }
+}
+
+// ── SmartRecruiters ──────────────────────────────────────────────────────
+
+export type SmartRecruitersRawPosting = SmartRecruitersListRow & { detail: SmartRecruitersDetail }
+
+/** Job-ad sections in reading order; companyDescription last, as background. */
+const SMARTRECRUITERS_SECTIONS = ['jobDescription', 'qualifications', 'additionalInformation', 'companyDescription']
+
+/**
+ * Verified fields (2 Oct 2026, KPMG Australia and Luxury Escapes): the job
+ * ad is HTML split into sections; location is structured (city, region);
+ * `typeOfEmployment.label` is "Full-time", "Part-time", "Intern" and the
+ * like; `experienceLevel` ("entry_level", "internship") is the level signal
+ * the targeting gates can use. SmartRecruiters has no closing date, so every
+ * job is held for missing_closing_date.
+ */
+export function normaliseSmartRecruitersPosting(raw: SmartRecruitersRawPosting, company: string, url: string): NormaliseResult {
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  const loc = raw.location ?? null
+  const location = loc?.city ? [loc.city, loc.region].filter(Boolean).join(', ') : null
+  if (location) confidence.location = 'read'
+
+  const sections = raw.detail.jobAd?.sections ?? {}
+  const html = SMARTRECRUITERS_SECTIONS.map((key) => sections[key]?.text)
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join('\n')
+  const description = cleanDescription(html)
+  if (description) confidence.description = 'read'
+
+  // An internship-level posting is an internship whatever its hours say.
+  const jobType =
+    raw.experienceLevel?.id === 'internship'
+      ? 'internship'
+      : normalizeJobType((raw.typeOfEmployment?.label ?? '').toLowerCase())
+  if (jobType) confidence.job_type = 'read'
+
+  const tags = inferJobFunctions(raw.name, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const job: NormalisedJob = {
+    title: raw.name,
+    company,
+    location,
+    work_mode: loc?.remote ? 'remote' : null,
+    job_type: jobType,
+    url,
+    description,
+    tags,
+    posted_at: raw.releasedDate ?? null,
+    closing_at: null,
   }
   return { job, confidence }
 }

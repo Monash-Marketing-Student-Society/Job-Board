@@ -5,6 +5,7 @@ import {
   greenhouseConsentTarget,
   oracleConsentTarget,
   pageUpConsentTarget,
+  smartRecruitersConsentTarget,
   sitemapJsonLdConsentTarget,
   jobAdderConsentTarget,
 } from './vendors'
@@ -98,8 +99,13 @@ describe('consent targets', () => {
     expect(pageUpConsentTarget(asahi).toString()).toBe('https://careers.pageuppeople.com/527/cw/')
   })
 
+  it('SmartRecruiters checks the API postings path (robots-disallowed: explicit consent required)', () => {
+    const kpmg = { ...source({ vendor: 'smartrecruiters' }), endpoint: 'https://api.smartrecruiters.com/v1/companies/KPMGAustralia1' }
+    expect(smartRecruitersConsentTarget(kpmg).toString()).toBe('https://api.smartrecruiters.com/v1/companies/KPMGAustralia1/postings')
+  })
+
   it('every registered vendor declares one', () => {
-    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld', 'jobadder', 'pageup']) {
+    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld', 'jobadder', 'pageup', 'smartrecruiters']) {
       expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
     }
   })
