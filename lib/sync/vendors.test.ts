@@ -67,6 +67,11 @@ describe('consent targets', () => {
     expect(workdayConsentTarget(mars).toString()).toBe('https://mars.wd3.myworkdayjobs.com/External/')
   })
 
+  it('Workday on myworkdaysite.com checks /recruiting/<tenant>/<site>/', () => {
+    const mdlz = { ...source({ vendor: 'workday' }), endpoint: 'https://wd3.myworkdaysite.com/wday/cxs/mdlz/External' }
+    expect(workdayConsentTarget(mdlz).toString()).toBe('https://wd3.myworkdaysite.com/recruiting/mdlz/External/')
+  })
+
   it('Greenhouse checks the board API path it reads', () => {
     const ogilvy = { ...source({ vendor: 'greenhouse' }), endpoint: 'https://boards-api.greenhouse.io/v1/boards/ogilvyaus/' }
     expect(greenhouseConsentTarget(ogilvy).toString()).toBe('https://boards-api.greenhouse.io/v1/boards/ogilvyaus/jobs')

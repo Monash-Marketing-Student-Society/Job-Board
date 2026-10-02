@@ -42,8 +42,16 @@ export interface Vendor {
  */
 export function workdayConsentTarget(source: SourceRow): URL {
   const url = new URL(source.endpoint)
-  const site = url.pathname.split('/').filter(Boolean).pop()
+  const segments = url.pathname.split('/').filter(Boolean) // wday, cxs, <tenant>, <site>
+  const site = segments.pop()
   if (!site) throw new Error(`Source "${source.slug}" has a Workday endpoint with no site segment`)
+  // Workday's other domain (Mondelēz: wd3.myworkdaysite.com) serves the
+  // public site at /recruiting/<tenant>/<site>/ instead of /<site>/.
+  if (url.hostname.endsWith('.myworkdaysite.com')) {
+    const tenant = segments.pop()
+    if (!tenant) throw new Error(`Source "${source.slug}" has a Workday endpoint with no tenant segment`)
+    return new URL(`/recruiting/${tenant}/${site}/`, url.origin)
+  }
   return new URL(`/${site}/`, url.origin)
 }
 
