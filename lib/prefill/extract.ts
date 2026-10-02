@@ -30,6 +30,19 @@ export interface StructuredJobFields {
   tags?: JobFunction[]
 }
 
+/**
+ * One address part as text. schema.org allows a Country/Place object here,
+ * not only a string: Kraft Heinz sends `addressCountry: { name: "AU" }`,
+ * which joined as "[object Object]". Anything else that isn't text is dropped.
+ */
+function placeText(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null
+  if (value && typeof value === 'object' && typeof (value as { name?: unknown }).name === 'string') {
+    return ((value as { name: string }).name).trim() || null
+  }
+  return null
+}
+
 function extractLocation(jobLocation: unknown): string | null {
   const loc = Array.isArray(jobLocation) ? jobLocation[0] : jobLocation
   if (!loc) return null
@@ -38,8 +51,9 @@ function extractLocation(jobLocation: unknown): string | null {
     const addr = (loc as Record<string, unknown>).address
     if (typeof addr === 'string') return addr.trim() || null
     if (typeof addr === 'object' && addr !== null) {
-      const a = addr as Record<string, string>
+      const a = addr as Record<string, unknown>
       return [a.addressLocality, a.addressRegion, a.addressCountry]
+        .map(placeText)
         .filter(Boolean).join(', ') || null
     }
   }

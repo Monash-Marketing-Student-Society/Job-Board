@@ -162,12 +162,16 @@ export function jobPostingFromMicrodata(html: string): Record<string, unknown> |
   const addresses: Array<Record<string, string>> = []
   for (const m of scope.matchAll(/itemtype="https?:\/\/schema\.org\/PostalAddress"[^>]*>([\s\S]*?)<\/span>/gi)) {
     const address: Record<string, string> = {}
-    for (const meta of m[1].matchAll(/itemprop="(addressLocality|addressRegion|addressCountry)"[^>]*\bcontent="([^"]*)"/gi)) {
+    for (const meta of m[1].matchAll(/itemprop="(addressLocality|addressRegion|addressCountry|streetAddress)"[^>]*\bcontent="([^"]*)"/gi)) {
       address[meta[1]] = decodeHtmlEntities(meta[2])
     }
+    // ANZ's site (same SuccessFactors platform as Deloitte) puts the whole
+    // place in streetAddress ("Dunedin, NZ") and sends no locality.
+    if (!address.addressLocality && address.streetAddress) address.addressLocality = address.streetAddress
+    delete address.streetAddress
     if (Object.keys(address).length > 0) addresses.push(address)
   }
-  const target = addresses.findIndex((a) => /^(melbourne|sydney)$/i.test(a.addressLocality ?? ''))
+  const target = addresses.findIndex((a) => /\b(melbourne|sydney)\b/i.test(a.addressLocality ?? ''))
   if (target > 0) addresses.unshift(...addresses.splice(target, 1))
 
   const meta = (name: string) => {
