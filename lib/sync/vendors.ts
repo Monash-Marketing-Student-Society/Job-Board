@@ -11,12 +11,15 @@
  */
 
 import { greenhouseAdapter } from './adapters/greenhouse'
+import { oracleAdapter, oracleSite } from './adapters/oracle'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
 import {
   normaliseGreenhousePosting,
+  normaliseOraclePosting,
   normaliseWorkdayPosting,
   type GreenhouseRawPosting,
+  type OracleRawPosting,
   type NormaliseResult,
   type WorkdayRawPosting,
 } from './normalise'
@@ -40,6 +43,11 @@ export function workdayConsentTarget(source: SourceRow): URL {
   return new URL(`/${site}/`, url.origin)
 }
 
+/** Oracle: the public careers site, `.../CandidateExperience/<lang>/sites/<site>/`. */
+export function oracleConsentTarget(source: SourceRow): URL {
+  return new URL(`${oracleSite(source).siteUrl}/`)
+}
+
 /** Greenhouse: the board API path the adapter reads, on boards-api.greenhouse.io. */
 export function greenhouseConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/jobs`)
@@ -55,6 +63,12 @@ const VENDORS: Record<string, Vendor> = {
     adapter: greenhouseAdapter,
     normalise: (posting) => normaliseGreenhousePosting(posting.raw as unknown as GreenhouseRawPosting, posting.company),
     consentTarget: greenhouseConsentTarget,
+  },
+  oracle: {
+    adapter: oracleAdapter,
+    normalise: (posting) =>
+      normaliseOraclePosting(posting.raw as unknown as OracleRawPosting, posting.company, posting.applyUrl),
+    consentTarget: oracleConsentTarget,
   },
 }
 
