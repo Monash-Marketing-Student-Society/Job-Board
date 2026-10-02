@@ -13,6 +13,7 @@
 import { greenhouseAdapter } from './adapters/greenhouse'
 import { jobAdderAdapter, type JobAdderRawPosting } from './adapters/jobadder'
 import { oracleAdapter, oracleSite } from './adapters/oracle'
+import { pageupAdapter, type PageUpItem } from './adapters/pageup'
 import { sitemapJsonLdAdapter, postingsPath } from './adapters/sitemap-jsonld'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
@@ -21,6 +22,7 @@ import {
   normaliseJobAdderPosting,
   normaliseJsonLdPosting,
   normaliseOraclePosting,
+  normalisePageUpPosting,
   normaliseWorkdayPosting,
   type GreenhouseRawPosting,
   type OracleRawPosting,
@@ -71,6 +73,18 @@ export function sitemapJsonLdConsentTarget(source: SourceRow): URL {
 }
 
 /** JobAdder: the widget path it reads on apps.jobadder.com, the only path that host's robots.txt allows. */
+/**
+ * PageUp: the employer's public listing, `/<client>/cw/` on
+ * careers.pageuppeople.com (the feed is `/<client>/cw/en/rss`). Asahi's
+ * robots.txt blocks admin, test and `/ci` paths only.
+ */
+export function pageUpConsentTarget(source: SourceRow): URL {
+  const url = new URL(source.endpoint)
+  const [client, site] = url.pathname.split('/').filter(Boolean)
+  if (!client || !site) throw new Error(`Source "${source.slug}" needs a PageUp feed endpoint (/<client>/<site>/<lang>/rss)`)
+  return new URL(`/${client}/${site}/`, url.origin)
+}
+
 export function jobAdderConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/RenderJobList`)
 }
@@ -97,6 +111,11 @@ const VENDORS: Record<string, Vendor> = {
     normalise: (posting) =>
       normaliseJobAdderPosting(posting.raw as unknown as JobAdderRawPosting, posting.company, posting.applyUrl),
     consentTarget: jobAdderConsentTarget,
+  },
+  pageup: {
+    adapter: pageupAdapter,
+    normalise: (posting) => normalisePageUpPosting(posting.raw as unknown as PageUpItem, posting.company),
+    consentTarget: pageUpConsentTarget,
   },
   sitemap_jsonld: {
     adapter: sitemapJsonLdAdapter,

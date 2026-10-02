@@ -82,6 +82,13 @@ describe('oracleAdapter', () => {
     expect(postings.map((p) => p.title)).toEqual(['Regional Sales Manager-AZ'])
   })
 
+  it('skips titles that fail config.title_filter, before any detail request', async () => {
+    serve()
+    const postings = await oracleAdapter.fetch({ ...TWE, config: { vendor: 'oracle', title_filter: 'business partner' } })
+    expect(postings.map((p) => p.title)).toEqual(['P&C Business Partner'])
+    expect(vi.mocked(fetch).mock.calls.filter((c) => String(c[0]).includes('Details'))).toHaveLength(1)
+  })
+
   it('pages until it has read the reported total', async () => {
     const row = (n: number, country = 'AU') => ({ Id: String(n), Title: `Role ${n}`, PrimaryLocation: 'Melbourne', PrimaryLocationCountry: country, PostedDate: '2026-10-01' })
     vi.mocked(fetch).mockImplementation(async (url) => {
