@@ -178,6 +178,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
           label="Company Logo URL"
           value={formData.company_logo_url}
           onChange={(url) => setFormData((prev) => ({ ...prev, company_logo_url: url }))}
+          companyName={formData.company}
         />
 
         <div>
