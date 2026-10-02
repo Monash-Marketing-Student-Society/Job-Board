@@ -31,6 +31,7 @@
 
 import { fetchPublicUrl } from '../../ssrf'
 import { findJobPosting } from '../../prefill/extract'
+import { decodeHtmlEntities } from '../../utils'
 import type { Adapter, RawPosting, SourceRow } from './types'
 
 const REQUEST_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)' }
@@ -101,6 +102,90 @@ export function jobPostingFromHtml(html: string): Record<string, unknown> | null
     }
   }
   return null
+}
+
+/** The inner HTML of the element whose opening tag ends at `openEnd`, balancing nested tags of the same name. */
+function innerHtml(html: string, openEnd: number, tag: string): string | null {
+  const re = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi')
+  re.lastIndex = openEnd
+  let depth = 1
+  for (let m = re.exec(html); m; m = re.exec(html)) {
+    if (m[0].endsWith('/>')) continue
+    depth += m[1] ? -1 : 1
+    if (depth === 0) return html.slice(openEnd, m.index)
+  }
+  return null
+}
+
+function textOf(fragment: string): string {
+  return decodeHtmlEntities(fragment.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+}
+
+/** An itemprop's value: a `<meta content>`, or the element's inner HTML. */
+function itemprop(scope: string, name: string): { content: string | null; html: string | null } | null {
+  const m = new RegExp(`<(\\w+)\\b[^>]*\\bitemprop="${name}"[^>]*>`, 'i').exec(scope)
+  if (!m) return null
+  const content = /\bcontent="([^"]*)"/i.exec(m[0])
+  if (content) return { content: decodeHtmlEntities(content[1]), html: null }
+  return { content: null, html: innerHtml(scope, m.index + m[0].length, m[1]) }
+}
+
+function isoDate(value: string | null): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/**
+ * A schema.org JobPosting written as **microdata** (itemscope/itemprop
+ * attributes) rather than JSON-LD, returned in the JSON-LD shape so the same
+ * normaliser reads both. SuccessFactors career sites use this: Deloitte's
+ * jobs.deloitte.com.au, verified 2 Oct 2026 -- title, description (nested
+ * HTML), datePosted ("Thu Sep 24 16:00:00 UTC 2026", converted to ISO here so
+ * it can't reach a timestamp column as raw text), hiringOrganization, and a
+ * jobLocation listing several PostalAddresses (one role, five cities).
+ *
+ * The normaliser uses the first jobLocation, so a Melbourne or Sydney
+ * address is moved to the front: the role really is open there, and a role
+ * listed "Adelaide; Sydney" would otherwise read as Adelaide and be rejected.
+ */
+export function jobPostingFromMicrodata(html: string): Record<string, unknown> | null {
+  const start = /<(\w+)\b[^>]*\bitemtype="https?:\/\/schema\.org\/JobPosting"[^>]*>/i.exec(html)
+  if (!start) return null
+  const scope = innerHtml(html, start.index + start[0].length, start[1]) ?? html.slice(start.index)
+
+  const title = itemprop(scope, 'title')
+  const titleText = title?.content ?? (title?.html ? textOf(title.html) : '')
+  if (!titleText) return null
+
+  const description = itemprop(scope, 'description')
+  const addresses: Array<Record<string, string>> = []
+  for (const m of scope.matchAll(/itemtype="https?:\/\/schema\.org\/PostalAddress"[^>]*>([\s\S]*?)<\/span>/gi)) {
+    const address: Record<string, string> = {}
+    for (const meta of m[1].matchAll(/itemprop="(addressLocality|addressRegion|addressCountry)"[^>]*\bcontent="([^"]*)"/gi)) {
+      address[meta[1]] = decodeHtmlEntities(meta[2])
+    }
+    if (Object.keys(address).length > 0) addresses.push(address)
+  }
+  const target = addresses.findIndex((a) => /^(melbourne|sydney)$/i.test(a.addressLocality ?? ''))
+  if (target > 0) addresses.unshift(...addresses.splice(target, 1))
+
+  const meta = (name: string) => {
+    const v = itemprop(scope, name)
+    return v?.content ?? (v?.html ? textOf(v.html) : null)
+  }
+  const organisation = meta('hiringOrganization')
+
+  return {
+    '@type': 'JobPosting',
+    title: titleText,
+    description: description?.content ?? description?.html ?? null,
+    datePosted: isoDate(meta('datePosted')),
+    validThrough: isoDate(meta('validThrough')),
+    employmentType: meta('employmentType'),
+    ...(organisation ? { hiringOrganization: { name: organisation } } : {}),
+    jobLocation: addresses.map((address) => ({ '@type': 'Place', address })),
+  }
 }
 
 async function fetchText(url: URL): Promise<{ status: number; text: string | null }> {
@@ -182,12 +267,13 @@ export const sitemapJsonLdAdapter: Adapter = {
         failures.push(page.status)
         continue
       }
-      const job = jobPostingFromHtml(page.text)
+      // JSON-LD first (Myer, Coles); schema.org microdata otherwise (Deloitte).
+      const job = jobPostingFromHtml(page.text) ?? jobPostingFromMicrodata(page.text)
       // A listed page with no JobPosting (a closed posting, a landing page) is skipped.
       if (!job || typeof job.title !== 'string' || !job.title.trim()) continue
 
       const read = new Set(['title', 'company', 'applyUrl'])
-      if (job.jobLocation) read.add('location')
+      if (Array.isArray(job.jobLocation) ? job.jobLocation.length > 0 : job.jobLocation) read.add('location')
       if (job.description) read.add('description')
       if (job.validThrough) read.add('closing_at')
       if (job.employmentType) read.add('job_type')
