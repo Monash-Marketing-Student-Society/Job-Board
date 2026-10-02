@@ -26,6 +26,26 @@
 import { fetchPublicUrl } from '../../ssrf'
 import type { Adapter, RawPosting, SourceRow } from './types'
 
+/**
+ * `config.location_filter`: a case-insensitive pattern a posting's location
+ * must match. A board can be global -- IPG Mediabrands' (Kinesso) lists 216
+ * roles across Europe and the Americas, and the targeting gates only know a
+ * short list of overseas places, so 19 of them reached review as "unsure".
+ * Null when unset; throws on an invalid pattern rather than reading everything.
+ */
+export function locationFilter(source: SourceRow): RegExp | null {
+  const raw = source.config.location_filter
+  if (raw === undefined || raw === null) return null
+  if (typeof raw !== 'string' || !raw) {
+    throw new Error(`Source "${source.slug}" has a malformed config.location_filter: ${JSON.stringify(raw)}`)
+  }
+  try {
+    return new RegExp(raw, 'i')
+  } catch {
+    throw new Error(`Source "${source.slug}" has an invalid config.location_filter pattern: ${raw}`)
+  }
+}
+
 const REQUEST_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)' }
 const REQUEST_TIMEOUT_MS = 15_000
 
@@ -65,10 +85,12 @@ export const greenhouseAdapter: Adapter = {
     if (!Array.isArray(body?.jobs)) throw new Error(`Greenhouse board for ${source.slug} returned no jobs array`)
 
     const postings: RawPosting[] = []
+    const where = locationFilter(source)
     for (const job of body.jobs) {
       // Shape-checked per posting: one without a title or apply URL is
       // skipped, never allowed to fail the rest of the board.
       if (!job?.title || !job.absolute_url) continue
+      if (where && !where.test(job.location?.name ?? '')) continue
 
       const read = new Set(['title', 'company', 'applyUrl'])
       if (job.location?.name) read.add('location')
