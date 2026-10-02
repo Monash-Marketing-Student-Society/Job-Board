@@ -1,0 +1,9 @@
+Sitemap: https://mars.wd3.myworkdayjobs.com/ExternalPrivate1/siteMap.xml
+
+User-agent: *
+Allow: /ExternalPrivate1/
+Disallow: /External/
+Disallow: /MexHV/
+Disallow: /ChampionPetfoods/
+Disallow: /BetterTogether/
+Disallow: /refreshFacet/

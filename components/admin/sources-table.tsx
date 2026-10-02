@@ -38,6 +38,8 @@ export interface SourceView {
   tier: 'A' | 'B' | 'C'
   endpoint: string
   vendor: string | null
+  /** Read on the employer's explicit say-so rather than its robots.txt (lib/sync/robots.ts). */
+  explicitConsent: boolean
   enabled: boolean
   autoPublish: boolean
   usualCount: number | null
@@ -276,6 +278,11 @@ function SourceName({ row }: { row: SourceView }) {
       </div>
       <p className="text-xs text-muted-foreground truncate">
         {[row.vendor, row.slug].filter(Boolean).join(' · ')}
+        {row.explicitConsent && (
+          <span className="ml-1.5" title="The employer approved MMSS reading this feed directly, so its robots.txt is not checked.">
+            · explicit consent
+          </span>
+        )}
         {!row.enabled && <span className="ml-1.5 font-medium text-slate-500">Paused</span>}
       </p>
     </div>

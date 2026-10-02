@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { vendorFor } from './vendors'
+import { vendorFor, workdayConsentTarget, greenhouseConsentTarget } from './vendors'
 import { workdayAdapter } from './adapters/workday'
 import { greenhouseAdapter } from './adapters/greenhouse'
 import type { SourceRow, RawPosting } from './adapters/types'
@@ -41,5 +41,23 @@ describe('vendorFor', () => {
   it('throws a clear error for a missing or unknown vendor rather than half-working', () => {
     expect(() => vendorFor(source({}))).toThrow(/no known vendor/)
     expect(() => vendorFor(source({ vendor: 'phenom' }))).toThrow(/no known vendor/)
+  })
+})
+
+describe('consent targets', () => {
+  it('Workday checks the public site path, not the cxs JSON path', () => {
+    const mars = { ...source({ vendor: 'workday' }), endpoint: 'https://mars.wd3.myworkdayjobs.com/wday/cxs/mars/External' }
+    expect(workdayConsentTarget(mars).toString()).toBe('https://mars.wd3.myworkdayjobs.com/External/')
+  })
+
+  it('Greenhouse checks the board API path it reads', () => {
+    const ogilvy = { ...source({ vendor: 'greenhouse' }), endpoint: 'https://boards-api.greenhouse.io/v1/boards/ogilvyaus/' }
+    expect(greenhouseConsentTarget(ogilvy).toString()).toBe('https://boards-api.greenhouse.io/v1/boards/ogilvyaus/jobs')
+  })
+
+  it('every registered vendor declares one', () => {
+    for (const vendor of ['workday', 'greenhouse']) {
+      expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
+    }
   })
 })
