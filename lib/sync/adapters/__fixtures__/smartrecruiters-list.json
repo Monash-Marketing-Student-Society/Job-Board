@@ -1,0 +1,82 @@
+{
+  "offset": 0,
+  "limit": 100,
+  "totalFound": 3,
+  "content": [
+    {
+      "id": "6000000001429835",
+      "name": "Luxury Escapes Graduate Program - Software Engineer",
+      "ref": "https://api.smartrecruiters.com/v1/companies/LuxuryEscapes/postings/6000000001429835",
+      "releasedDate": "2026-09-23T00:24:40.148Z",
+      "location": {
+        "city": "Sydney",
+        "region": "New South Wales",
+        "country": "au",
+        "remote": false,
+        "fullLocation": "Sydney, New South Wales, Australia"
+      },
+      "experienceLevel": {
+        "id": "entry_level",
+        "label": "Entry Level"
+      },
+      "function": {
+        "id": "information_technology",
+        "label": "Information Technology"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      }
+    },
+    {
+      "id": "6000000001448400",
+      "name": "Senior Frontend Engineer",
+      "ref": "https://api.smartrecruiters.com/v1/companies/LuxuryEscapes/postings/6000000001448400",
+      "releasedDate": "2026-09-29T23:59:25.339Z",
+      "location": {
+        "city": "Sydney",
+        "region": "New South Wales",
+        "country": "au",
+        "remote": false,
+        "fullLocation": "Sydney, New South Wales, Australia"
+      },
+      "experienceLevel": {
+        "id": "mid_senior_level",
+        "label": "Mid-Senior Level"
+      },
+      "function": {
+        "id": "information_technology",
+        "label": "Information Technology"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      }
+    },
+    {
+      "id": "6000000001350434",
+      "name": "Multilingual Customer Experience Agent (German)",
+      "ref": "https://api.smartrecruiters.com/v1/companies/LuxuryEscapes/postings/6000000001350434",
+      "releasedDate": "2026-08-25T22:46:51.907Z",
+      "location": {
+        "city": "London",
+        "region": "Greater London",
+        "country": "gb",
+        "remote": false,
+        "fullLocation": "London, Greater London, United Kingdom"
+      },
+      "experienceLevel": {
+        "id": "entry_level",
+        "label": "Entry Level"
+      },
+      "function": {
+        "id": "sales",
+        "label": "Sales"
+      },
+      "typeOfEmployment": {
+        "id": "permanent",
+        "label": "Full-time"
+      }
+    }
+  ]
+}
