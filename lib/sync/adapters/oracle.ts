@@ -28,6 +28,7 @@
 
 import { fetchPublicUrl } from '../../ssrf'
 import type { Adapter, RawPosting, SourceRow } from './types'
+import { titleFilter } from './workday'
 
 const REQUEST_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)' }
 const REQUEST_TIMEOUT_MS = 20_000
@@ -88,6 +89,10 @@ export const oracleAdapter: Adapter = {
   async fetch(source: SourceRow): Promise<RawPosting[]> {
     const site = oracleSite(source)
     const country = typeof source.config.country === 'string' ? source.config.country.toUpperCase() : 'AU'
+    // `config.title_filter`, as for Workday: checked on the list title, so a
+    // generalist employer's off-target roles cost no detail request (Westpac:
+    // 127 listed, nearly all lending and banking).
+    const filter = titleFilter(source)
     const api = `${site.origin}/hcmRestApi/resources/latest`
 
     const kept: OracleListRow[] = []
@@ -102,7 +107,9 @@ export const oracleAdapter: Adapter = {
         throw new Error(`Oracle requisition list failed for ${source.slug} at offset ${offset}`)
       }
       for (const row of item.requisitionList) {
-        if (row?.Id && row.Title && row.PrimaryLocationCountry?.toUpperCase() === country) kept.push(row)
+        if (!row?.Id || !row.Title || row.PrimaryLocationCountry?.toUpperCase() !== country) continue
+        if (filter && !filter.test(row.Title)) continue
+        kept.push(row)
       }
       const total = typeof item.TotalJobsCount === 'number' ? item.TotalJobsCount : 0
       if (item.requisitionList.length === 0 || offset + PAGE_SIZE >= total) break
