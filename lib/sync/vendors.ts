@@ -11,10 +11,12 @@
  */
 
 import { greenhouseAdapter } from './adapters/greenhouse'
+import { sitemapJsonLdAdapter, postingsPath } from './adapters/sitemap-jsonld'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
 import {
   normaliseGreenhousePosting,
+  normaliseJsonLdPosting,
   normaliseWorkdayPosting,
   type GreenhouseRawPosting,
   type NormaliseResult,
@@ -45,6 +47,11 @@ export function greenhouseConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/jobs`)
 }
 
+/** Sitemap + JSON-LD: the postings path on the sitemap's host (Myer: `/jobs/`, which its robots.txt disallows). */
+export function sitemapJsonLdConsentTarget(source: SourceRow): URL {
+  return new URL(postingsPath(source), new URL(source.endpoint).origin)
+}
+
 const VENDORS: Record<string, Vendor> = {
   workday: {
     adapter: workdayAdapter,
@@ -55,6 +62,11 @@ const VENDORS: Record<string, Vendor> = {
     adapter: greenhouseAdapter,
     normalise: (posting) => normaliseGreenhousePosting(posting.raw as unknown as GreenhouseRawPosting, posting.company),
     consentTarget: greenhouseConsentTarget,
+  },
+  sitemap_jsonld: {
+    adapter: sitemapJsonLdAdapter,
+    normalise: (posting) => normaliseJsonLdPosting(posting.raw, posting.company, posting.applyUrl),
+    consentTarget: sitemapJsonLdConsentTarget,
   },
 }
 
