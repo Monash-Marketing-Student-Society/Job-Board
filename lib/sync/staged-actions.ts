@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
 import type { NormalisedJob } from './normalise'
 
@@ -35,12 +36,16 @@ interface ClaimedRow {
   external_id: string | null
   fingerprint: string
   normalised: NormalisedJob
-  sources: { slug: string } | { slug: string }[] | null
+  sources: ClaimedSource | ClaimedSource[] | null
 }
 
-function slugOf(row: ClaimedRow): string | null {
-  const src = Array.isArray(row.sources) ? row.sources[0] : row.sources
-  return src?.slug ?? null
+interface ClaimedSource {
+  slug: string
+  config: Record<string, unknown> | null
+}
+
+function sourceOf(row: ClaimedRow): ClaimedSource | null {
+  return (Array.isArray(row.sources) ? row.sources[0] : row.sources) ?? null
 }
 
 export async function approveStaged(db: SupabaseClient, id: string, reviewerId: string): Promise<ActionResult> {
@@ -49,14 +54,15 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
     .update({ status: 'approved', reviewed_by: reviewerId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'pending')
-    .select('id, external_id, fingerprint, normalised, sources(slug)')
+    .select('id, external_id, fingerprint, normalised, sources(slug, config)')
     .maybeSingle()
 
   if (claimError) return { ok: false, kind: 'error', message: `claim: ${claimError.message}` }
   if (!claimed) return { ok: false, kind: 'conflict' }
 
   const row = claimed as unknown as ClaimedRow
-  const slug = slugOf(row)
+  const src = sourceOf(row)
+  const slug = src?.slug ?? null
   const j = row.normalised
 
   const { data: job, error: insertError } = slug
@@ -67,6 +73,7 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
           external_id: row.external_id,
           title: j.title,
           company: j.company,
+          company_logo_url: sourceLogoUrl(src?.config),
           location: j.location,
           work_mode: j.work_mode,
           job_type: j.job_type,

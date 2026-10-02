@@ -133,6 +133,18 @@ describe('supabaseDeps writes', () => {
     })
   })
 
+  it('publish sets the logo from the source domain, and leaves it null without one', async () => {
+    const withDomain = fakeDb(() => ({ data: { id: 'j1' } }))
+    await supabaseDeps(withDomain.db, { ...SOURCE, config: { domain: 'unilever.com' } }).publish(ROW)
+    const job = withDomain.log.find((c) => c.table === 'jobs')!.ops.find((o) => o.name === 'insert')!.args[0] as Record<string, unknown>
+    expect(job.company_logo_url).toContain('cdn.brandfetch.io/domain/unilever.com/')
+
+    const without = fakeDb(() => ({ data: { id: 'j1' } }))
+    await supabaseDeps(without.db, SOURCE).publish(ROW)
+    const bare = without.log.find((c) => c.table === 'jobs')!.ops.find((o) => o.name === 'insert')!.args[0] as Record<string, unknown>
+    expect(bare.company_logo_url).toBeNull()
+  })
+
   it('enrich on a job updates only url and description, and only where source LIKE sync:%', async () => {
     const { db, log } = fakeDb()
     await supabaseDeps(db, SOURCE).enrich({ kind: 'job', id: 'j1', source: 'sync:adzuna', tier: 'B' }, ROW.normalised)

@@ -14,6 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sourceLogoUrl } from '../logos'
 import type { SourceRow } from './adapters/types'
 import { rollingMedian, zeroGuardTripped, type RunCounts, type StagedInsert, type StoredMatch, type SyncDeps } from './run'
 import type { NormalisedJob } from './normalise'
@@ -54,13 +55,14 @@ async function matchFromFingerprint(
   return null
 }
 
-function jobInsert(source: string, row: StagedInsert) {
+function jobInsert(source: SourceRow, row: StagedInsert) {
   const j = row.normalised
   return {
-    source,
+    source: `sync:${source.slug}`,
     external_id: row.externalId,
     title: j.title,
     company: j.company,
+    company_logo_url: sourceLogoUrl(source.config),
     location: j.location,
     work_mode: j.work_mode,
     job_type: j.job_type,
@@ -142,7 +144,7 @@ export function supabaseDeps(db: SupabaseClient, source: SourceRow): SyncDeps {
     async publish(row) {
       const { data, error } = await db
         .from('jobs')
-        .insert({ ...jobInsert(sourceKey, row), auto_published_at: new Date().toISOString() })
+        .insert({ ...jobInsert(source, row), auto_published_at: new Date().toISOString() })
         .select('id')
         .single()
       if (error) throw new Error(`publish: ${error.message}`)

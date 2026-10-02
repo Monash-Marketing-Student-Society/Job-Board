@@ -15,7 +15,7 @@ const NORMALISED = {
   closing_at: '2026-12-01',
 }
 
-const CLAIMED = { id: 's1', external_id: 'R-1', fingerprint: 'fp', normalised: NORMALISED, sources: { slug: 'unilever' } }
+const CLAIMED = { id: 's1', external_id: 'R-1', fingerprint: 'fp', normalised: NORMALISED, sources: { slug: 'unilever', config: { domain: 'unilever.com' } } }
 
 const has = (ops: Op[], name: string) => ops.some((o) => o.name === name)
 const argOf = (ops: Op[], name: string) => ops.find((o) => o.name === name)!.args[0] as Record<string, unknown>
@@ -63,6 +63,13 @@ describe('approveStaged', () => {
       is_sponsored: false,
       auto_published_at: null,
     })
+  })
+
+  it('gives the job its logo from the source domain', async () => {
+    const { db, log } = fakeDb(happy())
+    await approveStaged(db, 's1', 'admin-1')
+    const job = argOf(log.find((c) => c.table === 'jobs')!.ops, 'insert')
+    expect(job.company_logo_url).toContain('cdn.brandfetch.io/domain/unilever.com/')
   })
 
   it('sanitises the description again before it goes public', async () => {
