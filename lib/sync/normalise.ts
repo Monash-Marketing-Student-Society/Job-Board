@@ -24,6 +24,7 @@ import { sanitizeDescription } from '../sanitize'
 import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '../tags'
 import { matchesAny } from './text-match'
 import { mapJobPostingToData } from '../prefill/extract'
+import type { JobAdderRawPosting } from './adapters/jobadder'
 import type { JobType, WorkMode } from '../types'
 
 export interface NormalisedJob {
@@ -351,5 +352,61 @@ export function normaliseOraclePosting(raw: OracleRawPosting, company: string, u
     posted_at: raw.PostedDate ?? null,
     closing_at: closingAt,
   }
+  return { job, confidence }
+}
+
+// ── JobAdder ─────────────────────────────────────────────────────────────
+
+/**
+ * JobAdder's work-type labels are the board owner's own wording. Seen on
+ * 2 Oct 2026: "Permanent / Full Time", "Part-time", "Casual", "Contract or
+ * Temp". Anything else is left null for a reviewer.
+ */
+export function jobAdderJobType(label: string | null): JobType | null {
+  if (!label) return null
+  const l = label.toLowerCase()
+  if (/\bintern/.test(l)) return 'internship'
+  if (/\bgraduate\b/.test(l)) return 'graduate'
+  if (/full[\s-]?time/.test(l)) return 'full-time'
+  if (/part[\s-]?time/.test(l)) return 'part-time'
+  if (/\bcasual\b/.test(l)) return 'casual'
+  if (/\b(contract|temp)\b/.test(l)) return 'contract'
+  return null
+}
+
+/**
+ * Verified fields (2 Oct 2026, Yo-Chi and Seed Heritage widgets): title,
+ * classification labels (location and work type picked out by
+ * config.categories in the adapter), the posted date, and the detail page's
+ * bullet points and description HTML. No closing date exists anywhere in
+ * the widget, so closing_at is always null and the posting is held.
+ */
+export function normaliseJobAdderPosting(raw: JobAdderRawPosting, company: string, url: string): NormaliseResult {
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  if (raw.location) confidence.location = 'read'
+
+  const description = cleanDescription(raw.descriptionHtml)
+  if (description) confidence.description = 'read'
+
+  const jobType = jobAdderJobType(raw.jobType)
+  if (jobType) confidence.job_type = 'read'
+
+  const tags = inferJobFunctions(raw.title, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const job: NormalisedJob = {
+    title: raw.title,
+    company,
+    location: raw.location,
+    work_mode: null,
+    job_type: jobType,
+    url,
+    description,
+    tags,
+    posted_at: raw.postedOn,
+    closing_at: null,
+  }
+
   return { job, confidence }
 }
