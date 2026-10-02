@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import dns from 'dns/promises'
-import { workdayAdapter, resolveFacetIds, locationFacetConfig, type WorkdayFacet } from './workday'
+import { workdayAdapter, resolveFacetIds, locationFacetConfig, titleFilter, type WorkdayFacet } from './workday'
 import marsListWithFacets from './__fixtures__/workday-list-facets.json'
 import workdayList from './__fixtures__/workday-list.json'
 import workdayDetail from './__fixtures__/workday-detail.json'
@@ -181,6 +181,55 @@ describe('workdayAdapter', () => {
     expect(listCalls).toBe(2)
   })
 
+  it('keeps paging when later pages report total 0, as real Workday does', async () => {
+    // Verified on CommBank, 2 Oct 2026: total is 164 on page one, 0 after.
+    // Trusting each page's total stopped every source at 40 postings.
+    const listing = (n: number) => ({ title: `Role ${n}`, externalPath: `/job/R-${n}`, locationsText: 'Melbourne' })
+    const pages: Record<number, unknown> = {
+      0: { total: 45, jobPostings: Array.from({ length: 20 }, (_, i) => listing(i)) },
+      20: { total: 0, jobPostings: Array.from({ length: 20 }, (_, i) => listing(20 + i)) },
+      40: { total: 0, jobPostings: Array.from({ length: 5 }, (_, i) => listing(40 + i)) },
+    }
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      if (String(url).endsWith('/jobs')) return jsonResponse(pages[JSON.parse(init?.body as string).offset])
+      return jsonResponse(workdayDetail)
+    })
+
+    const postings = await workdayAdapter.fetch(SOURCE)
+    expect(postings).toHaveLength(45)
+  })
+
+  it('stops at an empty page even if the first total overstated', async () => {
+    let listCalls = 0
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      if (String(url).endsWith('/jobs')) {
+        listCalls++
+        const offset = JSON.parse(init?.body as string).offset
+        return jsonResponse(offset === 0 ? { total: 500, jobPostings: workdayList.jobPostings } : { total: 0, jobPostings: [] })
+      }
+      return jsonResponse(workdayDetail)
+    })
+    await workdayAdapter.fetch(SOURCE)
+    expect(listCalls).toBe(2)
+  })
+
+  it('skips listings whose title fails config.title_filter, without a detail request', async () => {
+    const listing = (title: string, n: number) => ({ title, externalPath: `/job/R-${n}`, locationsText: 'Sydney' })
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      if (String(url).endsWith('/jobs'))
+        return jsonResponse({
+          total: 3,
+          jobPostings: [listing('Customer Banking Specialist', 1), listing('Brand Marketing Graduate', 2), listing('Retail Sales', 3)],
+        })
+      return jsonResponse(workdayDetail)
+    })
+
+    const postings = await workdayAdapter.fetch({ ...SOURCE, config: { title_filter: 'marketing|brand' } })
+    expect(postings).toHaveLength(1)
+    const detailCalls = vi.mocked(fetch).mock.calls.filter((c) => !String(c[0]).endsWith('/jobs'))
+    expect(detailCalls.map((c) => String(c[0]))).toEqual([`${SOURCE.endpoint}/job/R-2`])
+  })
+
   it('throws when the list request itself fails, so the run records the error', async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }))
 
@@ -289,5 +338,19 @@ describe('locationFacetConfig', () => {
   it('throws on a malformed value instead of silently fetching the whole tenant', () => {
     expect(() => locationFacetConfig(src({ location_facet: { parameter: 'locations' } }))).toThrow(/malformed/)
     expect(() => locationFacetConfig(src({ location_facet: 'AUS' }))).toThrow(/malformed/)
+  })
+})
+
+describe('titleFilter', () => {
+  const src = (config: Record<string, unknown>) => ({ ...({} as SourceRow), slug: 'x', config })
+
+  it('is null when unset, case-insensitive when set', () => {
+    expect(titleFilter(src({}))).toBeNull()
+    expect(titleFilter(src({ title_filter: 'marketing' }))!.test('Senior MARKETING Manager')).toBe(true)
+  })
+
+  it('throws on a non-string or invalid pattern rather than reading everything', () => {
+    expect(() => titleFilter(src({ title_filter: 42 }))).toThrow(/malformed/)
+    expect(() => titleFilter(src({ title_filter: '(unclosed' }))).toThrow(/invalid/)
   })
 })
