@@ -46,3 +46,77 @@ export function sourceLogoUrl(config: Record<string, unknown> | null | undefined
   const domain = config?.domain
   return typeof domain === 'string' ? brandfetchLogoUrl(domain) : null
 }
+
+/**
+ * Brandfetch Brand Search: company name -> candidate brands, for the logo
+ * suggestions on the submit and admin job forms.
+ *
+ * Brandfetch's terms allow this API only as autocomplete, called from the
+ * user's browser, with results not cached or stored. So it is fetched
+ * client-side, and what we keep is never the search result itself -- only the
+ * logo URL rebuilt from the chosen domain (`brandfetchLogoUrl`), which is a
+ * Logo API hotlink. (The `icon` URLs in search results expire after 24h.)
+ */
+export interface BrandMatch {
+  name: string
+  domain: string
+  verified: boolean
+  /** Brandfetch's 0-1 data quality score. */
+  quality: number
+}
+
+export const BRAND_SEARCH_MAX = 4
+
+export function brandSearchUrl(company: string): string {
+  return `https://api.brandfetch.io/v2/search/${encodeURIComponent(company.trim())}?c=${BRANDFETCH_CLIENT_ID}`
+}
+
+/** Defensive parse: the response is third-party JSON, so keep only well-formed rows with a usable domain. */
+export function parseBrandSearch(json: unknown): BrandMatch[] {
+  if (!Array.isArray(json)) return []
+  const seen = new Set<string>()
+  const out: BrandMatch[] = []
+  for (const item of json) {
+    if (!item || typeof item !== 'object') continue
+    const r = item as Record<string, unknown>
+    const domain = typeof r.domain === 'string' ? normaliseDomain(r.domain) : null
+    if (!domain || seen.has(domain)) continue
+    seen.add(domain)
+    out.push({
+      name: typeof r.name === 'string' && r.name.trim() ? r.name.trim() : domain,
+      domain,
+      verified: r.verified === true,
+      quality: typeof r.qualityScore === 'number' ? r.qualityScore : 0,
+    })
+    if (out.length === BRAND_SEARCH_MAX) break
+  }
+  return out
+}
+
+/** Case, punctuation and legal suffixes don't make a different company: "Mars, Inc." is "mars". */
+export function comparableName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(pty|ltd|limited|inc|incorporated|llc|plc|co|corp|corporation)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const AUTO_MIN_QUALITY = 0.85
+
+/**
+ * The one match safe to apply without a click, or null. Deliberately strict --
+ * a wrong logo on a live listing is worse than none, and names collide ("Bain"
+ * is three firms; "Commonwealth Bank" also matches a US credit union). Needs
+ * an exact name match on a verified, good-quality brand, and no second
+ * verified brand under the same name.
+ */
+export function autoMatch(company: string, matches: BrandMatch[]): BrandMatch | null {
+  const wanted = comparableName(company)
+  if (!wanted) return null
+  const same = matches.filter((m) => m.verified && comparableName(m.name) === wanted)
+  if (same.length !== 1) return null
+  return same[0].quality >= AUTO_MIN_QUALITY ? same[0] : null
+}

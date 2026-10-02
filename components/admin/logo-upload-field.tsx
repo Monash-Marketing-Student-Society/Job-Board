@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { UploadSimpleIcon } from '@phosphor-icons/react'
 import { Button, Input, Label } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { autoMatch, brandfetchLogoUrl, brandSearchUrl, parseBrandSearch, type BrandMatch } from '@/lib/logos'
 
 /**
  * Shared by the admin job form and the public /submit form (same pairing
@@ -20,6 +21,8 @@ import { createClient } from '@/lib/supabase/client'
  */
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
 const PREVIEW_DEBOUNCE_MS = 400
+const SEARCH_DEBOUNCE_MS = 400
+const SEARCH_MIN_CHARS = 2
 // No SVG: the bucket is public and anon can upload to it, so accepting an
 // executable document format would let anyone host script at a URL on the
 // project's own Supabase origin. See the note in 0014 for the full reasoning.
@@ -35,11 +38,51 @@ interface LogoUploadFieldProps {
   name: string
   label: string
   value: string
-  onChange: (url: string) => void
+  /** `auto` when the field filled itself from a company-name match, so a caller can tell it from an edit. */
+  onChange: (url: string, origin?: 'auto' | 'user') => void
   required?: boolean
+  /** The form's company name. When set, matching logos are suggested from it (see lib/logos.ts). */
+  companyName?: string
 }
 
-export function LogoUploadField({ id, name, label, value, onChange, required }: LogoUploadFieldProps) {
+/**
+ * Logo suggestions for a company name, from Brandfetch Brand Search.
+ *
+ * Fetched from the browser on purpose: Brandfetch allows this API only as
+ * client-side autocomplete. Settles before searching (one request per name the
+ * user meant, not per keystroke) and drops a stale response when the name has
+ * moved on. Any failure is just "no suggestions" -- the field still works.
+ */
+function useBrandMatches(companyName: string | undefined) {
+  const [result, setResult] = useState<{ query: string; matches: BrandMatch[] }>({ query: '', matches: [] })
+  const query = (companyName ?? '').trim()
+
+  useEffect(() => {
+    if (query.length < SEARCH_MIN_CHARS) return
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(brandSearchUrl(query), { signal: controller.signal })
+        const matches = res.ok ? parseBrandSearch(await res.json()) : []
+        setResult({ query, matches })
+      } catch {
+        if (!controller.signal.aborted) setResult({ query, matches: [] })
+      }
+    }, SEARCH_DEBOUNCE_MS)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [query])
+
+  // Matches for an older name are never shown against the current one. A
+  // stable empty array, so effects keyed on this don't re-run every render.
+  return result.query === query ? result.matches : NO_MATCHES
+}
+
+const NO_MATCHES: BrandMatch[] = []
+
+export function LogoUploadField({ id, name, label, value, onChange, required, companyName }: LogoUploadFieldProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -70,6 +113,28 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
     const timer = setTimeout(() => setPreviewSrc(value), PREVIEW_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [value])
+
+  const matches = useBrandMatches(companyName)
+
+  // The URL this field last filled in by itself. Auto-fill only ever replaces
+  // an empty value or its own earlier pick -- never a URL the user pasted,
+  // uploaded or clicked, and never the saved logo of a job being edited.
+  const autoFilledRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (matches === NO_MATCHES) return
+    const match = autoMatch(companyName ?? '', matches)
+    const url = match ? brandfetchLogoUrl(match.domain) : null
+    if (url === value) return
+    if (value !== '' && value !== autoFilledRef.current) return
+    if (!url && value === '') return
+    // A new company name with no confident match also takes back an earlier
+    // auto-fill -- otherwise "Ogilvy" changed to "Bain" keeps Ogilvy's logo.
+    autoFilledRef.current = url
+    onChange(url ?? '', 'auto')
+    // onChange is a fresh closure on every parent render; matches is what drives this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matches])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -102,7 +167,7 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
       if (uploadErr) throw uploadErr
 
       const { data } = supabase.storage.from('company-logos').getPublicUrl(path)
-      onChange(data.publicUrl)
+      onChange(data.publicUrl, 'user')
     } catch (err) {
       console.error('Error uploading logo:', err)
       setUploadError(err instanceof Error ? err.message : 'Failed to upload logo')
@@ -120,7 +185,7 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
           name={name}
           type="url"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value, 'user')}
           placeholder="https://company.com/logo.png"
           className="flex-1"
         />
@@ -147,6 +212,38 @@ export function LogoUploadField({ id, name, label, value, onChange, required }: 
       </p>
       {uploadError && (
         <p className="text-xs text-destructive mt-1">{uploadError}</p>
+      )}
+      {matches.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-muted-foreground">
+            {value === autoFilledRef.current && value !== ''
+              ? 'Logo matched from the company name. Not right? Pick another:'
+              : 'Logos matching the company name:'}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {matches.map((m) => {
+              const url = brandfetchLogoUrl(m.domain)!
+              const selected = url === value
+              return (
+                <button
+                  key={m.domain}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onChange(selected ? '' : url, 'user')}
+                  className={`flex items-center gap-2 rounded-lg border py-1 pl-1 pr-2.5 text-left text-xs transition-colors ${
+                    selected ? 'border-primary bg-primary/5' : 'border-border bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <img src={url} alt="" className="size-7 rounded-md border border-border bg-white object-contain" />
+                  <span className="min-w-0">
+                    <span className="block font-medium text-foreground">{m.name}</span>
+                    <span className="block text-muted-foreground">{m.domain}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       )}
       {/* Hiding the whole block, not just the image: the old handler set
           display:none on the <img> alone and left the "Preview" caption

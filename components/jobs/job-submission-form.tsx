@@ -455,12 +455,14 @@ export function JobSubmissionForm({ existingSubmission, editToken }: JobSubmissi
             name="company_logo_url"
             label="Company logo URL"
             value={formData.company_logo_url}
-            onChange={(url) => {
+            onChange={(url, origin) => {
               setFormData((prev) => ({ ...prev, company_logo_url: url }))
               // Same as a manual edit via handleChange: clear the prefill
-              // badge once the user has touched what it filled in.
-              if (prefillStatus === 'success') setPrefillStatus('idle')
+              // badge once the user has touched what it filled in. A logo the
+              // field matched by itself is not the user touching anything.
+              if (origin !== 'auto' && prefillStatus === 'success') setPrefillStatus('idle')
             }}
+            companyName={formData.company}
           />
           <div className="sm:col-span-2">
             <Label htmlFor="tags">Job function</Label>
