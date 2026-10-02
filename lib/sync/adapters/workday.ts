@@ -101,6 +101,26 @@ export function resolveFacetIds(facets: WorkdayFacet[], { parameter, prefix }: L
   return found ? ids : null
 }
 
+/**
+ * `config.title_filter`: a case-insensitive pattern a listing's title must
+ * match to be read at all. For big employers that hire across every function
+ * (CommBank, Telstra, Accenture), it keeps branch, retail and IT roles out of
+ * the review queue, and because it's checked on the list title it skips their
+ * detail requests too. Null when unset; throws on an invalid pattern.
+ */
+export function titleFilter(source: SourceRow): RegExp | null {
+  const raw = source.config.title_filter
+  if (raw === undefined || raw === null) return null
+  if (typeof raw !== 'string' || !raw) {
+    throw new Error(`Source "${source.slug}" has a malformed config.title_filter: ${JSON.stringify(raw)}`)
+  }
+  try {
+    return new RegExp(raw, 'i')
+  } catch {
+    throw new Error(`Source "${source.slug}" has an invalid config.title_filter pattern: ${raw}`)
+  }
+}
+
 /** `config.location_facet`, or null when unset. Throws on a malformed value rather than ignoring it. */
 export function locationFacetConfig(source: SourceRow): LocationFacetConfig | null {
   const raw = source.config.location_facet
@@ -175,6 +195,11 @@ export const workdayAdapter: Adapter = {
     const postings: RawPosting[] = []
     let offset = 0
     let appliedFacets: Record<string, string[]> = {}
+    const filter = titleFilter(source)
+    // Workday reports `total` on the first page only; every later page says 0
+    // (verified on CommBank, 2 Oct 2026). Trusting each page's own total
+    // stopped every source at 40 postings.
+    let total: number | null = null
 
     const facetConfig = locationFacetConfig(source)
     if (facetConfig) {
@@ -196,7 +221,10 @@ export const workdayAdapter: Adapter = {
       const page = await fetchList(source.endpoint, offset, appliedFacets)
       if (!page) throw new Error(`Workday list request failed for ${source.slug} at offset ${offset}`)
 
+      if (total === null) total = page.total
+
       for (const listed of page.jobPostings) {
+        if (filter && !filter.test(listed.title)) continue
         const detail = await fetchDetail(source.endpoint, listed.externalPath)
         if (!detail) {
           // One posting's detail call failing doesn't fail the whole source --
@@ -223,7 +251,7 @@ export const workdayAdapter: Adapter = {
       }
 
       offset += PAGE_SIZE
-      if (offset >= page.total) break
+      if (page.jobPostings.length === 0 || offset >= total) break
     }
 
     return postings
