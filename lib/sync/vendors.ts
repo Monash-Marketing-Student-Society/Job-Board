@@ -11,12 +11,14 @@
  */
 
 import { greenhouseAdapter } from './adapters/greenhouse'
+import { jobAdderAdapter, type JobAdderRawPosting } from './adapters/jobadder'
 import { oracleAdapter, oracleSite } from './adapters/oracle'
 import { sitemapJsonLdAdapter, postingsPath } from './adapters/sitemap-jsonld'
 import { workdayAdapter } from './adapters/workday'
 import type { Adapter, RawPosting, SourceRow } from './adapters/types'
 import {
   normaliseGreenhousePosting,
+  normaliseJobAdderPosting,
   normaliseJsonLdPosting,
   normaliseOraclePosting,
   normaliseWorkdayPosting,
@@ -60,6 +62,11 @@ export function sitemapJsonLdConsentTarget(source: SourceRow): URL {
   return new URL(postingsPath(source), new URL(source.endpoint).origin)
 }
 
+/** JobAdder: the widget path it reads on apps.jobadder.com, the only path that host's robots.txt allows. */
+export function jobAdderConsentTarget(source: SourceRow): URL {
+  return new URL(`${source.endpoint.replace(/\/$/, '')}/RenderJobList`)
+}
+
 const VENDORS: Record<string, Vendor> = {
   workday: {
     adapter: workdayAdapter,
@@ -76,6 +83,12 @@ const VENDORS: Record<string, Vendor> = {
     normalise: (posting) =>
       normaliseOraclePosting(posting.raw as unknown as OracleRawPosting, posting.company, posting.applyUrl),
     consentTarget: oracleConsentTarget,
+  },
+  jobadder: {
+    adapter: jobAdderAdapter,
+    normalise: (posting) =>
+      normaliseJobAdderPosting(posting.raw as unknown as JobAdderRawPosting, posting.company, posting.applyUrl),
+    consentTarget: jobAdderConsentTarget,
   },
   sitemap_jsonld: {
     adapter: sitemapJsonLdAdapter,

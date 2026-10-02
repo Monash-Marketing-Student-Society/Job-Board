@@ -5,10 +5,12 @@ import {
   greenhouseConsentTarget,
   oracleConsentTarget,
   sitemapJsonLdConsentTarget,
+  jobAdderConsentTarget,
 } from './vendors'
 import { workdayAdapter } from './adapters/workday'
 import { greenhouseAdapter } from './adapters/greenhouse'
 import { sitemapJsonLdAdapter } from './adapters/sitemap-jsonld'
+import { jobAdderAdapter } from './adapters/jobadder'
 import type { SourceRow, RawPosting } from './adapters/types'
 import workdayDetail from './adapters/__fixtures__/workday-detail.json'
 
@@ -29,6 +31,10 @@ describe('vendorFor', () => {
 
   it('resolves greenhouse to its adapter', () => {
     expect(vendorFor(source({ vendor: 'greenhouse' })).adapter).toBe(greenhouseAdapter)
+  })
+
+  it('resolves jobadder to its adapter', () => {
+    expect(vendorFor(source({ vendor: 'jobadder' })).adapter).toBe(jobAdderAdapter)
   })
 
   it('resolves sitemap_jsonld to its adapter', () => {
@@ -76,8 +82,13 @@ describe('consent targets', () => {
     expect(sitemapJsonLdConsentTarget(myer).toString()).toBe('https://careers.myergroup.com.au/jobs/')
   })
 
+  it('JobAdder checks the widget path, the only one apps.jobadder.com allows', () => {
+    const yochi = { ...source({ vendor: 'jobadder' }), endpoint: 'https://apps.jobadder.com/widgets/V1/Jobs/' }
+    expect(jobAdderConsentTarget(yochi).toString()).toBe('https://apps.jobadder.com/widgets/V1/Jobs/RenderJobList')
+  })
+
   it('every registered vendor declares one', () => {
-    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld']) {
+    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld', 'jobadder']) {
       expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
     }
   })
