@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import dns from 'dns/promises'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { sitemapJsonLdAdapter, sitemapUrls, jobPostingFromHtml, urlFilter, postingsPath, MAX_PAGES } from './sitemap-jsonld'
+import {
+  sitemapJsonLdAdapter,
+  sitemapUrls,
+  jobPostingFromHtml,
+  urlFilter,
+  postingsPath,
+  MAX_PAGES,
+  MAX_CHILD_SITEMAPS,
+} from './sitemap-jsonld'
 import { normaliseJsonLdPosting } from '../normalise'
 import type { SourceRow } from './types'
 
@@ -137,6 +145,56 @@ describe('sitemapJsonLdAdapter', () => {
     serve(sitemap, () => textResponse(POSTING))
     await sitemapJsonLdAdapter.fetch(SOURCE)
     expect(requestedPages()).toEqual(['https://careers.myergroup.com.au/jobs/graduate-marketing'])
+  })
+
+  describe('a sitemap index (Coles: sitemap_index.xml -> sitemap1.xml, sitemap2.xml)', () => {
+    const H = 'https://careers.myergroup.com.au'
+    const INDEX =
+      `<sitemapindex><sitemap><loc>${H}/sitemap1.xml</loc></sitemap>` +
+      `<sitemap><loc>${H}/sitemap2.xml</loc></sitemap>` +
+      `<sitemap><loc>https://evil.test/sitemap3.xml</loc></sitemap></sitemapindex>`
+    const urlset = (...paths: string[]) => `<urlset>${paths.map((p) => `<url><loc>${H}${p}</loc></url>`).join('')}</urlset>`
+    const INDEXED = { ...SOURCE, endpoint: `${H}/sitemap_index.xml` }
+
+    function serveIndex(children: Record<string, Response | (() => Response)>) {
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input)
+        if (url.endsWith('/sitemap_index.xml')) return textResponse(INDEX)
+        const child = children[new URL(url).pathname]
+        if (child) return typeof child === 'function' ? child() : child
+        return textResponse(POSTING)
+      })
+    }
+
+    it("reads postings from every same-host child sitemap, deduplicated, and never the other host's", async () => {
+      serveIndex({
+        '/sitemap1.xml': textResponse(urlset('/jobs/graduate-marketing', '/jobs/store-team-member')),
+        '/sitemap2.xml': textResponse(urlset('/jobs/marketing-coordinator', '/jobs/graduate-marketing')),
+      })
+      await sitemapJsonLdAdapter.fetch(INDEXED)
+      const urls = vi.mocked(fetch).mock.calls.map(([u]) => String(u))
+      expect(urls.some((u) => u.includes('evil.test'))).toBe(false)
+      expect(urls.filter((u) => u.includes('/jobs/'))).toEqual([`${H}/jobs/graduate-marketing`, `${H}/jobs/marketing-coordinator`])
+    })
+
+    it('fails the run when a child sitemap fails, rather than reading half the jobs', async () => {
+      serveIndex({
+        '/sitemap1.xml': textResponse(urlset('/jobs/graduate-marketing')),
+        '/sitemap2.xml': () => textResponse('', 503),
+      })
+      await expect(sitemapJsonLdAdapter.fetch(INDEXED)).rejects.toThrow(/Child sitemap \/sitemap2.xml failed/)
+    })
+
+    it('refuses an index nested inside an index', async () => {
+      serveIndex({ '/sitemap1.xml': textResponse(INDEX), '/sitemap2.xml': textResponse(urlset()) })
+      await expect(sitemapJsonLdAdapter.fetch(INDEXED)).rejects.toThrow(/sitemap index/)
+    })
+
+    it('refuses an index listing more child sitemaps than the limit', async () => {
+      const many = `<sitemapindex>${Array.from({ length: MAX_CHILD_SITEMAPS + 1 }, (_, i) => `<sitemap><loc>${H}/s${i}.xml</loc></sitemap>`).join('')}</sitemapindex>`
+      vi.mocked(fetch).mockImplementation(async () => textResponse(many))
+      await expect(sitemapJsonLdAdapter.fetch(INDEXED)).rejects.toThrow(/over the 10 limit/)
+    })
   })
 
   it('throws when more URLs match than the page limit, before fetching any page', async () => {

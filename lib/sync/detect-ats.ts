@@ -9,6 +9,8 @@
  *
  *   Workday     https://<tenant>.wd<N>.myworkdayjobs.com/[<locale>/]<site>[/job/...]
  *               -> https://<tenant>.wd<N>.myworkdayjobs.com/wday/cxs/<tenant>/<site>
+ *               https://wd<N>.myworkdaysite.com/[<locale>/]recruiting/<tenant>/<site>[/...]
+ *               -> https://wd<N>.myworkdaysite.com/wday/cxs/<tenant>/<site>
  *   Greenhouse  https://job-boards.greenhouse.io/<token>[/jobs/<id>]
  *               https://boards.greenhouse.io/<token>, .../embed/job_board?for=<token>
  *               https://boards-api.greenhouse.io/v1/boards/<token>[/jobs]
@@ -19,6 +21,8 @@ export type DetectedAts = { vendor: 'workday' | 'greenhouse'; endpoint: string }
 
 const LOCALE = /^[a-z]{2}(-[A-Za-z]{2})?$/
 const WORKDAY_HOST = /^([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com$/i
+/** Workday's other domain: the tenant is in the path, not the host (Mondelēz, News Corp). */
+const WORKDAY_SITE_HOST = /^wd\d+\.myworkdaysite\.com$/i
 const GREENHOUSE_BOARD_HOSTS = new Set(['job-boards.greenhouse.io', 'boards.greenhouse.io', 'job-boards.eu.greenhouse.io'])
 /** Workday path segments that are never a site name. */
 const WORKDAY_RESERVED = new Set(['wday', 'job', 'jobs', 'details'])
@@ -34,6 +38,15 @@ export function detectAts(raw: string): DetectedAts | null {
 
   const host = url.hostname.toLowerCase()
   const segments = url.pathname.split('/').filter(Boolean).map((s) => decodeURIComponent(s))
+
+  if (WORKDAY_SITE_HOST.test(host)) {
+    if (segments[0] === 'wday' && segments[1] === 'cxs' && segments[3]) {
+      return { vendor: 'workday', endpoint: `https://${host}/wday/cxs/${segments[2]}/${segments[3]}` }
+    }
+    const rest = segments[0] && LOCALE.test(segments[0]) ? segments.slice(1) : segments
+    if (rest[0] !== 'recruiting' || !rest[1] || !rest[2]) return null
+    return { vendor: 'workday', endpoint: `https://${host}/wday/cxs/${rest[1]}/${rest[2]}` }
+  }
 
   const workday = WORKDAY_HOST.exec(host)
   if (workday) {
