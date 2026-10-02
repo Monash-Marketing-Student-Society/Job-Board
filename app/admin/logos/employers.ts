@@ -3,7 +3,7 @@
  * Wbb8bmW8msELQ11JaGkd6g, rev 4, read 2 Oct 2026), each with a starting
  * domain for its logo.
  *
- * MADE THIS is left out (removed by the user, 2 Oct 2026: no identifiable agency).
+ * MADE THIS and Melbourne Social Co are left out (removed by the user, 2 Oct 2026).
  *
  * TEMPORARY: lives only as long as /admin/logos. `domain` is a suggestion the
  * admin confirms by eye, taken from the employer's own site; each was checked
@@ -72,7 +72,6 @@ export const EMPLOYERS: Employer[] = [
   { name: 'Taboo Group', group: 'Creative & media agencies', domain: 'taboo.com.au' },
   { name: 'iD Collective', group: 'Creative & media agencies', domain: 'idcollective.com.au' },
   { name: 'MAXMEDIALAB', group: 'Creative & media agencies', domain: 'maxmedialab.com.au' },
-  { name: 'Melbourne Social Co', group: 'Creative & media agencies', domain: 'melbournesocialco.com.au' },
   // PR & comms
   { name: 'Porter Novelli', group: 'PR & comms', domain: 'porternovelli.com.au' },
   { name: 'Thrive PR', group: 'PR & comms', domain: 'thrivepr.com.au' },
