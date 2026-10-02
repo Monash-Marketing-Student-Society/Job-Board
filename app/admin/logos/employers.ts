@@ -3,7 +3,8 @@
  * Wbb8bmW8msELQ11JaGkd6g, rev 4, read 2 Oct 2026), each with a starting
  * domain for its logo.
  *
- * MADE THIS and Melbourne Social Co are left out (removed by the user, 2 Oct 2026).
+ * MADE THIS, Melbourne Social Co and Mango Communications are left out (removed by the
+ * user, 2 Oct 2026; Mango has no careers page).
  *
  * TEMPORARY: lives only as long as /admin/logos. `domain` is a suggestion the
  * admin confirms by eye, taken from the employer's own site; each was checked
@@ -76,7 +77,6 @@ export const EMPLOYERS: Employer[] = [
   { name: 'Porter Novelli', group: 'PR & comms', domain: 'porternovelli.com.au' },
   { name: 'Thrive PR', group: 'PR & comms', domain: 'thrivepr.com.au' },
   { name: 'MCMPR', group: 'PR & comms', domain: 'mcmpr.com.au' },
-  { name: 'Mango Communications', group: 'PR & comms', domain: null },
   { name: 'AMPR', group: 'PR & comms', domain: 'ampr.com.au' },
   { name: 'Zinc Group', group: 'PR & comms', domain: null },
 ]
