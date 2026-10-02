@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { vendorFor, workdayConsentTarget, greenhouseConsentTarget, oracleConsentTarget } from './vendors'
+import {
+  vendorFor,
+  workdayConsentTarget,
+  greenhouseConsentTarget,
+  oracleConsentTarget,
+  sitemapJsonLdConsentTarget,
+} from './vendors'
 import { workdayAdapter } from './adapters/workday'
 import { greenhouseAdapter } from './adapters/greenhouse'
+import { sitemapJsonLdAdapter } from './adapters/sitemap-jsonld'
 import type { SourceRow, RawPosting } from './adapters/types'
 import workdayDetail from './adapters/__fixtures__/workday-detail.json'
 
@@ -22,6 +29,10 @@ describe('vendorFor', () => {
 
   it('resolves greenhouse to its adapter', () => {
     expect(vendorFor(source({ vendor: 'greenhouse' })).adapter).toBe(greenhouseAdapter)
+  })
+
+  it('resolves sitemap_jsonld to its adapter', () => {
+    expect(vendorFor(source({ vendor: 'sitemap_jsonld' })).adapter).toBe(sitemapJsonLdAdapter)
   })
 
   it("normalises a Workday RawPosting using the posting's own company, not the response's", () => {
@@ -60,8 +71,13 @@ describe('consent targets', () => {
     expect(oracleConsentTarget(twe).toString()).toBe('https://ebpm.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/')
   })
 
+  it('sitemap + JSON-LD checks the postings path, not the sitemap', () => {
+    const myer = { ...source({ vendor: 'sitemap_jsonld' }), endpoint: 'https://careers.myergroup.com.au/sitemap.xml' }
+    expect(sitemapJsonLdConsentTarget(myer).toString()).toBe('https://careers.myergroup.com.au/jobs/')
+  })
+
   it('every registered vendor declares one', () => {
-    for (const vendor of ['workday', 'greenhouse', 'oracle']) {
+    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld']) {
       expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
     }
   })

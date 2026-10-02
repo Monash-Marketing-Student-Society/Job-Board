@@ -1,0 +1,169 @@
+/**
+ * The sitemap + JSON-LD adapter, for careers sites with no JSON API but
+ * whose posting pages carry schema.org `JobPosting` JSON-LD.
+ *
+ * Verified against the real site on 2 Oct 2026 (careers.myergroup.com.au --
+ * 361 postings in /sitemap.xml, every posting page with a JobPosting block
+ * carrying title, description, employmentType, validThrough and jobLocation).
+ * Fixtures in __fixtures__/jsonld-*.{xml,html} are trimmed from those calls.
+ *
+ * `sources.endpoint` is the sitemap URL. The sitemap lists every posting but
+ * only as a URL, so reading one is N+1 like Workday: one sitemap request,
+ * then one page request per posting. Myer's 361 are mostly store and
+ * warehouse roles, so two config keys keep the page requests down:
+ *   - `config.postings_path` (default `/jobs/`): only sitemap URLs on the
+ *     sitemap's host under this path are postings. It is also the path the
+ *     consent check reads robots.txt for (lib/sync/vendors.ts).
+ *   - `config.url_filter`: a case-insensitive pattern the posting URL must
+ *     match. The slug carries the title (`/jobs/expression-of-interest-entry-
+ *     level-buying-opportunities-various-locations`), so this is a title
+ *     filter applied before any page is fetched.
+ * More than MAX_PAGES matching URLs throws instead of quietly fetching
+ * hundreds of pages -- the fix is a narrower `url_filter`.
+ *
+ * Page failures. David Jones and ABC run the same careers platform as Myer
+ * but sit behind an AWS WAF bot challenge, which answers every posting page
+ * with an empty 202. Only a 200 is read as a page; when every page fails the
+ * source throws, so a blocked site records a failed run rather than a quiet
+ * zero. One page failing among several is skipped -- a single slow page
+ * shouldn't fail the whole employer.
+ */
+
+import { fetchPublicUrl } from '../../ssrf'
+import { findJobPosting } from '../../prefill/extract'
+import type { Adapter, RawPosting, SourceRow } from './types'
+
+const REQUEST_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; MMSSJobBoard/1.0)' }
+const REQUEST_TIMEOUT_MS = 15_000
+export const MAX_PAGES = 50
+const DEFAULT_POSTINGS_PATH = '/jobs/'
+
+/** `config.postings_path`, defaulting to `/jobs/`. Throws on a malformed value. */
+export function postingsPath(source: SourceRow): string {
+  const raw = source.config.postings_path
+  if (raw === undefined || raw === null) return DEFAULT_POSTINGS_PATH
+  if (typeof raw !== 'string' || !raw.startsWith('/')) {
+    throw new Error(`Source "${source.slug}" has a malformed config.postings_path: ${JSON.stringify(raw)}`)
+  }
+  return raw
+}
+
+/** `config.url_filter` as a case-insensitive pattern, or null when unset. Throws on an invalid pattern. */
+export function urlFilter(source: SourceRow): RegExp | null {
+  const raw = source.config.url_filter
+  if (raw === undefined || raw === null) return null
+  if (typeof raw !== 'string' || !raw) {
+    throw new Error(`Source "${source.slug}" has a malformed config.url_filter: ${JSON.stringify(raw)}`)
+  }
+  try {
+    return new RegExp(raw, 'i')
+  } catch {
+    throw new Error(`Source "${source.slug}" has an invalid config.url_filter pattern: ${raw}`)
+  }
+}
+
+/** Every `<loc>` in a urlset sitemap, entity-decoded. */
+export function sitemapUrls(xml: string): string[] {
+  if (/<sitemapindex[\s>]/i.test(xml)) {
+    throw new Error('sitemap is a sitemap index; point the source at the child sitemap that lists postings')
+  }
+  const urls: string[] = []
+  for (const m of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
+    urls.push(m[1].replace(/&amp;/g, '&'))
+  }
+  return urls
+}
+
+/** The first JobPosting node in a page's JSON-LD blocks, or null. */
+export function jobPostingFromHtml(html: string): Record<string, unknown> | null {
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  for (const m of html.matchAll(scriptRe)) {
+    try {
+      const found = findJobPosting(JSON.parse(m[1]))
+      if (found) return found
+    } catch {
+      // One malformed block doesn't hide a valid one later on the page.
+    }
+  }
+  return null
+}
+
+async function fetchText(url: URL): Promise<{ status: number; text: string | null }> {
+  const res = await fetchPublicUrl(url, { timeoutMs: REQUEST_TIMEOUT_MS, headers: REQUEST_HEADERS })
+  // 200 only: a WAF challenge is a 202 with an empty body, which res.ok accepts.
+  if (!res || res.status !== 200) return { status: res?.status ?? 0, text: null }
+  return { status: 200, text: await res.text() }
+}
+
+export const sitemapJsonLdAdapter: Adapter = {
+  kind: 'listing',
+
+  async fetch(source: SourceRow): Promise<RawPosting[]> {
+    const sitemapUrl = new URL(source.endpoint)
+    const path = postingsPath(source)
+    const filter = urlFilter(source)
+
+    const sitemap = await fetchText(sitemapUrl)
+    if (sitemap.text === null) {
+      throw new Error(`Sitemap request failed for ${source.slug} (HTTP ${sitemap.status || 'no response'})`)
+    }
+
+    const candidates: URL[] = []
+    for (const loc of sitemapUrls(sitemap.text)) {
+      let url: URL
+      try {
+        url = new URL(loc)
+      } catch {
+        continue
+      }
+      // Same host only: a sitemap can't point the worker at another site.
+      if (url.host !== sitemapUrl.host || !url.pathname.startsWith(path)) continue
+      if (filter && !filter.test(url.pathname)) continue
+      candidates.push(url)
+    }
+    if (candidates.length > MAX_PAGES) {
+      throw new Error(
+        `${candidates.length} sitemap URLs match for ${source.slug}, over the ${MAX_PAGES}-page limit; narrow config.url_filter`
+      )
+    }
+
+    const postings: RawPosting[] = []
+    const failures: number[] = []
+    for (const url of candidates) {
+      const page = await fetchText(url)
+      if (page.text === null) {
+        failures.push(page.status)
+        continue
+      }
+      const job = jobPostingFromHtml(page.text)
+      // A listed page with no JobPosting (a closed posting, a landing page) is skipped.
+      if (!job || typeof job.title !== 'string' || !job.title.trim()) continue
+
+      const read = new Set(['title', 'company', 'applyUrl'])
+      if (job.jobLocation) read.add('location')
+      if (job.description) read.add('description')
+      if (job.validThrough) read.add('closing_at')
+      if (job.employmentType) read.add('job_type')
+
+      const identifier = job.identifier as { value?: unknown } | undefined
+      postings.push({
+        sourceJobId: typeof identifier?.value === 'string' ? identifier.value : url.pathname,
+        // The posting's own page, where its Apply button is.
+        applyUrl: url.toString(),
+        title: job.title.trim(),
+        // hiringOrganization.name is the careers site's name ("MyerGroup
+        // Careers"); sources.name keeps one spelling per employer.
+        company: source.name,
+        raw: job,
+        read,
+      })
+    }
+
+    if (candidates.length > 0 && failures.length === candidates.length) {
+      throw new Error(
+        `Every posting page failed for ${source.slug} (HTTP ${[...new Set(failures)].join(', ')}); the site may be blocking automated requests`
+      )
+    }
+    return postings
+  },
+}

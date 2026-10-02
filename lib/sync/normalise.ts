@@ -12,22 +12,18 @@
  * lib/sync/adapters/__fixtures__/workday-detail.json and
  * greenhouse-detail.json), not invented.
  *
- * Deliberately NOT built here: a JSON-LD normaliser for the 'listing'
- * adapter fallback. The TDD's own research found no employer among those
- * checked whose posting pages carry JobPosting JSON-LD at all -- building
- * that path now would mean testing against a shape I invented rather than
- * one anyone actually publishes. app/api/prefill-job/route.ts already has a
- * working JSON-LD extractor (mapJobPostingToData); moving it to
- * lib/prefill/extract.ts for the worker to share, per the TDD's own plan, is
- * a deliberate follow-up -- that route has no test coverage today (vitest
- * only collects lib/**\/*.test.ts), so refactoring it belongs in its own
- * reviewed change, not bundled into new, unrelated normaliser code.
+ * The JSON-LD normaliser (bottom of this file) came later than the TDD
+ * expected: its research found no employer whose posting pages carried
+ * JobPosting JSON-LD, but Myer's careers site (2 Oct 2026) does, so it reads
+ * a real shape. It reuses lib/prefill/extract.ts's mapping rather than a
+ * second copy of it.
  */
 
 import { normalizeJobType, truncateText, decodeHtmlEntities } from '../utils'
 import { sanitizeDescription } from '../sanitize'
 import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '../tags'
 import { matchesAny } from './text-match'
+import { mapJobPostingToData } from '../prefill/extract'
 import type { JobType, WorkMode } from '../types'
 
 export interface NormalisedJob {
@@ -240,6 +236,62 @@ export function normaliseGreenhousePosting(raw: GreenhouseRawPosting, company: s
   }
 
   return { job, confidence }
+}
+
+// ── JSON-LD (schema.org JobPosting) ──────────────────────────────────────
+
+/**
+ * Verified fields (2 Oct 2026, careers.myergroup.com.au): title, description
+ * (real HTML), employmentType ("FULL_TIME"), validThrough and datePosted
+ * (ISO timestamps), jobLocation (a Place array; on Myer's expressions of
+ * interest the locality is the literal "Various Locations", which
+ * lib/sync/location.ts resolves to unknown, so they go to review).
+ *
+ * Field mapping is lib/prefill/extract.ts's mapJobPostingToData -- the same
+ * one the prefill route uses -- except that its description is only
+ * paragraph-wrapped, not sanitised, so it is sanitised here, and closing_at
+ * keeps validThrough's full timestamp instead of the UTC date the prefill
+ * form wants (Myer's 16:45Z is the next day in Melbourne).
+ */
+export function normaliseJsonLdPosting(raw: Record<string, unknown>, company: string, url: string): NormaliseResult {
+  const mapped = mapJobPostingToData(raw)
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  const title = typeof raw.title === 'string' ? raw.title.trim() : ''
+  const location = mapped.location ?? null
+  if (location) confidence.location = 'read'
+
+  const description = cleanDescription(mapped.description)
+  if (description) confidence.description = 'read'
+
+  const jobType = normalizeJobType(mapped.job_type)
+  if (jobType) confidence.job_type = 'read'
+
+  const closingAt = isoTimestamp(raw.validThrough) ?? isoTimestamp(raw.applicationDeadline)
+  if (closingAt) confidence.closing_at = 'read'
+
+  const tags = inferJobFunctions(title, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const job: NormalisedJob = {
+    title,
+    company,
+    location,
+    work_mode: null, // jobLocationType ("TELECOMMUTE") would carry it; Myer doesn't send it
+    job_type: jobType,
+    url,
+    description,
+    tags,
+    posted_at: isoTimestamp(raw.datePosted),
+    closing_at: closingAt,
+  }
+
+  return { job, confidence }
+}
+
+function isoTimestamp(value: unknown): string | null {
+  if (typeof value !== 'string' || !value) return null
+  return Number.isNaN(new Date(value).getTime()) ? null : value
 }
 
 // ── Oracle Recruiting Cloud ──────────────────────────────────────────────
