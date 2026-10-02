@@ -4,6 +4,7 @@ import {
   workdayConsentTarget,
   greenhouseConsentTarget,
   oracleConsentTarget,
+  pageUpConsentTarget,
   sitemapJsonLdConsentTarget,
   jobAdderConsentTarget,
 } from './vendors'
@@ -92,8 +93,13 @@ describe('consent targets', () => {
     expect(jobAdderConsentTarget(yochi).toString()).toBe('https://apps.jobadder.com/widgets/V1/Jobs/RenderJobList')
   })
 
+  it('PageUp checks the employer listing path, not the feed', () => {
+    const asahi = { ...source({ vendor: 'pageup' }), endpoint: 'https://careers.pageuppeople.com/527/cw/en/rss' }
+    expect(pageUpConsentTarget(asahi).toString()).toBe('https://careers.pageuppeople.com/527/cw/')
+  })
+
   it('every registered vendor declares one', () => {
-    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld', 'jobadder']) {
+    for (const vendor of ['workday', 'greenhouse', 'oracle', 'sitemap_jsonld', 'jobadder', 'pageup']) {
       expect(typeof vendorFor(source({ vendor })).consentTarget).toBe('function')
     }
   })
