@@ -1,7 +1,9 @@
 /**
- * The 57 allowlisted employers from the PRD's "Recruitment URLs" tab (doc
+ * The allowlisted employers from the PRD's "Recruitment URLs" tab (doc
  * Wbb8bmW8msELQ11JaGkd6g, rev 4, read 2 Oct 2026), each with a starting
  * domain for its logo.
+ *
+ * MADE THIS and Melbourne Social Co are left out (removed by the user, 2 Oct 2026).
  *
  * TEMPORARY: lives only as long as /admin/logos. `domain` is a suggestion the
  * admin confirms by eye, taken from the employer's own site; each was checked
@@ -66,12 +68,10 @@ export const EMPLOYERS: Employer[] = [
   { name: 'OMD', group: 'Creative & media agencies', domain: 'omd.com' },
   { name: 'McCann Australia', group: 'Creative & media agencies', domain: 'mccann.com' },
   { name: 'Kinesso', group: 'Creative & media agencies', domain: 'kinesso.com' },
-  { name: 'MADE THIS', group: 'Creative & media agencies', domain: null },
   { name: 'Onetwo Agency', group: 'Creative & media agencies', domain: 'onetwo.agency' },
   { name: 'Taboo Group', group: 'Creative & media agencies', domain: 'taboo.com.au' },
   { name: 'iD Collective', group: 'Creative & media agencies', domain: 'idcollective.com.au' },
   { name: 'MAXMEDIALAB', group: 'Creative & media agencies', domain: 'maxmedialab.com.au' },
-  { name: 'Melbourne Social Co', group: 'Creative & media agencies', domain: 'melbournesocialco.com.au' },
   // PR & comms
   { name: 'Porter Novelli', group: 'PR & comms', domain: 'porternovelli.com.au' },
   { name: 'Thrive PR', group: 'PR & comms', domain: 'thrivepr.com.au' },
@@ -80,3 +80,6 @@ export const EMPLOYERS: Employer[] = [
   { name: 'AMPR', group: 'PR & comms', domain: 'ampr.com.au' },
   { name: 'Zinc Group', group: 'PR & comms', domain: null },
 ]
+
+/** Companies on the board that don't need a logo pass (user, 2 Oct 2026). Matched by comparableName. */
+export const HIDDEN_COMPANIES = ['Lenzo']

@@ -9,7 +9,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { comparableName, parseBrandfetchInput } from './logos'
+import { comparableName, parseLogoInput } from './logos'
 
 export interface ApprovedLogo {
   company_key: string
@@ -25,9 +25,10 @@ export type ApproveResult =
   | { ok: false; kind: 'error'; message: string }
 
 /**
- * `link` is whatever the page sends: a suggested domain, or a pasted
- * Brandfetch link. It goes through parseBrandfetchInput here, on the server,
- * so a hand-made request can't store a non-Brandfetch URL either.
+ * `link` is whatever the page sends: a suggested domain, a pasted Brandfetch
+ * or image link, or an uploaded file's public URL. It goes through
+ * parseLogoInput here, on the server, so a hand-made request can't store a
+ * page URL or a link about to expire either.
  */
 export async function approveCompanyLogo(
   db: SupabaseClient,
@@ -38,10 +39,9 @@ export async function approveCompanyLogo(
   const key = comparableName(company)
   if (!key) return { ok: false, kind: 'invalid', message: 'Company name is empty' }
 
-  const parsed = parseBrandfetchInput(input.link)
-  if (!parsed) {
-    return { ok: false, kind: 'invalid', message: 'Paste a Brandfetch link (brandfetch.com/… or cdn.brandfetch.io/…) or a domain' }
-  }
+  const result = parseLogoInput(input.link)
+  if (!result.ok) return { ok: false, kind: 'invalid', message: result.reason }
+  const parsed = result.logo
 
   const { data: logo, error } = await db
     .from('company_logos')
