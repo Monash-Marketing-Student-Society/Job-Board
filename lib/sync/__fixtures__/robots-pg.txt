@@ -1,0 +1,7 @@
+Sitemap: https://pg.wd5.myworkdayjobs.com/1000/siteMap.xml
+Sitemap: https://pg.wd5.myworkdayjobs.com/1001/siteMap.xml
+
+User-agent: *
+Allow: /1000/
+Allow: /1001/
+Disallow: /refreshFacet/
