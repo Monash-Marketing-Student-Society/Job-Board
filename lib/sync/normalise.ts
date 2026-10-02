@@ -24,6 +24,7 @@ import { sanitizeDescription } from '../sanitize'
 import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '../tags'
 import { matchesAny } from './text-match'
 import { mapJobPostingToData } from '../prefill/extract'
+import type { PageUpItem } from './adapters/pageup'
 import type { JobAdderRawPosting } from './adapters/jobadder'
 import type { SmartRecruitersDetail, SmartRecruitersListRow } from './adapters/smartrecruiters'
 import type { JobType, WorkMode } from '../types'
@@ -409,6 +410,73 @@ export function normaliseJobAdderPosting(raw: JobAdderRawPosting, company: strin
     closing_at: null,
   }
 
+  return { job, confidence }
+}
+
+// ── PageUp ───────────────────────────────────────────────────────────────
+
+/**
+ * PageUp's work type is free text ("Permanent - Full Time", "Casual",
+ * "Fixed Term - Part Time"), which normalizeJobType's exact matches can't
+ * read. Most specific first: an internship or graduate role beats its hours.
+ */
+export function pageUpJobType(workType: string | null | undefined): NormalisedJob['job_type'] {
+  if (!workType) return null
+  const t = workType.toLowerCase()
+  // Whole words only: Asahi's "Fixed Term - Full Time,Internal Secondment"
+  // once read as an internship, and a senior manager role passed as clean.
+  if (/\bintern(ship)?s?\b/.test(t)) return 'internship'
+  if (/\bgraduate|\bgrad\b/.test(t)) return 'graduate'
+  if (/\bcasual/.test(t)) return 'casual'
+  if (/fixed[ -]term|\bcontract|temporary/.test(t)) return 'contract'
+  if (/part[ -]?time/.test(t)) return 'part-time'
+  if (/full[ -]?time/.test(t)) return 'full-time'
+  return null
+}
+
+/** An RFC 1123 feed date ("Thu, 15 Oct 2026 12:55:00 GMT", or "... Z") as ISO, or null. */
+function feedDate(value: string | null | undefined): string | null {
+  if (!value) return null
+  const d = new Date(value.replace(/ Z$/, ' GMT'))
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/**
+ * Verified fields (2 Oct 2026, Asahi's feed): `job:description` is real HTML
+ * once the feed's single layer of escaping is decoded (the adapter does
+ * that); `job:closingDate` is set on every Asahi job; `job:location` is a
+ * city or region ("Melbourne", "NSW - other", "NZ").
+ */
+export function normalisePageUpPosting(raw: PageUpItem, company: string): NormaliseResult {
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  const location = raw.location ?? null
+  if (location) confidence.location = 'read'
+
+  const description = cleanDescription(raw.description ?? raw.summary)
+  if (raw.description) confidence.description = 'read'
+
+  const closingAt = feedDate(raw.closingDate)
+  if (closingAt) confidence.closing_at = 'read'
+
+  const jobType = pageUpJobType(raw.workType)
+  if (jobType) confidence.job_type = 'read'
+
+  const tags = inferJobFunctions(raw.title, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const job: NormalisedJob = {
+    title: raw.title,
+    company,
+    location,
+    work_mode: null,
+    job_type: jobType,
+    url: raw.link,
+    description,
+    tags,
+    posted_at: feedDate(raw.pubDate),
+    closing_at: closingAt,
+  }
   return { job, confidence }
 }
 

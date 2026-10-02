@@ -10,6 +10,7 @@ import {
   postingsPath,
   MAX_PAGES,
   MAX_CHILD_SITEMAPS,
+  jobPostingFromMicrodata,
 } from './sitemap-jsonld'
 import { normaliseJsonLdPosting } from '../normalise'
 import type { SourceRow } from './types'
@@ -22,6 +23,8 @@ const PUBLIC_ADDR = [{ address: '93.184.216.34', family: 4 }]
 const FIXTURES = join(__dirname, '__fixtures__')
 const SITEMAP = readFileSync(join(FIXTURES, 'jsonld-sitemap.xml'), 'utf8')
 const POSTING = readFileSync(join(FIXTURES, 'jsonld-posting.html'), 'utf8')
+/** A real Deloitte posting page (jobs.deloitte.com.au, 2 Oct 2026), scripts and styles stripped: microdata, no JSON-LD. */
+const MICRODATA = readFileSync(join(FIXTURES, 'microdata-posting.html'), 'utf8')
 
 const BUYING_URL =
   'https://careers.myergroup.com.au/jobs/expression-of-interest-entry-level-buying-opportunities-various-locations'
@@ -90,6 +93,48 @@ describe('jobPostingFromHtml', () => {
   })
 })
 
+describe('jobPostingFromMicrodata (real Deloitte page)', () => {
+  const job = jobPostingFromMicrodata(MICRODATA)!
+
+  it('has no JSON-LD, so the JSON-LD reader finds nothing', () => {
+    expect(jobPostingFromHtml(MICRODATA)).toBeNull()
+  })
+
+  it('reads title, organisation and an ISO posted date', () => {
+    expect(job.title).toBe('Private Tax Advisory | Multiple Opportunities Available')
+    expect(job.hiringOrganization).toEqual({ name: 'Deloitte Services Pty Ltd' })
+    // "Thu Sep 24 16:00:00 UTC 2026" on the page; raw text must not reach a timestamp column.
+    expect(job.datePosted).toBe('2026-09-24T16:00:00.000Z')
+    expect(job.validThrough).toBeNull()
+  })
+
+  it("keeps the description's nested HTML whole", () => {
+    expect(String(job.description)).toContain('<p>')
+    expect(String(job.description).length).toBeGreaterThan(2000)
+  })
+
+  it('lists every address, Melbourne or Sydney first', () => {
+    const localities = (job.jobLocation as Array<{ address: { addressLocality: string } }>).map((p) => p.address.addressLocality)
+    expect(localities).toEqual(['Melbourne', 'Adelaide', 'Brisbane', 'Hobart', 'Sydney'])
+  })
+
+  it('moves a Sydney address ahead of an earlier non-target city', () => {
+    const html =
+      '<div itemscope itemtype="http://schema.org/JobPosting"><span itemprop="title">Graduate</span>' +
+      '<span itemprop="jobLocation" itemscope itemtype="http://schema.org/Place">' +
+      '<span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"><meta itemprop="addressLocality" content="Adelaide"></span>' +
+      '<span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"><meta itemprop="addressLocality" content="Sydney"></span>' +
+      '</span></div>'
+    const parsed = jobPostingFromMicrodata(html)!
+    expect((parsed.jobLocation as Array<{ address: { addressLocality: string } }>)[0].address.addressLocality).toBe('Sydney')
+  })
+
+  it('is null for a page with no JobPosting, or one without a title', () => {
+    expect(jobPostingFromMicrodata('<html><body>Search jobs</body></html>')).toBeNull()
+    expect(jobPostingFromMicrodata('<div itemscope itemtype="https://schema.org/JobPosting"><span itemprop="title"> </span></div>')).toBeNull()
+  })
+})
+
 describe('config helpers', () => {
   it('defaults postings_path to /jobs/ and rejects a relative one', () => {
     expect(postingsPath(withConfig({}))).toBe('/jobs/')
@@ -110,6 +155,13 @@ describe('sitemapJsonLdAdapter', () => {
   })
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('reads a microdata posting page when there is no JSON-LD (Deloitte)', async () => {
+    serve(SITEMAP, () => textResponse(MICRODATA))
+    const [first] = await sitemapJsonLdAdapter.fetch(SOURCE)
+    expect(first.title).toBe('Private Tax Advisory | Multiple Opportunities Available')
+    expect([...first.read].sort()).toEqual(['applyUrl', 'company', 'description', 'location', 'title'])
   })
 
   it('fetches only the pages whose URL matches url_filter', async () => {
