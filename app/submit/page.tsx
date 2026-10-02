@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { JobSubmissionForm } from '@/components/jobs/job-submission-form'
 
 export const metadata = {
@@ -14,6 +15,13 @@ export default function SubmitJobPage() {
           <p className="text-slate-500 mt-2 text-sm leading-relaxed">
             Submit a job listing for Monash MMSS students. Our team will review
             your submission within 2–3 business days before it goes live.
+          </p>
+          <p className="text-slate-500 mt-2 text-sm">
+            Hiring regularly?{' '}
+            <Link href="/submit/feed" className="underline font-medium text-slate-700">
+              List all your roles automatically
+            </Link>
+            .
           </p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
