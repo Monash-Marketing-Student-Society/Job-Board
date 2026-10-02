@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { CheckIcon, LinkSimpleIcon } from '@phosphor-icons/react'
+import { CheckIcon, LinkSimpleIcon, UploadSimpleIcon } from '@phosphor-icons/react'
 import { Button, Input, useConfirmDialog } from '@/components/ui'
 import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import { tableCardClassName } from '@/components/admin/table/table-styles'
-import { autoMatch, brandfetchLogoUrl, brandSearchUrl, parseBrandSearch, parseBrandfetchInput, type BrandMatch } from '@/lib/logos'
+import { autoMatch, brandfetchLogoUrl, brandSearchUrl, parseBrandSearch, parseLogoInput, type BrandMatch } from '@/lib/logos'
+import { LOGO_MIME_TO_EXT, uploadLogoFile } from '@/lib/logo-upload'
 import type { LogoReviewRow } from '@/lib/logo-review'
 
 /**
@@ -31,6 +32,21 @@ interface Candidate {
 
 const SEARCH_CONCURRENCY = 3
 
+/** Mention a link's expiry only when it is this close; LinkedIn's "2038" links are effectively permanent. */
+const EXPIRY_NOTE_DAYS = 365
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return 'link'
+  }
+}
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Melbourne' })
+}
+
 function candidatesFor(row: LogoReviewRow, matches: BrandMatch[] | undefined): Candidate[] {
   const out: Candidate[] = []
   const seen = new Set<string>()
@@ -51,16 +67,21 @@ function candidatesFor(row: LogoReviewRow, matches: BrandMatch[] | undefined): C
       link: row.approved.domain ?? row.approved.logoUrl,
       logoUrl: row.approved.logoUrl,
       label: 'Approved',
-      detail: row.approved.domain ?? 'pasted link',
+      detail: row.approved.domain ?? hostOf(row.approved.logoUrl),
     })
   }
   if (row.suggestedDomain) add(byDomain(row.suggestedDomain, 'Suggested'))
   if (row.currentLogo) {
-    const parsed = parseBrandfetchInput(row.currentLogo)
-    // A non-Brandfetch logo (LinkedIn, an upload) can't be approved here, but is worth seeing.
+    // Offered only if it would pass approval: an expired LinkedIn link is left out.
+    const parsed = parseLogoInput(row.currentLogo)
     add(
-      parsed
-        ? { link: parsed.domain ?? parsed.logoUrl, logoUrl: parsed.logoUrl, label: 'On its jobs now', detail: parsed.domain ?? 'Brandfetch file' }
+      parsed.ok
+        ? {
+            link: parsed.logo.domain ?? parsed.logo.logoUrl,
+            logoUrl: parsed.logo.logoUrl,
+            label: 'On its jobs now',
+            detail: parsed.logo.domain ?? hostOf(parsed.logo.logoUrl),
+          }
         : null
     )
   }
@@ -268,8 +289,22 @@ interface LogoRowProps {
 
 function LogoRow({ row, showGroup, candidates, picked, searching, busy, onPick, onApprove, onUnapprove }: LogoRowProps) {
   const [paste, setPaste] = useState('')
-  const pasted = paste.trim() ? parseBrandfetchInput(paste) : null
-  const pasteInvalid = paste.trim() !== '' && !pasted
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const parsedPaste = paste.trim() ? parseLogoInput(paste) : null
+  const pasted = parsedPaste?.ok ? parsedPaste.logo : null
+  const pasteError = parsedPaste && !parsedPaste.ok ? parsedPaste.reason : null
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const result = await uploadLogoFile(file)
+    if (result.ok) await onApprove(result.url)
+    else toast.error(`${row.company}: ${result.error}`)
+    setUploading(false)
+  }
   const approvedIsPicked = !!row.approved && picked?.logoUrl === row.approved.logoUrl
 
   return (
@@ -321,7 +356,7 @@ function LogoRow({ row, showGroup, candidates, picked, searching, busy, onPick, 
             })}
             {searching && <span className="self-center text-xs text-slate-400">Searching Brandfetch…</span>}
             {!searching && candidates.length === 0 && (
-              <span className="self-center text-xs text-slate-500">No matches. Paste a Brandfetch link below.</span>
+              <span className="self-center text-xs text-slate-500">No matches. Paste a link or upload the logo below.</span>
             )}
           </div>
 
@@ -337,9 +372,9 @@ function LogoRow({ row, showGroup, candidates, picked, searching, busy, onPick, 
               <Input
                 value={paste}
                 onChange={(e) => setPaste(e.target.value)}
-                placeholder="Wrong logo? Paste a Brandfetch link or domain"
-                aria-label={`Brandfetch link for ${row.company}`}
-                aria-invalid={pasteInvalid}
+                placeholder="Wrong logo? Paste an image link, Brandfetch link or domain"
+                aria-label={`Logo link for ${row.company}`}
+                aria-invalid={!!pasteError}
                 className="h-9 pl-8 text-sm"
               />
             </div>
@@ -347,10 +382,30 @@ function LogoRow({ row, showGroup, candidates, picked, searching, busy, onPick, 
             <Button type="submit" variant="outline" size="sm" disabled={!pasted || busy}>
               Use this
             </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept={Object.keys(LOGO_MIME_TO_EXT).join(',')}
+              onChange={handleFile}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              loading={uploading}
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
+              <UploadSimpleIcon weight="bold" className="size-3.5" />
+              Upload
+            </Button>
           </form>
-          {pasteInvalid && (
-            <p className="mt-1 text-xs text-destructive">
-              Not a Brandfetch logo. Use a brandfetch.com/… or cdn.brandfetch.io/… link, or a domain like ogilvy.com.
+          {pasteError && <p className="mt-1 text-xs text-destructive">{pasteError}</p>}
+          {pasted?.expiresAt && pasted.expiresAt.getTime() - Date.now() < EXPIRY_NOTE_DAYS * 86_400_000 && (
+            <p className="mt-1 text-xs text-amber-700">
+              This link stops working on {formatDate(pasted.expiresAt)}.
             </p>
           )}
         </div>

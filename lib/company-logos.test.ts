@@ -46,9 +46,16 @@ describe('approveCompanyLogo', () => {
     expect(argOf(update, 'in')).toEqual(['id', ['j1', 'j2']])
   })
 
-  it('refuses a link that is not a Brandfetch logo, before writing anything', async () => {
+  it('stores a direct image link as-is', async () => {
+    const link = 'https://play-lh.googleusercontent.com/AZEIGHgTZc'
     const { db, log } = fakeDb(happy)
-    const result = await approveCompanyLogo(db, { company: 'Mars', link: 'https://media.licdn.com/logo.png' }, 'admin-1')
+    expect(await approveCompanyLogo(db, { company: 'ATO', link }, 'admin-1')).toMatchObject({ ok: true })
+    expect(argOf(log.find((c) => c.table === 'company_logos')!.ops, 'upsert')[0]).toMatchObject({ logo_url: link, domain: null })
+  })
+
+  it('refuses a page link, before writing anything', async () => {
+    const { db, log } = fakeDb(happy)
+    const result = await approveCompanyLogo(db, { company: 'Mars', link: 'https://www.facebook.com/mars' }, 'admin-1')
     expect(result).toMatchObject({ ok: false, kind: 'invalid' })
     expect(log).toHaveLength(0)
   })

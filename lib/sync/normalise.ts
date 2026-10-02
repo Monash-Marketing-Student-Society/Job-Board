@@ -241,3 +241,63 @@ export function normaliseGreenhousePosting(raw: GreenhouseRawPosting, company: s
 
   return { job, confidence }
 }
+
+// ── Oracle Recruiting Cloud ──────────────────────────────────────────────
+
+export interface OracleRawPosting {
+  Id: string
+  Title: string
+  PrimaryLocation: string | null
+  PostedDate: string | null
+  JobSchedule?: string | null
+  detail: {
+    ExternalDescriptionStr?: string | null
+    ExternalResponsibilitiesStr?: string | null
+    ExternalQualificationsStr?: string | null
+    ExternalPostedEndDate?: string | null
+  }
+}
+
+/**
+ * Verified fields (2 Oct 2026, Penfolds/TWE and Ipsos): the description is
+ * real HTML split across three detail fields (description, responsibilities,
+ * qualifications), joined in that order. `ExternalPostedEndDate` is the
+ * closing date when the employer sets one -- null on every posting checked,
+ * so most Oracle jobs are held for missing_closing_date. `JobSchedule` was
+ * null too; read when present. `PostedDate` is a plain date.
+ */
+export function normaliseOraclePosting(raw: OracleRawPosting, company: string, url: string): NormaliseResult {
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  const location = raw.PrimaryLocation ?? null
+  if (location) confidence.location = 'read'
+
+  const html = [raw.detail.ExternalDescriptionStr, raw.detail.ExternalResponsibilitiesStr, raw.detail.ExternalQualificationsStr]
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join('\n')
+  const description = cleanDescription(html)
+  if (description) confidence.description = 'read'
+
+  const closingAt = raw.detail.ExternalPostedEndDate ?? null
+  if (closingAt) confidence.closing_at = 'read'
+
+  const jobType = raw.JobSchedule ? normalizeJobType(raw.JobSchedule) : null
+  if (jobType) confidence.job_type = 'read'
+
+  const tags = inferJobFunctions(raw.Title, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const job: NormalisedJob = {
+    title: raw.Title,
+    company,
+    location,
+    work_mode: null,
+    job_type: jobType,
+    url,
+    description,
+    tags,
+    posted_at: raw.PostedDate ?? null,
+    closing_at: closingAt,
+  }
+  return { job, confidence }
+}
