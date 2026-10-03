@@ -64,12 +64,13 @@ function fakeApi(polls: Array<Response | Error>) {
 }
 
 describe('linkedin config', () => {
-  it('searches 6 keywords x 2 cities x 2 levels = 24 inputs, all in Australia', () => {
+  it('searches 12 junior-phrased keywords x 2 cities = 24 inputs, all in Australia', () => {
     const inputs = searchInputs()
     expect(inputs).toHaveLength(24)
-    expect(inputs.some((i) => 'job_type' in i)).toBe(false)
+    // Both measured as useless live (3 Oct 2026): Bright Data ignores the one and errors on the other.
+    expect(inputs.some((i) => 'job_type' in i || 'experience_level' in i)).toBe(false)
     expect(new Set(inputs.map((i) => i.location))).toEqual(new Set(['Melbourne', 'Sydney']))
-    expect(inputs.every((i) => i.country === 'AU' && i.time_range === 'Past week' && i.selective_search)).toBe(true)
+    expect(inputs.every((i) => i.country === 'AU' && i.time_range === 'Past week' && !i.selective_search)).toBe(true)
   })
 
   it("stays under the cap at two runs a week, even if every input returns its full limit", () => {
