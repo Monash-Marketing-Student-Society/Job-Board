@@ -1,4 +1,4 @@
-import { schedules, task, logger } from '@trigger.dev/sdk'
+import { schedules, task, logger, wait } from '@trigger.dev/sdk'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runAllSources, type WorkerSummary } from '@/lib/sync/worker'
 import { sendRunDigest } from '@/lib/sync/digest'
@@ -19,16 +19,26 @@ import { sendEmail } from '@/lib/email'
  * admin sets `config.auto_publish = true` on its row, which the phase-2 soak
  * decides. Held postings land in staged_jobs for /admin/submissions.
  *
+ * - `job-board-sync-linkedin` runs the LinkedIn source (Bright Data) at
+ *   02:30 Melbourne on Mondays and Thursdays. It isn't in the nightly pass
+ *   (its row's frequency is 'weekly') because every run spends paid
+ *   records; see lib/sync/adapters/linkedin-config.ts for the budget. It
+ *   waits for Bright Data's snapshot with `wait.for`, which checkpoints the
+ *   run instead of billing the minutes spent waiting.
+ *
  * After a real run (never a dry one) a digest goes to partnerships@ if
  * anything was held or any source broke -- see lib/sync/digest.ts. It needs
  * SYNC_DIGEST=1 and RESEND_API_KEY in the Trigger.dev environment; without
  * them the run still completes and the output says the digest was skipped.
  */
 
+/** Waits that checkpoint the run rather than holding a machine (and the bill) for the duration. */
+const checkpointSleep = (ms: number) => wait.for({ seconds: Math.ceil(ms / 1000) })
+
 async function runAndDigest(opts: { dryRun: boolean; slug?: string }) {
   const db = createAdminClient()
   const startedAt = new Date()
-  const summaries = await runAllSources(db, opts)
+  const summaries = await runAllSources(db, { ...opts, sleep: checkpointSleep })
   log(summaries, opts.dryRun)
 
   if (opts.dryRun) return { summaries, digest: 'skipped_dry_run' as const }
@@ -56,6 +66,13 @@ export const syncTask = schedules.task({
   cron: { pattern: '0 2 * * *', timezone: 'Australia/Melbourne' },
   maxDuration: 3600,
   run: async () => runAndDigest({ dryRun: false }),
+})
+
+export const linkedInSyncTask = schedules.task({
+  id: 'job-board-sync-linkedin',
+  cron: { pattern: '30 2 * * 1,4', timezone: 'Australia/Melbourne' },
+  maxDuration: 3600,
+  run: async () => runAndDigest({ dryRun: false, slug: 'linkedin' }),
 })
 
 export const syncManualTask = task({

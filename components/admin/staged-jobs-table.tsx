@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon } from '@phosphor-icons/react'
-import { Badge, Button, useConfirmDialog } from '@/components/ui'
+import { Badge, Button, NativeSelect, NativeSelectOption, useConfirmDialog } from '@/components/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,14 +140,31 @@ function PostingLink({ url, title }: { url: string; title: string }) {
   )
 }
 
+/** Each source with rows waiting, busiest first -- the filter's options. */
+function sourceOptions(rows: StagedJobRow[]): Array<{ slug: string; name: string; count: number }> {
+  const bySlug = new Map<string, { slug: string; name: string; count: number }>()
+  for (const row of rows) {
+    if (!row.source) continue
+    const entry = bySlug.get(row.source.slug) ?? { slug: row.source.slug, name: row.source.name, count: 0 }
+    entry.count++
+    bySlug.set(row.source.slug, entry)
+  }
+  return [...bySlug.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+}
+
 export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [hidden, setHidden] = useState<Set<string>>(new Set())
+  const [sourceFilter, setSourceFilter] = useState('all')
   const { confirm, dialog } = useConfirmDialog()
 
-  const visible = rows.filter((r) => !hidden.has(r.id))
+  const remaining = rows.filter((r) => !hidden.has(r.id))
+  const sourceCounts = sourceOptions(remaining)
+  // Falls back to all once the filtered source's last row has been actioned.
+  const activeFilter = sourceCounts.some((s) => s.slug === sourceFilter) ? sourceFilter : 'all'
+  const visible = activeFilter === 'all' ? remaining : remaining.filter((r) => r.source?.slug === activeFilter)
   const allSelected = visible.length > 0 && visible.every((r) => selected.has(r.id))
   const someSelected = !allSelected && visible.some((r) => selected.has(r.id))
   const reviewOnly = rows.some((r) => r.risk_reasons.includes('review_only_mode'))
@@ -234,29 +251,47 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
         <div>
           <h2 className="text-base font-semibold text-slate-800 font-heading">Synced jobs to review</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {visible.length === 0
-              ? 'Nothing waiting. Jobs synced from employer career sites appear here when they need a human look.'
+            {remaining.length === 0
+              ? 'Nothing waiting. Jobs synced from employer career sites and LinkedIn appear here when they need a human look.'
               : reviewOnly
-                ? 'From employer career sites. Sources are review-only for now, so every synced job waits here before it goes live.'
-                : 'From employer career sites, held because something about them needs a human look.'}
+                ? 'From employer career sites and LinkedIn. Sources are review-only for now, so every synced job waits here before it goes live.'
+                : 'From employer career sites and LinkedIn, held because something about them needs a human look.'}
           </p>
         </div>
 
-        {selectedIds.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Button className={cn(softButtonClassName)} onClick={() => approve(selectedIds)}>
-              <CheckIcon weight="bold" className="size-4" />
-              Approve {selectedIds.length}
-            </Button>
-            <RejectMenu label={`Reject ${selectedIds.length} as…`} onReject={(reason) => reject(selectedIds, reason)}>
-              <Button className={cn(softButtonClassName)}>
-                <XIcon weight="bold" className="size-4" />
-                Reject {selectedIds.length}
-                <CaretDownIcon className="size-3.5" />
+        <div className="flex flex-wrap items-center gap-2">
+          {sourceCounts.length > 1 && (
+            <NativeSelect
+              aria-label="Filter synced jobs by source"
+              value={activeFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="h-8 rounded-lg pl-2.5 pr-7 text-xs"
+            >
+              <NativeSelectOption value="all">All sources ({remaining.length})</NativeSelectOption>
+              {sourceCounts.map((s) => (
+                <NativeSelectOption key={s.slug} value={s.slug}>
+                  {s.name} ({s.count})
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          )}
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button className={cn(softButtonClassName)} onClick={() => approve(selectedIds)}>
+                <CheckIcon weight="bold" className="size-4" />
+                Approve {selectedIds.length}
               </Button>
-            </RejectMenu>
-          </div>
-        )}
+              <RejectMenu label={`Reject ${selectedIds.length} as…`} onReject={(reason) => reject(selectedIds, reason)}>
+                <Button className={cn(softButtonClassName)}>
+                  <XIcon weight="bold" className="size-4" />
+                  Reject {selectedIds.length}
+                  <CaretDownIcon className="size-3.5" />
+                </Button>
+              </RejectMenu>
+            </>
+          )}
+        </div>
       </div>
 
       {visible.length > 0 && (

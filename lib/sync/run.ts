@@ -26,7 +26,7 @@ import { resolveCity } from './location'
 import type { NormalisedJob, NormaliseConfidence, NormaliseResult } from './normalise'
 import { assessRisk, type RiskReason } from './risk'
 import { targets } from './target'
-import type { Adapter, RawPosting, SourceRow } from './adapters/types'
+import type { Adapter, AdapterContext, RawPosting, SourceRow } from './adapters/types'
 
 /** A job or staged job already known under one of the three identity checks. */
 export interface StoredMatch {
@@ -177,10 +177,11 @@ export async function processSource(
   source: SourceRow,
   adapter: Adapter,
   normalise: (posting: RawPosting) => NormaliseResult,
-  deps: SyncDeps
+  deps: SyncDeps,
+  ctx?: AdapterContext
 ): Promise<RunCounts> {
   const counts = emptyCounts()
-  const postings = await adapter.fetch(source)
+  const postings = await adapter.fetch(source, ctx)
 
   for (const posting of postings) {
     counts.seen++

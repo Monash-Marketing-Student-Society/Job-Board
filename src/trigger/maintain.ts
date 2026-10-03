@@ -1,7 +1,7 @@
 import { schedules, logger } from '@trigger.dev/sdk'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { expiredActiveFilter } from '@/lib/maintain/expiry'
-import { classifyLinkCheck, LINK_CHECK_STRIKE_LIMIT } from '@/lib/sync/link'
+import { classifyLinkCheck, isLinkedInJobPage, LINK_CHECK_STRIKE_LIMIT } from '@/lib/sync/link'
 import { fetchPublicUrl } from '@/lib/ssrf'
 
 /**
@@ -59,13 +59,14 @@ async function checkLinks(supabase: ReturnType<typeof createAdminClient>) {
 
   if (error) {
     logger.error('Link check: failed to list active jobs', { error: error.message })
-    return { checked: 0, ok: 0, unpublished: [] as Array<{ id: string; reason: string }>, struck: 0, errors: 1 }
+    return { checked: 0, ok: 0, unpublished: [] as Array<{ id: string; reason: string }>, struck: 0, skipped: 0, errors: 1 }
   }
 
   const now = new Date().toISOString()
   const unpublished: Array<{ id: string; reason: string }> = []
   let ok = 0
   let struck = 0
+  let skipped = 0
   let errors = 0
 
   // Sequential on purpose: this walks other people's servers, and the repo has
@@ -85,6 +86,13 @@ async function checkLinks(supabase: ReturnType<typeof createAdminClient>) {
     const res = await fetchPublicUrl(target, { timeoutMs: LINK_CHECK_TIMEOUT_MS, headers: LINK_CHECK_HEADERS })
     const result = res ? { status: res.status, finalUrl: res.url || target.toString() } : null
     const action = classifyLinkCheck(result)
+
+    // A 404 or a redirect to a generic page is still believed on LinkedIn; an
+    // ambiguous answer is its bot wall, not a strike (see isLinkedInJobPage).
+    if (action.outcome === 'strike' && isLinkedInJobPage(target.toString())) {
+      skipped++
+      continue
+    }
 
     let updates: Record<string, unknown>
 
@@ -117,10 +125,11 @@ async function checkLinks(supabase: ReturnType<typeof createAdminClient>) {
     ok,
     unpublished: unpublished.length,
     struck,
+    skipped,
     errors,
   })
 
-  return { checked: jobs?.length ?? 0, ok, unpublished, struck, errors }
+  return { checked: jobs?.length ?? 0, ok, unpublished, struck, skipped, errors }
 }
 
 export const maintainTask = schedules.task({
