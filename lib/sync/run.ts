@@ -107,6 +107,7 @@ export async function processPosting(
     jobType: job.job_type,
     location: job.location,
     tags: job.tags,
+    description: job.description,
   })
   if (verdict === 'reject') {
     counts.rejected++
