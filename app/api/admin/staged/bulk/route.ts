@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SUBMISSIONS_TAG } from '@/lib/admin-data'
-import { bulkAction, isRejectReason, type RejectReason } from '@/lib/sync/staged-actions'
+import { bulkAction, isRejectReason, parseRejectComment, REJECT_COMMENT_MAX, type RejectReason } from '@/lib/sync/staged-actions'
 import { requireAdminId, unauthorized } from '@/lib/sync/staged-http'
 
 /** Enough for a whole run's worth of held jobs; bounds how long one request can run. */
@@ -22,9 +22,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `ids must be 1-${MAX_IDS} strings` }, { status: 400 })
   }
 
-  let action: { type: 'approve' } | { type: 'reject'; reason: RejectReason }
+  const comment = parseRejectComment(body.comment)
+  if (comment === undefined) {
+    return NextResponse.json({ error: `The comment must be text of at most ${REJECT_COMMENT_MAX} characters` }, { status: 400 })
+  }
+
+  let action: { type: 'approve' } | { type: 'reject'; reason: RejectReason; comment: string | null }
   if (body.action === 'approve') action = { type: 'approve' }
-  else if (body.action === 'reject' && isRejectReason(body.reason)) action = { type: 'reject', reason: body.reason }
+  else if (body.action === 'reject' && isRejectReason(body.reason)) action = { type: 'reject', reason: body.reason, comment }
   else return NextResponse.json({ error: 'action must be approve, or reject with a valid reason' }, { status: 400 })
 
   const outcomes = await bulkAction(createAdminClient(), ids as string[], action, reviewerId)

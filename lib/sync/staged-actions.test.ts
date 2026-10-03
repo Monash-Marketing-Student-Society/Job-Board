@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { approveStaged, rejectStaged, bulkAction, isRejectReason } from './staged-actions'
+import { approveStaged, rejectStaged, bulkAction, isRejectReason, parseRejectComment, recheckPending } from './staged-actions'
 import { fakeDb, type Handler, type Op } from './test-helpers/fake-db'
 
 const NORMALISED = {
@@ -145,6 +145,64 @@ describe('rejectStaged', () => {
     const { db } = fakeDb(() => ({ data: null }))
     expect(await rejectStaged(db, 's1', 'duplicate', 'admin-1')).toEqual({ ok: false, kind: 'conflict' })
   })
+
+  it('stores the admin comment, and null when there is none', async () => {
+    const { db, log } = fakeDb(() => ({ data: { id: 's1' } }))
+    await rejectStaged(db, 's1', 'too_senior', 'admin-1', 'Wants 3 years in agency')
+    await rejectStaged(db, 's2', 'irrelevant', 'admin-1')
+    expect(argOf(log[0].ops, 'update')).toMatchObject({ reject_reason: 'too_senior', reject_comment: 'Wants 3 years in agency' })
+    expect(argOf(log[1].ops, 'update')).toMatchObject({ reject_comment: null })
+  })
+})
+
+describe('parseRejectComment', () => {
+  it('trims, treats empty as none, and refuses what the column would', () => {
+    expect(parseRejectComment('  too senior  ')).toBe('too senior')
+    expect(parseRejectComment('   ')).toBeNull()
+    expect(parseRejectComment(undefined)).toBeNull()
+    expect(parseRejectComment(null)).toBeNull()
+    expect(parseRejectComment(42)).toBeUndefined()
+    expect(parseRejectComment('x'.repeat(501))).toBeUndefined()
+    expect(parseRejectComment('x'.repeat(500))).toHaveLength(500)
+  })
+})
+
+describe('recheckPending', () => {
+  const pending = [
+    { id: 'keep', normalised: { ...NORMALISED, title: 'Marketing Graduate Program', description: '<p>No experience needed</p>' } },
+    { id: 'senior', normalised: { ...NORMALISED, title: 'Assistant Brand Manager', job_type: null } },
+    { id: 'exp', normalised: { ...NORMALISED, description: '<p>You bring 3+ years’ experience in brand.</p>' } },
+  ]
+  const queue: Handler = (table, ops) => {
+    if (table === 'staged_jobs' && has(ops, 'select') && !has(ops, 'update')) return { data: pending }
+    if (table === 'staged_jobs' && has(ops, 'update')) return { data: { id: 'x' } }
+  }
+
+  it('lists what the current filter would remove without touching anything', async () => {
+    const { db, log } = fakeDb(queue)
+    const removals = await recheckPending(db, 'admin-1', { apply: false })
+
+    expect(removals).toMatchObject([
+      { id: 'senior', reason: 'too_senior' },
+      { id: 'exp', reason: 'experience_required', comment: 'Filter recheck: experience_required -- "3+ years’ experience"' },
+    ])
+    expect(log.some((c) => has(c.ops, 'update'))).toBe(false)
+  })
+
+  it('rejects them with the rule as the comment once applied', async () => {
+    const { db, log } = fakeDb(queue)
+    await recheckPending(db, 'admin-1', { apply: true })
+
+    const updates = log.filter((c) => has(c.ops, 'update'))
+    expect(updates).toHaveLength(2)
+    expect(argOf(updates[0].ops, 'update')).toMatchObject({ status: 'rejected', reject_reason: 'too_senior', reviewed_by: 'admin-1' })
+    expect(updates[0].ops).toContainEqual({ name: 'eq', args: ['status', 'pending'] })
+  })
+
+  it('reports a read failure instead of an empty list', async () => {
+    const { db } = fakeDb(() => ({ error: { message: 'boom' } }))
+    expect(await recheckPending(db, 'admin-1', { apply: false })).toEqual({ error: 'boom' })
+  })
 })
 
 describe('bulkAction', () => {
@@ -162,7 +220,7 @@ describe('bulkAction', () => {
 
 describe('isRejectReason', () => {
   it('accepts exactly the reasons the staged_jobs CHECK constraint allows', () => {
-    for (const r of ['irrelevant', 'duplicate', 'expired', 'employer_blocked', 'bad_link', 'other']) {
+    for (const r of ['irrelevant', 'too_senior', 'experience_required', 'duplicate', 'expired', 'employer_blocked', 'bad_link', 'other']) {
       expect(isRejectReason(r)).toBe(true)
     }
     expect(isRejectReason('spam')).toBe(false)
