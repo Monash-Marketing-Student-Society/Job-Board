@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import dns from 'dns/promises'
-import { greenhouseAdapter } from './greenhouse'
+import { greenhouseAdapter, locationFilter } from './greenhouse'
 import greenhouseList from './__fixtures__/greenhouse-list.json'
 import { normaliseGreenhousePosting, type GreenhouseRawPosting } from '../normalise'
 import type { SourceRow } from './types'
@@ -81,6 +81,24 @@ describe('greenhouseAdapter', () => {
 
     const postings = await greenhouseAdapter.fetch(SOURCE)
     expect(postings).toHaveLength(greenhouseList.jobs.length)
+  })
+
+  it('keeps only postings whose location matches config.location_filter', async () => {
+    const board = {
+      jobs: [
+        { ...greenhouseList.jobs[0], location: { name: 'Melbourne, Victoria, Australia' } },
+        { ...greenhouseList.jobs[1], id: 2, location: { name: 'Hamburg, Hamburg, Germany' } },
+        { ...greenhouseList.jobs[1], id: 3, location: null },
+      ],
+    }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(board))
+    const postings = await greenhouseAdapter.fetch({ ...SOURCE, config: { vendor: 'greenhouse', location_filter: 'australia' } })
+    expect(postings.map((p) => p.sourceJobId)).toEqual([String(greenhouseList.jobs[0].id)])
+  })
+
+  it('throws on an invalid location_filter instead of reading the whole board', () => {
+    expect(() => locationFilter({ ...SOURCE, config: { location_filter: '(oops' } })).toThrow(/invalid/)
+    expect(locationFilter({ ...SOURCE, config: {} })).toBeNull()
   })
 
   it('throws on a non-2xx, even with a JSON body -- a wrong board token must not read as an empty board', async () => {
