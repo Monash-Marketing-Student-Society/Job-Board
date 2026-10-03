@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { targets, type TargetInput } from './target'
+import { assessTarget, targets, type TargetInput } from './target'
 
 function job(overrides: Partial<TargetInput>): TargetInput {
   return {
@@ -128,9 +128,10 @@ describe('targets — level gate', () => {
     }
   })
 
-  it('sends an assistant manager title to review unless it also carries another seniority marker', () => {
-    // Real title, Nestlé, 3 Oct 2026
-    expect(targets(job({ title: 'Assistant Brand Manager', jobType: null, tags: ['Brand'] }))).toBe('unsure')
+  it('rejects any manager title, assistant manager included', () => {
+    // Real title, Nestlé, 3 Oct 2026 -- went to review until the committee
+    // decided these roles expect industry experience.
+    expect(targets(job({ title: 'Assistant Brand Manager', jobType: null, tags: ['Brand'] }))).toBe('reject')
     expect(targets(job({ title: 'Senior Assistant Brand Manager', jobType: null, tags: ['Brand'] }))).toBe('reject')
     expect(targets(job({ title: 'Manager, Marketing Assistants', jobType: null, tags: ['Brand'] }))).toBe('reject')
   })
@@ -176,5 +177,23 @@ describe('targets — combined verdict rules', () => {
     expect(
       targets({ title: 'Graduate Marketing Program', jobType: 'graduate', location: 'Sydney', tags: ['Brand'] })
     ).toBe('pass')
+  })
+})
+
+describe('assessTarget — the reason for a reject', () => {
+  it('names the rule that fired, with the text behind it', () => {
+    expect(assessTarget(job({ location: 'Perth' }))).toEqual({ verdict: 'reject', rule: 'location', evidence: 'Perth' })
+    expect(assessTarget(job({ title: 'Paralegal', tags: [] })).rule).toBe('excluded_field')
+    expect(assessTarget(job({ title: 'Assistant Brand Manager', jobType: null })).rule).toBe('too_senior_title')
+    expect(assessTarget(job({ title: 'Operations Trainee', jobType: null, tags: ['Operations'] })).rule).toBe('not_marketing')
+  })
+
+  it('rejects a stated 2+ years requirement even on a graduate title', () => {
+    const result = assessTarget(job({ description: '<p>You will bring <strong>3+ years’ experience</strong> in brand.</p>' }))
+    expect(result).toEqual({ verdict: 'reject', rule: 'experience_required', evidence: '3+ years’ experience' })
+  })
+
+  it('leaves a clean posting alone when the description asks for less', () => {
+    expect(assessTarget(job({ description: '0-2 years experience welcome' }))).toEqual({ verdict: 'pass' })
   })
 })

@@ -16,6 +16,7 @@
  * this gate reads it, it doesn't compute it.
  */
 
+import { requiredExperience } from './experience'
 import { resolveCity } from './location'
 import { matchesAny } from './text-match'
 import { JOB_FUNCTIONS, type JobFunction } from '../tags'
@@ -27,9 +28,22 @@ export interface TargetInput {
   location: string | null
   /** Closed-vocabulary tags a normaliser already derived for this posting. */
   tags: JobFunction[]
+  /** Sanitised HTML description, read only for a stated experience requirement. */
+  description?: string | null
 }
 
 export type TargetVerdict = 'pass' | 'reject' | 'unsure'
+
+/** Which check removed a posting -- stored so an admin can see why. */
+export type TargetRule = 'location' | 'excluded_field' | 'too_senior_title' | 'not_marketing' | 'experience_required'
+
+export interface TargetResult {
+  verdict: TargetVerdict
+  /** Set on a reject: the first check that fired. */
+  rule?: TargetRule
+  /** The text that triggered it, where there is one worth showing. */
+  evidence?: string
+}
 type GateVerdict = 'yes' | 'maybe' | 'no'
 
 // Titles carrying any of these are dropped before either the level or
@@ -60,12 +74,9 @@ function excluded(title: string): boolean {
 // word in an otherwise senior title must not outrank the seniority signal.
 const SENIORITY_REJECT_KEYWORDS = ['senior', 'manager', 'head of', 'lead', 'director']
 
-// "Assistant Brand Manager" is a common first marketing role (often a year
-// or two in), so the "manager" in it must not reject outright. With no other
-// seniority marker it goes to review instead of passing: the level varies by
-// employer.
-const ASSISTANT_MANAGER = /\bassistant\b.*\bmanager\b/i
-const SENIORITY_EXCEPT_MANAGER = SENIORITY_REJECT_KEYWORDS.filter((k) => k !== 'manager')
+// Any "manager" rejects, "Assistant Brand Manager" included: the committee
+// found those roles expect a year or two in industry (3 Oct 2026), so they
+// no longer go to review as unsure.
 
 // PRD's level list is {internship, graduate, vacationer, cadet} or an
 // entry-level title {junior, assistant, coordinator, associate, trainee}.
@@ -81,7 +92,6 @@ const PASS_LEVEL_KEYWORDS = [
 
 function levelGate(job: TargetInput): GateVerdict {
   if (job.jobType === 'internship' || job.jobType === 'graduate') return 'yes'
-  if (ASSISTANT_MANAGER.test(job.title)) return matchesAny(job.title, SENIORITY_EXCEPT_MANAGER) ? 'no' : 'maybe'
   if (matchesAny(job.title, SENIORITY_REJECT_KEYWORDS)) return 'no'
   if (matchesAny(job.title, PASS_LEVEL_KEYWORDS)) return 'yes'
   return 'maybe'
@@ -130,28 +140,39 @@ function functionGate(job: TargetInput): GateVerdict {
 }
 
 /**
- * The three gates in order. Location first because it's the cheapest -- a
- * string comparison that removes most of what an aggregator returns before
- * either of the other two, which can call a model, ever runs.
+ * The gates in order, with the reason for a reject. Location first because
+ * it's the cheapest -- a string comparison that removes most of what an
+ * aggregator returns before anything else runs. The description is read
+ * last, only for a posting every title check would otherwise keep.
  */
-export function targets(job: TargetInput): TargetVerdict {
+export function assessTarget(job: TargetInput): TargetResult {
   const city = resolveCity(job.location)
-  if (city === 'other') return 'reject'
+  if (city === 'other') return { verdict: 'reject', rule: 'location', evidence: job.location ?? undefined }
 
-  if (excluded(job.title)) return 'reject'
+  if (excluded(job.title)) return { verdict: 'reject', rule: 'excluded_field', evidence: job.title }
 
   const level = levelGate(job)
+  if (level === 'no') return { verdict: 'reject', rule: 'too_senior_title', evidence: job.title }
   const fn = functionGate(job)
-  if (level === 'no' || fn === 'no') return 'reject'
+  if (fn === 'no') return { verdict: 'reject', rule: 'not_marketing' }
+
+  // A graduate or intern title is no protection here: an explicit "3+ years'
+  // experience" is the employer saying who they will actually hire.
+  const experience = requiredExperience(job.description)
+  if (experience) return { verdict: 'reject', rule: 'experience_required', evidence: experience.evidence }
 
   // A location this gate can't place never publishes on a guess, however
-  // clean the other two gates are -- checked after level/function so an
-  // otherwise-rejectable posting (wrong level, wrong function) is rejected
-  // outright rather than sent to review for a location that wouldn't have
-  // mattered anyway.
-  if (city === 'unknown') return 'unsure'
+  // clean the other gates are -- checked after them so an otherwise-
+  // rejectable posting is rejected outright rather than sent to review for a
+  // location that wouldn't have mattered anyway.
+  if (city === 'unknown') return { verdict: 'unsure' }
 
-  if (level === 'maybe' || fn === 'maybe') return 'unsure'
+  if (level === 'maybe' || fn === 'maybe') return { verdict: 'unsure' }
 
-  return 'pass'
+  return { verdict: 'pass' }
+}
+
+/** The verdict alone, for callers that don't need the reason. */
+export function targets(job: TargetInput): TargetVerdict {
+  return assessTarget(job).verdict
 }
