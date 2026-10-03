@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon } from '@phosphor-icons/react'
+import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon, FunnelIcon } from '@phosphor-icons/react'
 import { Badge, Button, useConfirmDialog } from '@/components/ui'
 import {
   DropdownMenu,
@@ -26,7 +26,8 @@ import { riskReasonLabel } from '@/lib/sync/risk'
  * it), when it closes, and a way to see the real posting. Approve publishes
  * with no email (a synced job has no submitter); reject needs a reason,
  * which is stored against the source so a source producing constant rejects
- * becomes visible.
+ * becomes visible, and takes a comment saying why -- what the filter is
+ * tuned from during the trial.
  *
  * Deliberately not here yet: the near-duplicate warning (pg_trgm similarity
  * against live jobs from the same employer). It needs its own migration and
@@ -53,6 +54,8 @@ const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
 
 const REJECT_REASONS: Array<{ value: string; label: string }> = [
   { value: 'irrelevant', label: 'Not relevant' },
+  { value: 'too_senior', label: 'Too senior' },
+  { value: 'experience_required', label: 'Needs 2+ years’ experience' },
   { value: 'duplicate', label: 'Duplicate' },
   { value: 'expired', label: 'Expired' },
   { value: 'employer_blocked', label: 'Employer blocked' },
@@ -79,7 +82,7 @@ function RejectMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="text-xs text-muted-foreground">{label}</DropdownMenuLabel>
         {REJECT_REASONS.map((r) => (
           <DropdownMenuItem key={r.value} onSelect={() => onReject(r.value)}>
@@ -180,18 +183,92 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
     run(ids, { action: 'approve' }, many ? 'published' : 'Job published to the live board')
   }
 
-  const reject = (ids: string[], reason: string) => {
-    run(ids, { action: 'reject', reason }, ids.length > 1 ? 'rejected' : 'Job rejected')
+  /**
+   * Every reject asks why, in the admin's words. During the filter trial
+   * those comments are what the rules get tuned from, so the box is always
+   * offered; it's only required for "Other", which says nothing on its own.
+   */
+  const reject = async (ids: string[], reason: string) => {
+    const many = ids.length > 1
+    const label = REJECT_REASONS.find((r) => r.value === reason)?.label ?? reason
+    const required = reason === 'other'
+    const { confirmed, note } = await confirm({
+      title: many ? `Reject ${ids.length} jobs as “${label}”?` : `Reject as “${label}”?`,
+      confirmLabel: many ? `Reject ${ids.length}` : 'Reject',
+      destructive: true,
+      note: {
+        label: required ? 'Why? (required for Other)' : 'Why? (optional)',
+        placeholder: 'e.g. Asks for 3 years agency experience in the second paragraph',
+        helper: 'Helps tune the filter during the trial. Max 500 characters.',
+      },
+    })
+    if (!confirmed) return
+    if (required && !note) {
+      toast.error('Add a short note for “Other” so the filter can learn from it')
+      return
+    }
+    if (note.length > 500) {
+      toast.error('Keep the note under 500 characters')
+      return
+    }
+    run(ids, { action: 'reject', reason, comment: note || undefined }, many ? 'rejected' : 'Job rejected')
+  }
+
+  /**
+   * Runs the current filter over the whole pending queue: lists what it would
+   * remove first, and rejects only once the admin confirms that list.
+   */
+  const recheck = () => {
+    startTransition(async () => {
+      const preview = await fetch('/api/admin/staged/recheck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply: false }),
+      })
+      const found = await preview.json().catch(() => ({}))
+      if (!preview.ok) {
+        toast.error(found.error || 'Recheck failed')
+        return
+      }
+      const removed: Array<{ title: string; company: string }> = found.removed ?? []
+      if (removed.length === 0) {
+        toast.success('Nothing in the queue is caught by the current filter')
+        return
+      }
+      const listed = removed.slice(0, 8).map((r) => `${decodeHtmlEntities(r.title)} (${r.company})`).join(', ')
+      const { confirmed } = await confirm({
+        title: `Remove ${removed.length} job${removed.length === 1 ? '' : 's'} the filter now catches?`,
+        description: `${listed}${removed.length > 8 ? `, and ${removed.length - 8} more` : ''}.`,
+        warning: 'Each is rejected with the rule that caught it as its comment. Nothing is emailed.',
+        confirmLabel: `Remove ${removed.length}`,
+        destructive: true,
+      })
+      if (!confirmed) return
+
+      const res = await fetch('/api/admin/staged/recheck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply: true }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(payload.error || 'Recheck failed')
+        return
+      }
+      hide((payload.removed ?? []).map((r: { id: string }) => r.id))
+      toast.success(`${(payload.removed ?? []).length} removed by the filter`)
+      router.refresh()
+    })
   }
 
   /** One route for one row, the bulk route for several -- both claim per row. */
-  const run = (ids: string[], body: { action: string; reason?: string }, successText: string) => {
+  const run = (ids: string[], body: { action: string; reason?: string; comment?: string }, successText: string) => {
     startTransition(async () => {
       if (ids.length === 1) {
         const res = await fetch(`/api/admin/staged/${ids[0]}/${body.action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: body.reason }),
+          body: JSON.stringify({ reason: body.reason, comment: body.comment }),
         })
         const payload = await res.json().catch(() => ({}))
         if (!res.ok) {
@@ -241,6 +318,13 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
                 : 'From employer career sites, held because something about them needs a human look.'}
           </p>
         </div>
+
+        {selectedIds.length === 0 && visible.length > 0 && (
+          <Button className={cn(softButtonClassName)} onClick={recheck}>
+            <FunnelIcon className="size-4" />
+            Recheck with filter
+          </Button>
+        )}
 
         {selectedIds.length > 0 && (
           <div className="flex items-center gap-2">

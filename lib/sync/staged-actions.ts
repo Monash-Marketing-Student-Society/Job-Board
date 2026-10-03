@@ -19,12 +19,38 @@ import { approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
 import type { NormalisedJob } from './normalise'
+import { assessTarget, type TargetRule } from './target'
 
-export const REJECT_REASONS = ['irrelevant', 'duplicate', 'expired', 'employer_blocked', 'bad_link', 'other'] as const
+export const REJECT_REASONS = [
+  'irrelevant',
+  'too_senior',
+  'experience_required',
+  'duplicate',
+  'expired',
+  'employer_blocked',
+  'bad_link',
+  'other',
+] as const
 export type RejectReason = (typeof REJECT_REASONS)[number]
 
 export function isRejectReason(value: unknown): value is RejectReason {
   return typeof value === 'string' && (REJECT_REASONS as readonly string[]).includes(value)
+}
+
+/** Matches the staged_jobs CHECK constraint (0055). */
+export const REJECT_COMMENT_MAX = 500
+
+/**
+ * A reject comment from a request body: trimmed, empty means none. Returns
+ * undefined for anything that isn't a usable comment, so the route can 400
+ * rather than silently dropping what the admin typed.
+ */
+export function parseRejectComment(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (trimmed.length > REJECT_COMMENT_MAX) return undefined
+  return trimmed || null
 }
 
 export type ActionResult =
@@ -140,11 +166,18 @@ export async function rejectStaged(
   db: SupabaseClient,
   id: string,
   reason: RejectReason,
-  reviewerId: string
+  reviewerId: string,
+  comment: string | null = null
 ): Promise<ActionResult> {
   const { data, error } = await db
     .from('staged_jobs')
-    .update({ status: 'rejected', reject_reason: reason, reviewed_by: reviewerId, updated_at: new Date().toISOString() })
+    .update({
+      status: 'rejected',
+      reject_reason: reason,
+      reject_comment: comment,
+      reviewed_by: reviewerId,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .eq('status', 'pending')
     .select('id')
@@ -164,14 +197,74 @@ export interface BulkOutcome {
 export async function bulkAction(
   db: SupabaseClient,
   ids: string[],
-  action: { type: 'approve' } | { type: 'reject'; reason: RejectReason },
+  action: { type: 'approve' } | { type: 'reject'; reason: RejectReason; comment?: string | null },
   reviewerId: string
 ): Promise<BulkOutcome[]> {
   const outcomes: BulkOutcome[] = []
   for (const id of ids) {
     const result =
-      action.type === 'approve' ? await approveStaged(db, id, reviewerId) : await rejectStaged(db, id, action.reason, reviewerId)
+      action.type === 'approve'
+        ? await approveStaged(db, id, reviewerId)
+        : await rejectStaged(db, id, action.reason, reviewerId, action.comment ?? null)
     outcomes.push({ id, result })
   }
   return outcomes
+}
+
+/** The reject reason a human would pick for what the gate caught. */
+const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
+  too_senior_title: 'too_senior',
+  experience_required: 'experience_required',
+  location: 'irrelevant',
+  excluded_field: 'irrelevant',
+  not_marketing: 'irrelevant',
+}
+
+export interface RecheckRemoval {
+  id: string
+  title: string
+  company: string
+  reason: RejectReason
+  comment: string
+  result: ActionResult
+}
+
+/**
+ * Runs the current targeting gate over every pending staged job and rejects
+ * what it would now remove. The gate only sees new postings, so without this
+ * a rule change leaves the queue it was written for untouched.
+ *
+ * The comment records the rule and the text that fired it, marked as the
+ * filter's, so the Feedback list can tell a recheck from a human decision.
+ * `apply: false` only reports -- what the admin sees before confirming.
+ */
+export async function recheckPending(
+  db: SupabaseClient,
+  reviewerId: string,
+  { apply }: { apply: boolean }
+): Promise<RecheckRemoval[] | { error: string }> {
+  const { data, error } = await db.from('staged_jobs').select('id, normalised').eq('status', 'pending')
+  if (error) return { error: error.message }
+
+  const removals: RecheckRemoval[] = []
+  for (const row of (data ?? []) as Array<{ id: string; normalised: NormalisedJob }>) {
+    const j = row.normalised
+    const verdict = assessTarget({
+      title: j.title,
+      jobType: j.job_type,
+      location: j.location,
+      tags: j.tags ?? [],
+      description: j.description,
+    })
+    if (verdict.verdict !== 'reject' || !verdict.rule) continue
+
+    const reason = REASON_FOR_RULE[verdict.rule]
+    const comment = `Filter recheck: ${verdict.rule}${verdict.evidence ? ` -- "${verdict.evidence}"` : ''}`.slice(
+      0,
+      REJECT_COMMENT_MAX
+    )
+    const result: ActionResult = apply ? await rejectStaged(db, row.id, reason, reviewerId, comment) : { ok: true }
+    removals.push({ id: row.id, title: j.title, company: j.company, reason, comment, result })
+  }
+  return removals
 }
