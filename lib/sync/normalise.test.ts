@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { normaliseWorkdayPosting, normaliseGreenhousePosting, inferJobFunctions, tidyWorkdayLocation } from './normalise'
 import workdayDetail from './adapters/__fixtures__/workday-detail.json'
 import greenhouseDetail from './adapters/__fixtures__/greenhouse-detail.json'
+import linkedInSnapshot from './adapters/__fixtures__/linkedin-snapshot.json'
+import {
+  linkedInDescriptionHtml,
+  linkedInJobType,
+  normaliseLinkedInPosting,
+  type LinkedInRawPosting,
+} from './normalise'
 
 describe('normaliseWorkdayPosting', () => {
   const { job, confidence } = normaliseWorkdayPosting(workdayDetail, 'Unilever')
@@ -158,5 +165,84 @@ describe('normaliseWorkdayPosting with a tenant that omits endDate', () => {
     const { job, confidence } = normaliseWorkdayPosting({ jobPostingInfo: info } as never, 'P&G')
     expect(job.closing_at).toBeNull()
     expect(confidence.closing_at).toBeUndefined()
+  })
+})
+
+describe('normaliseLinkedInPosting', () => {
+  const real = linkedInSnapshot[0] as unknown as LinkedInRawPosting
+  const linkedInPage = 'https://www.linkedin.com/jobs/view/marketing-specialist-4471733100?_l=en'
+  const { job, confidence } = normaliseLinkedInPosting(real, real.company_name, linkedInPage)
+
+  it("reads the real record (Delaware North, 3 Oct 2026)", () => {
+    expect(job.title).toBe('Marketing Specialist Paid Media, Head Office')
+    expect(job.company).toBe('Delaware North, Australia & New Zealand')
+    expect(job.location).toBe('Melbourne, Victoria') // ", Australia" dropped
+    expect(job.job_type).toBe('full-time')
+    expect(job.posted_at).toBe('2026-09-30T05:20:00.820Z')
+  })
+
+  it('closes 30 days after posting, marked as inferred', () => {
+    expect(job.closing_at).toBe('2026-10-30T05:20:00.820Z')
+    expect(confidence.closing_at).toBe('inferred')
+  })
+
+  it('links the LinkedIn job page without its tracking query', () => {
+    expect(job.url).toBe('https://www.linkedin.com/jobs/view/4471733100/')
+  })
+
+  it("keeps an employer's own apply link as it is", () => {
+    const external = 'https://careers.example.com/jobs/1'
+    expect(normaliseLinkedInPosting(real, 'X', external).job.url).toBe(external)
+  })
+
+  it("strips LinkedIn's show-more widget from the description", () => {
+    expect(job.description).toContain('Delaware North Australia is seeking')
+    expect(job.description).not.toMatch(/Show (more|less)/)
+    expect(job.description).not.toContain('<button')
+    expect(job.description).not.toContain('show-more-less')
+  })
+
+  it('falls back to the plain-text summary, escaped', () => {
+    const { job: plain } = normaliseLinkedInPosting(
+      { ...real, job_description_formatted: null, job_summary: 'Pay <b>great</b> & more' },
+      'X',
+      linkedInPage
+    )
+    expect(plain.description).toContain('Pay &lt;b&gt;great&lt;/b&gt; &amp; more')
+  })
+
+  it('infers marketing tags from the title and description', () => {
+    expect(job.tags).toContain('Digital')
+  })
+})
+
+describe('linkedInDescriptionHtml', () => {
+  it('returns markup unchanged when there is no widget around it', () => {
+    expect(linkedInDescriptionHtml('<p>Plain</p>')).toBe('<p>Plain</p>')
+    expect(linkedInDescriptionHtml(null)).toBeNull()
+  })
+})
+
+describe('linkedInJobType', () => {
+  it('reads internship from seniority, employment type or title, ahead of hours', () => {
+    expect(linkedInJobType('Marketing Coordinator', 'Internship', 'Full-time')).toBe('internship')
+    expect(linkedInJobType('Marketing Coordinator', 'Entry level', 'Internship')).toBe('internship')
+    expect(linkedInJobType('Summer Marketing Intern', 'Not Applicable', 'Full-time')).toBe('internship')
+  })
+
+  it('reads graduate from the title only, since LinkedIn has no graduate level', () => {
+    expect(linkedInJobType('2027 Graduate Program - Marketing', 'Entry level', 'Full-time')).toBe('graduate')
+    expect(linkedInJobType('Marketing Associate', 'Entry level', 'Full-time')).toBe('full-time')
+  })
+
+  it('maps hours, with Temporary as contract and unknown types as null', () => {
+    expect(linkedInJobType('Brand Assistant', null, 'Part-time')).toBe('part-time')
+    expect(linkedInJobType('Brand Assistant', null, 'Temporary')).toBe('contract')
+    expect(linkedInJobType('Brand Assistant', null, 'Volunteer')).toBeNull()
+    expect(linkedInJobType('Brand Assistant', null, null)).toBeNull()
+  })
+
+  it('does not read "internal" or "international" as an internship', () => {
+    expect(linkedInJobType('Internal Communications Coordinator', null, 'Full-time')).toBe('full-time')
   })
 })

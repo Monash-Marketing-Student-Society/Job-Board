@@ -534,3 +534,117 @@ export function normaliseSmartRecruitersPosting(raw: SmartRecruitersRawPosting, 
   return { job, confidence }
 }
 
+
+// ── LinkedIn (Bright Data) ───────────────────────────────────────────────
+
+/** How long a LinkedIn job stays up: no closing date is published, so posted + 30 days stands in. */
+export const LINKEDIN_LISTING_DAYS = 30
+
+/**
+ * LinkedIn's job description arrives wrapped in its "show more / show less"
+ * widget: a `<section>`, a clamp `<div>`, then `<button>`s whose labels the
+ * sanitizer would keep as stray text. Only the markup before the first
+ * button is the description.
+ */
+export function linkedInDescriptionHtml(html: string | null | undefined): string | null {
+  if (!html) return null
+  const start = html.match(/<div[^>]*show-more-less-html__markup[^>]*>/)
+  let body = start ? html.slice((start.index ?? 0) + start[0].length) : html
+  const button = body.indexOf('<button')
+  if (button !== -1) body = body.slice(0, button)
+  return body.replace(/<\/div>\s*$/, '').trim() || null
+}
+
+/** Plain text (`job_summary`) as minimal HTML, for a record with no formatted description. */
+function plainTextHtml(text: string): string {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return `<p>${escaped}</p>`
+}
+
+/**
+ * LinkedIn's seniority and employment type onto the board's job types.
+ * Internship wins over hours; "Graduate" only from the title, because
+ * LinkedIn has no graduate level ("Entry level" is shown for grad programs
+ * and for any junior full-time role alike, so it sets nothing here and the
+ * targeting gates read the title instead).
+ */
+export function linkedInJobType(title: string, seniority: string | null | undefined, employment: string | null | undefined): JobType | null {
+  const s = (seniority ?? '').toLowerCase()
+  const e = (employment ?? '').toLowerCase()
+  if (s === 'internship' || e === 'internship' || /\bintern(ship)?s?\b/i.test(title)) return 'internship'
+  if (/\bgraduate|\bgrad\b/i.test(title)) return 'graduate'
+  if (e === 'part-time') return 'part-time'
+  if (e === 'contract' || e === 'temporary') return 'contract'
+  if (e === 'full-time') return 'full-time'
+  return null
+}
+
+/** The LinkedIn job page without its tracking query (`?_l=en`, `trk=`), keyed on the posting id. */
+function linkedInJobPage(postingId: string): string {
+  return `https://www.linkedin.com/jobs/view/${postingId}/`
+}
+
+export interface LinkedInRawPosting {
+  job_posting_id: string
+  url?: string
+  apply_link?: string | null
+  job_title: string
+  company_name: string
+  job_location?: string | null
+  job_summary?: string | null
+  job_description_formatted?: string | null
+  job_seniority_level?: string | null
+  job_employment_type?: string | null
+  job_posted_date?: string | null
+}
+
+/**
+ * Verified fields (live, 3 Oct 2026) -- see lib/sync/adapters/linkedin.ts.
+ * `company` is LinkedIn's company name for this posting, not the source's
+ * name: one source, every employer. The logo is left to the approved-logo
+ * table; `company_logo` is a media.licdn.com URL that can expire.
+ */
+export function normaliseLinkedInPosting(raw: LinkedInRawPosting, company: string, applyUrl: string): NormaliseResult {
+  const confidence: NormaliseConfidence = { title: 'read', company: 'read', url: 'read' }
+
+  // "Melbourne, Victoria, Australia" -> "Melbourne, Victoria"
+  const location = raw.job_location?.replace(/,\s*Australia$/i, '').trim() || null
+  if (location) confidence.location = 'read'
+
+  const formatted = linkedInDescriptionHtml(raw.job_description_formatted)
+  const description = cleanDescription(formatted ?? (raw.job_summary ? plainTextHtml(raw.job_summary) : null))
+  if (description) confidence.description = 'read'
+
+  const jobType = linkedInJobType(raw.job_title, raw.job_seniority_level, raw.job_employment_type)
+  if (jobType) confidence.job_type = 'read'
+
+  const tags = inferJobFunctions(raw.job_title, description)
+  if (tags.length > 0) confidence.tags = 'inferred'
+
+  const postedAt = isoTimestamp(raw.job_posted_date)
+  let closingAt: string | null = null
+  if (postedAt) {
+    const closing = new Date(postedAt)
+    closing.setUTCDate(closing.getUTCDate() + LINKEDIN_LISTING_DAYS)
+    closingAt = closing.toISOString()
+    confidence.closing_at = 'inferred'
+  }
+
+  // An external apply link is the employer's own page; otherwise the clean LinkedIn job page.
+  const isLinkedInPage = /(^|\.)linkedin\.com$/i.test(new URL(applyUrl).hostname)
+  const url = isLinkedInPage ? linkedInJobPage(raw.job_posting_id) : applyUrl
+
+  const job: NormalisedJob = {
+    title: raw.job_title,
+    company,
+    location,
+    work_mode: null,
+    job_type: jobType,
+    url,
+    description,
+    tags,
+    posted_at: postedAt,
+    closing_at: closingAt,
+  }
+  return { job, confidence }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isJobSpecificUrl, classifyLinkCheck, LINK_CHECK_STRIKE_LIMIT } from './link'
+import { isJobSpecificUrl, isLinkedInJobPage, classifyLinkCheck, LINK_CHECK_STRIKE_LIMIT } from './link'
 
 describe('isJobSpecificUrl', () => {
   it('accepts a Greenhouse posting URL', () => {
@@ -116,5 +116,19 @@ describe('classifyLinkCheck', () => {
 
   it('sets the strike limit to three, matching the PRD', () => {
     expect(LINK_CHECK_STRIKE_LIMIT).toBe(3)
+  })
+})
+
+describe('isLinkedInJobPage', () => {
+  it('matches LinkedIn job pages on any LinkedIn host', () => {
+    expect(isLinkedInJobPage('https://www.linkedin.com/jobs/view/4471733100/')).toBe(true)
+    expect(isLinkedInJobPage('https://au.linkedin.com/jobs/view/4471733100?trk=x')).toBe(true)
+  })
+
+  it("doesn't match an employer's page, a LinkedIn company page, or a lookalike host", () => {
+    expect(isLinkedInJobPage('https://careers.example.com/jobs/view/1')).toBe(false)
+    expect(isLinkedInJobPage('https://www.linkedin.com/company/example')).toBe(false)
+    expect(isLinkedInJobPage('https://notlinkedin.com/jobs/view/1')).toBe(false)
+    expect(isLinkedInJobPage('not a url')).toBe(false)
   })
 })

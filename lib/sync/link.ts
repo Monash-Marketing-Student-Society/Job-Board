@@ -74,6 +74,22 @@ export function isJobSpecificUrl(rawUrl: string): boolean {
   return false
 }
 
+/**
+ * A LinkedIn job page (the apply link of a LinkedIn-sourced job whose
+ * application stays on LinkedIn). LinkedIn answers requests from cloud IPs
+ * with its own status 999 bot wall, so from the Trigger.dev worker an
+ * ambiguous answer here says nothing about the job -- three of them must
+ * not unpublish it. Its closing date (posted + 30 days) takes it down instead.
+ */
+export function isLinkedInJobPage(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl)
+    return /(^|\.)linkedin\.com$/i.test(url.hostname) && url.pathname.startsWith('/jobs/view/')
+  } catch {
+    return false
+  }
+}
+
 /** Consecutive timeout/ambiguous-status checks before a job is unpublished. */
 export const LINK_CHECK_STRIKE_LIMIT = 3
 

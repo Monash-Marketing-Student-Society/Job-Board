@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn, toApplicationHref } from '@/lib/utils'
+import { sourceAttribution } from '@/lib/job-attribution'
 import { sanitizeDescription } from '@/lib/sanitize'
 import { trackEvent } from '@/lib/analytics/track'
 import { handleApplyClick } from './apply-link'
@@ -39,6 +40,7 @@ const pillVariants = {
 
 export function JobDetailPanel({ job, isMainView = false, onBack, preview = false }: JobDetailPanelProps) {
   const [copied, setCopied] = useState(false)
+  const attribution = sourceAttribution(job.source)
 
   /** No-op in preview mode — see the `preview` prop. */
   const trackApply = () => {
@@ -113,6 +115,7 @@ export function JobDetailPanel({ job, isMainView = false, onBack, preview = fals
                 className="text-sm text-slate-500 mt-1"
               >
                 {job.company}
+                {attribution && <span className="text-slate-400"> · {attribution}</span>}
               </motion.p>
             </div>
             <motion.div
