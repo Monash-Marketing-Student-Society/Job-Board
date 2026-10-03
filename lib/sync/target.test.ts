@@ -128,6 +128,13 @@ describe('targets — level gate', () => {
     }
   })
 
+  it('sends an assistant manager title to review unless it also carries another seniority marker', () => {
+    // Real title, Nestlé, 3 Oct 2026
+    expect(targets(job({ title: 'Assistant Brand Manager', jobType: null, tags: ['Brand'] }))).toBe('unsure')
+    expect(targets(job({ title: 'Senior Assistant Brand Manager', jobType: null, tags: ['Brand'] }))).toBe('reject')
+    expect(targets(job({ title: 'Manager, Marketing Assistants', jobType: null, tags: ['Brand'] }))).toBe('reject')
+  })
+
   it('sends a title with no level signal at all to review, not a reject', () => {
     expect(targets(job({ title: 'Marketing Executive', jobType: null, tags: ['Brand'] }))).toBe('unsure')
   })

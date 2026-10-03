@@ -60,6 +60,13 @@ function excluded(title: string): boolean {
 // word in an otherwise senior title must not outrank the seniority signal.
 const SENIORITY_REJECT_KEYWORDS = ['senior', 'manager', 'head of', 'lead', 'director']
 
+// "Assistant Brand Manager" is a common first marketing role (often a year
+// or two in), so the "manager" in it must not reject outright. With no other
+// seniority marker it goes to review instead of passing: the level varies by
+// employer.
+const ASSISTANT_MANAGER = /\bassistant\b.*\bmanager\b/i
+const SENIORITY_EXCEPT_MANAGER = SENIORITY_REJECT_KEYWORDS.filter((k) => k !== 'manager')
+
 // PRD's level list is {internship, graduate, vacationer, cadet} or an
 // entry-level title {junior, assistant, coordinator, associate, trainee}.
 // 'graduate'/'grad' are included here too, not just checked via job_type:
@@ -74,6 +81,7 @@ const PASS_LEVEL_KEYWORDS = [
 
 function levelGate(job: TargetInput): GateVerdict {
   if (job.jobType === 'internship' || job.jobType === 'graduate') return 'yes'
+  if (ASSISTANT_MANAGER.test(job.title)) return matchesAny(job.title, SENIORITY_EXCEPT_MANAGER) ? 'no' : 'maybe'
   if (matchesAny(job.title, SENIORITY_REJECT_KEYWORDS)) return 'no'
   if (matchesAny(job.title, PASS_LEVEL_KEYWORDS)) return 'yes'
   return 'maybe'
