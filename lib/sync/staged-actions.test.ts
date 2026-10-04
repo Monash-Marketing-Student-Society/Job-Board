@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { approveStaged, rejectStaged, bulkAction, isRejectReason, parseRejectComment, recheckPending } from './staged-actions'
+import { approveStaged, rejectStaged, bulkAction, isRejectReason, parseRejectComment, recheckPending, restoreFiltered } from './staged-actions'
 import { fakeDb, type Handler, type Op } from './test-helpers/fake-db'
 
 const NORMALISED = {
@@ -225,5 +225,56 @@ describe('isRejectReason', () => {
     }
     expect(isRejectReason('spam')).toBe(false)
     expect(isRejectReason(undefined)).toBe(false)
+  })
+})
+
+describe('restoreFiltered', () => {
+  const FILTERED_ROW = { id: 'f1', source_id: 'src-1', external_id: 'R-7', apply_url_hash: 'h7', normalised: NORMALISED }
+
+  function restoreDb(overrides: Partial<Record<'read' | 'known' | 'claim' | 'stage' | 'fp', unknown>> = {}): Handler {
+    return (table, ops) => {
+      if (table === 'filtered_postings' && has(ops, 'update')) {
+        return argOf(ops, 'update').status === 'restored' ? ((overrides.claim as never) ?? { data: { id: 'f1' } }) : {}
+      }
+      if (table === 'filtered_postings') return (overrides.read as never) ?? { data: FILTERED_ROW }
+      if (table === 'job_fingerprints' && has(ops, 'select')) return (overrides.known as never) ?? { data: null }
+      if (table === 'job_fingerprints') return (overrides.fp as never) ?? {}
+      if (table === 'staged_jobs') return (overrides.stage as never) ?? { data: { id: 'staged-1' } }
+    }
+  }
+
+  it('stages the posting for review, marked as restored, with a fingerprint', async () => {
+    const { db, log } = fakeDb(restoreDb())
+    expect(await restoreFiltered(db, 'f1', 'admin-1')).toEqual({ ok: true })
+
+    const claim = log.find((c) => c.table === 'filtered_postings' && has(c.ops, 'update'))!
+    expect(argOf(claim.ops, 'update')).toMatchObject({ status: 'restored', restored_by: 'admin-1' })
+    expect(claim.ops).toContainEqual({ name: 'eq', args: ['status', 'filtered'] })
+
+    const staged = argOf(log.find((c) => c.table === 'staged_jobs')!.ops, 'insert')
+    expect(staged).toMatchObject({ source_id: 'src-1', external_id: 'R-7', normalised: NORMALISED, risk_reasons: ['admin_restored'] })
+
+    const fp = argOf(log.find((c) => c.table === 'job_fingerprints' && has(c.ops, 'insert'))!.ops, 'insert')
+    expect(fp).toMatchObject({ staged_job_id: 'staged-1', apply_url_hash: 'h7', fingerprint: staged.fingerprint })
+  })
+
+  it('refuses a posting already known under its fingerprint, before claiming it', async () => {
+    const { db, log } = fakeDb(restoreDb({ known: { data: { fingerprint: 'fp' } } }))
+    expect(await restoreFiltered(db, 'f1', 'admin-1')).toEqual({ ok: false, kind: 'duplicate' })
+    expect(log.some((c) => has(c.ops, 'update') || has(c.ops, 'insert'))).toBe(false)
+  })
+
+  it('returns conflict when the posting is no longer filtered', async () => {
+    const { db } = fakeDb(restoreDb({ read: { data: null } }))
+    expect(await restoreFiltered(db, 'f1', 'admin-1')).toEqual({ ok: false, kind: 'conflict' })
+  })
+
+  it('puts the claim back when staging fails', async () => {
+    const { db, log } = fakeDb(restoreDb({ stage: { error: { message: 'boom' } } }))
+    const result = await restoreFiltered(db, 'f1', 'admin-1')
+
+    expect(result).toMatchObject({ ok: false, kind: 'error' })
+    const release = log.filter((c) => c.table === 'filtered_postings' && has(c.ops, 'update')).at(-1)!
+    expect(argOf(release.ops, 'update')).toMatchObject({ status: 'filtered', restored_by: null })
   })
 })

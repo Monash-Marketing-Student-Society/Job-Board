@@ -189,7 +189,50 @@ describe('dryRunDeps', () => {
     await deps.publish(ROW)
     await deps.enrich({ kind: 'job', id: 'j1', source: 'sync:x', tier: 'A' }, ROW.normalised)
     await deps.touch({ kind: 'job', id: 'j1', source: 'sync:x', tier: 'A' })
+    await deps.recordFiltered(FILTERED)
     expect(log.length).toBe(before)
+  })
+})
+
+const FILTERED = {
+  sourceId: 'src-1',
+  externalId: 'R-9',
+  applyUrlHash: 'hash-9',
+  normalised: ROW.normalised,
+  rule: 'experience_required' as const,
+  evidence: '3+ years experience',
+}
+
+describe('supabaseDeps.recordFiltered', () => {
+  it('folds the sighting into one row through the upsert function', async () => {
+    const { db, log } = fakeDb()
+    await supabaseDeps(db, SOURCE).recordFiltered(FILTERED)
+
+    expect(log).toEqual([
+      {
+        table: 'rpc:record_filtered_posting',
+        ops: [
+          {
+            name: 'rpc',
+            args: [
+              {
+                p_source_id: 'src-1',
+                p_external_id: 'R-9',
+                p_apply_url_hash: 'hash-9',
+                p_normalised: ROW.normalised,
+                p_rule: 'experience_required',
+                p_evidence: '3+ years experience',
+              },
+            ],
+          },
+        ],
+      },
+    ])
+  })
+
+  it('throws on a database error, so the run counts it against the posting', async () => {
+    const { db } = fakeDb(() => ({ error: { message: 'no such function' } }))
+    await expect(supabaseDeps(db, SOURCE).recordFiltered(FILTERED)).rejects.toThrow('record filtered: no such function')
   })
 })
 

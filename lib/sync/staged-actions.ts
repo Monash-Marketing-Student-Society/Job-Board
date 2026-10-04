@@ -18,7 +18,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
+import { computeFingerprint } from './fingerprint'
+import { resolveCity } from './location'
 import type { NormalisedJob } from './normalise'
+import type { RiskReason } from './risk'
 import { assessTarget, type TargetRule } from './target'
 
 export const REJECT_REASONS = [
@@ -56,6 +59,7 @@ export function parseRejectComment(value: unknown): string | null | undefined {
 export type ActionResult =
   | { ok: true; jobId?: string }
   | { ok: false; kind: 'conflict' }
+  | { ok: false; kind: 'duplicate' }
   | { ok: false; kind: 'error'; message: string; stranded?: boolean }
 
 interface ClaimedRow {
@@ -267,4 +271,87 @@ export async function recheckPending(
     removals.push({ id: row.id, title: j.title, company: j.company, reason, comment, result })
   }
   return removals
+}
+
+const RESTORED_RISK: RiskReason[] = ['admin_restored']
+
+/**
+ * Puts a posting the filter removed into the review queue, as an admin's
+ * call that the rule got it wrong. It goes to review, never straight to the
+ * board: restoring says "worth a look", not "approved".
+ *
+ * Same claim-first pattern as approve/reject (`WHERE status = 'filtered'`),
+ * released if staging fails. A posting already known under the same
+ * fingerprint -- staged or live from another source -- is refused as a
+ * duplicate before claiming, because job_fingerprints keys on it and a
+ * second staged copy would have nothing to dedup against.
+ *
+ * The staged row gets a fingerprint like any other, so the next nightly run
+ * dedups against it instead of filtering the posting again.
+ */
+export async function restoreFiltered(db: SupabaseClient, id: string, reviewerId: string): Promise<ActionResult> {
+  const { data: row, error: readError } = await db
+    .from('filtered_postings')
+    .select('id, source_id, external_id, apply_url_hash, normalised')
+    .eq('id', id)
+    .eq('status', 'filtered')
+    .maybeSingle()
+  if (readError) return { ok: false, kind: 'error', message: `read: ${readError.message}` }
+  if (!row) return { ok: false, kind: 'conflict' }
+
+  const j = row.normalised as NormalisedJob
+  const fingerprint = computeFingerprint(j.company, j.title, resolveCity(j.location))
+  const { data: known } = await db.from('job_fingerprints').select('fingerprint').eq('fingerprint', fingerprint).maybeSingle()
+  if (known) return { ok: false, kind: 'duplicate' }
+
+  const { data: claimed, error: claimError } = await db
+    .from('filtered_postings')
+    .update({ status: 'restored', restored_by: reviewerId, restored_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'filtered')
+    .select('id')
+    .maybeSingle()
+  if (claimError) return { ok: false, kind: 'error', message: `claim: ${claimError.message}` }
+  if (!claimed) return { ok: false, kind: 'conflict' }
+
+  const { data: staged, error: stageError } = await db
+    .from('staged_jobs')
+    .insert({
+      source_id: row.source_id,
+      external_id: row.external_id,
+      raw: {},
+      normalised: j,
+      fingerprint,
+      risk_reasons: RESTORED_RISK,
+    })
+    .select('id')
+    .single()
+
+  if (stageError || !staged) {
+    const { error: releaseError } = await db
+      .from('filtered_postings')
+      .update({ status: 'filtered', restored_by: null, restored_at: null })
+      .eq('id', id)
+    // Not `stranded`: that wording is about approve. A failed release here
+    // leaves the posting marked restored with nothing staged, and the message
+    // says so for the logs.
+    return {
+      ok: false,
+      kind: 'error',
+      message: `stage: ${stageError?.message ?? 'no row returned'}${releaseError ? ' (and still marked restored)' : ''}`,
+    }
+  }
+
+  // Reported, not undone: without it the posting is still in the queue, and
+  // the worst case is the next run filtering a second copy into this list.
+  const { error: fpError } = await db.from('job_fingerprints').insert({
+    fingerprint,
+    source_id: row.source_id,
+    staged_job_id: staged.id,
+    apply_url_hash: row.apply_url_hash,
+    source_job_id: row.external_id,
+  })
+  if (fpError) return { ok: false, kind: 'error', message: `staged, but fingerprint not recorded: ${fpError.message}` }
+
+  return { ok: true }
 }

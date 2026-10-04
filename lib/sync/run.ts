@@ -25,7 +25,7 @@ import { resolveDuplicate, sourceRank, type SourceRank } from './dedup'
 import { resolveCity } from './location'
 import type { NormalisedJob, NormaliseConfidence, NormaliseResult } from './normalise'
 import { assessRisk, type RiskReason } from './risk'
-import { targets } from './target'
+import { assessTarget, type TargetRule } from './target'
 import type { Adapter, AdapterContext, RawPosting, SourceRow } from './adapters/types'
 
 /** A job or staged job already known under one of the three identity checks. */
@@ -47,6 +47,16 @@ export interface StagedInsert {
   applyUrlHash: string
   confidence: NormaliseConfidence
   riskReasons: RiskReason[]
+}
+
+/** A posting the targeting gate removed -- kept so an admin can see why, and undo it. */
+export interface FilteredInsert {
+  sourceId: string
+  externalId: string | null
+  applyUrlHash: string
+  normalised: NormalisedJob
+  rule: TargetRule
+  evidence: string | null
 }
 
 export interface SyncDeps {
@@ -71,6 +81,8 @@ export interface SyncDeps {
   enrich(match: StoredMatch, job: NormalisedJob): Promise<void>
   /** Bump seen_count / last_seen_at for a duplicate that was discarded. */
   touch(match: StoredMatch): Promise<void>
+  /** Record (or re-sight) a posting the gate removed, for /admin/filters. */
+  recordFiltered(row: FilteredInsert): Promise<void>
 }
 
 export interface RunCounts {
@@ -102,21 +114,34 @@ export async function processPosting(
 ): Promise<void> {
   const { job, confidence } = result
 
-  const verdict = targets({
+  const { verdict, rule, evidence } = assessTarget({
     title: job.title,
     jobType: job.job_type,
     location: job.location,
     tags: job.tags,
     description: job.description,
   })
+  const applyUrlHash = computeApplyUrlHash(job.url)
   if (verdict === 'reject') {
     counts.rejected++
+    // Recorded, not just counted: during the filter trial a wrong removal has
+    // to be visible to be caught. Still no fingerprint -- a removed posting
+    // must stay free to come back if the rule that caught it changes.
+    if (rule) {
+      await deps.recordFiltered({
+        sourceId: source.id,
+        externalId: posting.sourceJobId,
+        applyUrlHash,
+        normalised: job,
+        rule,
+        evidence: evidence ?? null,
+      })
+    }
     return
   }
 
   const city = resolveCity(job.location)
   const fingerprint = computeFingerprint(job.company, job.title, city)
-  const applyUrlHash = computeApplyUrlHash(job.url)
   const sourceKey = `sync:${source.slug}`
 
   const existing = await deps.findExisting({

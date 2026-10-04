@@ -50,6 +50,27 @@ async function sweepExpiredJobs(supabase: ReturnType<typeof createAdminClient>) 
   return { swept: data?.length ?? 0 }
 }
 
+// A filtered posting the sync hasn't seen for this long is gone from the
+// employer's site -- nothing left to restore, so it leaves /admin/filters.
+const FILTERED_RETENTION_DAYS = 30
+
+async function pruneFilteredPostings(supabase: ReturnType<typeof createAdminClient>) {
+  const cutoff = new Date(Date.now() - FILTERED_RETENTION_DAYS * 86_400_000).toISOString()
+  const { data, error } = await supabase
+    .from('filtered_postings')
+    .delete()
+    .eq('status', 'filtered')
+    .lt('last_seen_at', cutoff)
+    .select('id')
+
+  if (error) {
+    logger.error('Filtered postings prune failed', { error: error.message })
+    return { pruned: 0, error: error.message }
+  }
+  logger.info('Filtered postings pruned', { pruned: data?.length ?? 0 })
+  return { pruned: data?.length ?? 0 }
+}
+
 async function checkLinks(supabase: ReturnType<typeof createAdminClient>) {
   const { data: jobs, error } = await supabase
     .from('jobs')
@@ -142,6 +163,7 @@ export const maintainTask = schedules.task({
     const supabase = createAdminClient()
     const sweep = await sweepExpiredJobs(supabase)
     const linkCheck = await checkLinks(supabase)
-    return { sweep, linkCheck }
+    const filteredPruned = await pruneFilteredPostings(supabase)
+    return { sweep, linkCheck, filteredPruned }
   },
 })
