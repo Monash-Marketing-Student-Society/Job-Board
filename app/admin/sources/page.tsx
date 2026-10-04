@@ -4,6 +4,8 @@ import { SourcesTable, type SourceView } from '@/components/admin/sources-table'
 import { AutoPublishedTable, type AutoPublishedRow } from '@/components/admin/auto-published-table'
 import { SourceRequestsTable, type SourceRequestRow } from '@/components/admin/source-requests-table'
 import { tableCardClassName } from '@/components/admin/table/table-styles'
+import { MONTHLY_RECORD_CAP } from '@/lib/sync/adapters/linkedin-config'
+import { recordsThisMonth } from '@/lib/sync/snapshot-ledger'
 import {
   AUTO_PUBLISHED_COLUMNS,
   AUTO_PUBLISHED_WINDOW_DAYS,
@@ -35,6 +37,38 @@ const AUTO_PUBLISHED_LIMIT = 200
 const REVIEW_WINDOW_DAYS = 14
 
 type Db = Awaited<ReturnType<typeof createServerClient>>
+
+interface RecordBudget {
+  name: string
+  used: number
+  cap: number
+}
+
+/**
+ * Paid sources' spend this month (today only LinkedIn via Bright Data).
+ * Null when there is none -- or when the ledger can't be read, so a missing
+ * table (migration not yet applied) hides the line rather than the page.
+ */
+async function recordBudgets(supabase: Db, sources: AdminSource[]): Promise<RecordBudget[]> {
+  const paid = sources.filter((s) => s.config.vendor === 'linkedin')
+  const budgets: RecordBudget[] = []
+  for (const source of paid) {
+    try {
+      const cap = typeof source.config.monthly_cap === 'number' ? source.config.monthly_cap : MONTHLY_RECORD_CAP
+      budgets.push({ name: source.name, used: await recordsThisMonth(supabase, source.id), cap })
+    } catch {
+      // ledger unreadable: leave this source out
+    }
+  }
+  return budgets
+}
+
+/** The same dot fills StatusDot uses; its label is capitalised per word, which reads badly as a sentence. */
+function budgetDot({ used, cap }: RecordBudget): string {
+  if (used >= cap * 0.9) return 'bg-destructive'
+  if (used >= cap * 0.6) return 'bg-warning'
+  return 'bg-success'
+}
 
 async function recentRuns(supabase: Db, sourceId: string): Promise<RunRow[]> {
   const { data } = await supabase
@@ -82,7 +116,10 @@ export default async function AdminSourcesPage() {
   }
 
   const sources = (sourcesResult.data ?? []) as AdminSource[]
-  const runs = await Promise.all(sources.map((s) => recentRuns(supabase, s.id)))
+  const [runs, budgets] = await Promise.all([
+    Promise.all(sources.map((s) => recentRuns(supabase, s.id))),
+    recordBudgets(supabase, sources),
+  ])
   const reviews = tallyReviews(reviewsResult.data ?? [])
   const published = countPublishedBySlug(publishedResult.data ?? [])
 
@@ -126,6 +163,17 @@ export default async function AdminSourcesPage() {
         <p className="text-sm text-slate-500 mt-1">
           Employer feeds the nightly sync reads. Changes apply from the next run, at 2am Melbourne time.
         </p>
+        {budgets.map((b) => (
+          <p key={b.name} className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+            <span className={`size-1.5 shrink-0 rounded-full ${budgetDot(b)}`} aria-hidden="true" />
+            <span>
+              <span className="font-medium text-slate-700">
+                {b.name}: {b.used.toLocaleString('en-AU')} of {b.cap.toLocaleString('en-AU')} records this month
+              </span>{' '}
+              · runs Monday and Thursday at 2:30am, and skips once the month&apos;s records are used
+            </span>
+          </p>
+        ))}
       </div>
 
       {(requestsResult.data ?? []).length > 0 && (

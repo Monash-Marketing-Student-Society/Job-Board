@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { formatDate, truncateText } from '@/lib/utils'
+import { sourceAttribution } from '@/lib/job-attribution'
 import type { Job } from '@/lib/types'
 
 interface JobCardProps {
@@ -11,6 +12,8 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, isSelected, onClick }: JobCardProps) {
+  const attribution = sourceAttribution(job.source)
+
   const getInitials = (company: string) => {
     return company
       .split(' ')
@@ -85,6 +88,7 @@ export function JobCard({ job, isSelected, onClick }: JobCardProps) {
               </h3>
               <p className="text-xs mt-0.5 text-slate-500">
                 {job.company}
+                {attribution && <span className="text-slate-400"> · {attribution}</span>}
               </p>
             </div>
             {expiryDate && (

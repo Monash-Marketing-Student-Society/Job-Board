@@ -12,6 +12,7 @@
 
 import { greenhouseAdapter } from './adapters/greenhouse'
 import { jobAdderAdapter, type JobAdderRawPosting } from './adapters/jobadder'
+import { linkedInAdapter } from './adapters/linkedin'
 import { oracleAdapter, oracleSite } from './adapters/oracle'
 import { pageupAdapter, type PageUpItem } from './adapters/pageup'
 import { sitemapJsonLdAdapter, postingsPath } from './adapters/sitemap-jsonld'
@@ -22,11 +23,13 @@ import {
   normaliseGreenhousePosting,
   normaliseJobAdderPosting,
   normaliseJsonLdPosting,
+  normaliseLinkedInPosting,
   normaliseOraclePosting,
   normalisePageUpPosting,
   normaliseSmartRecruitersPosting,
   normaliseWorkdayPosting,
   type GreenhouseRawPosting,
+  type LinkedInRawPosting,
   type OracleRawPosting,
   type SmartRecruitersRawPosting,
   type NormaliseResult,
@@ -97,6 +100,15 @@ export function smartRecruitersConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/postings`)
 }
 
+/**
+ * LinkedIn via Bright Data: linkedin.com's robots.txt disallows crawlers, so
+ * this source runs only on the explicit permission recorded in
+ * `config.consent` -- without it the check fails the run, by design.
+ */
+export function linkedInConsentTarget(): URL {
+  return new URL('https://www.linkedin.com/jobs/view/')
+}
+
 export function jobAdderConsentTarget(source: SourceRow): URL {
   return new URL(`${source.endpoint.replace(/\/$/, '')}/RenderJobList`)
 }
@@ -134,6 +146,12 @@ const VENDORS: Record<string, Vendor> = {
     normalise: (posting) =>
       normaliseSmartRecruitersPosting(posting.raw as unknown as SmartRecruitersRawPosting, posting.company, posting.applyUrl),
     consentTarget: smartRecruitersConsentTarget,
+  },
+  linkedin: {
+    adapter: linkedInAdapter,
+    normalise: (posting) =>
+      normaliseLinkedInPosting(posting.raw as unknown as LinkedInRawPosting, posting.company, posting.applyUrl),
+    consentTarget: linkedInConsentTarget,
   },
   sitemap_jsonld: {
     adapter: sitemapJsonLdAdapter,

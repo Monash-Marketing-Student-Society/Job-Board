@@ -18,6 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { SourceRow } from './adapters/types'
 import { emptyCounts, processSource, zeroGuardTripped } from './run'
 import { checkConsent } from './robots'
+import { snapshotLedger } from './snapshot-ledger'
 import { dryRunDeps, recordSourceRun, supabaseDeps, type SourceRunResult } from './supabase-deps'
 import { vendorFor } from './vendors'
 
@@ -28,7 +29,11 @@ export interface WorkerOptions {
   dryRun: boolean
   /** Run just this source, whatever its frequency. */
   slug?: string
+  /** How a paid source waits between polls; the Trigger.dev task passes `wait.for`. */
+  sleep?: (ms: number) => Promise<void>
 }
+
+const timerSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 export async function loadSources(db: SupabaseClient, slug?: string): Promise<LoadedSource[]> {
   let query = db
@@ -54,7 +59,9 @@ export async function runOneSource(db: SupabaseClient, source: LoadedSource, opt
     const consent = await checkConsent(source, vendor.consentTarget(source))
     if (!consent.ok) throw new Error(consent.reason)
     const real = supabaseDeps(db, source)
-    const counts = await processSource(source, vendor.adapter, vendor.normalise, opts.dryRun ? dryRunDeps(real) : real)
+    // The ledger writes even on a dry run: a paid source's records are spent either way.
+    const ctx = { ledger: snapshotLedger(db, source.id), sleep: opts.sleep ?? timerSleep, dryRun: opts.dryRun }
+    const counts = await processSource(source, vendor.adapter, vendor.normalise, opts.dryRun ? dryRunDeps(real) : real, ctx)
     result = { counts, error: null, zeroGuardTripped: zeroGuardTripped(counts.seen, source.usual_count) }
   } catch (e) {
     result = { counts: emptyCounts(), error: e instanceof Error ? e.message : String(e), zeroGuardTripped: false }
