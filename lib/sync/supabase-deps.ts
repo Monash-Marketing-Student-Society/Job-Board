@@ -196,13 +196,25 @@ export function supabaseDeps(db: SupabaseClient, source: SourceRow): SyncDeps {
         .update({ seen_count: (data.seen_count ?? 0) + 1, last_seen_at: new Date().toISOString() })
         .eq('fingerprint', data.fingerprint)
     },
+
+    async recordFiltered(row) {
+      const { error } = await db.rpc('record_filtered_posting', {
+        p_source_id: row.sourceId,
+        p_external_id: row.externalId,
+        p_apply_url_hash: row.applyUrlHash,
+        p_normalised: row.normalised,
+        p_rule: row.rule,
+        p_evidence: row.evidence,
+      })
+      if (error) throw new Error(`record filtered: ${error.message}`)
+    },
   }
 }
 
 /** A dry run reads for real but writes nothing: same dedup answers, no rows, no mail. */
 export function dryRunDeps(real: SyncDeps): SyncDeps {
   const noop = async () => {}
-  return { ...real, stage: noop, publish: noop, enrich: noop, touch: noop }
+  return { ...real, stage: noop, publish: noop, enrich: noop, touch: noop, recordFiltered: noop }
 }
 
 export interface SourceRunResult {

@@ -56,6 +56,7 @@ function fakeDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     publish: vi.fn().mockResolvedValue(undefined),
     enrich: vi.fn().mockResolvedValue(undefined),
     touch: vi.fn().mockResolvedValue(undefined),
+    recordFiltered: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -107,7 +108,7 @@ describe('processPosting — routing', () => {
 })
 
 describe('processPosting — targeting', () => {
-  it('rejects an off-target posting before fingerprinting or any database call', async () => {
+  it('rejects an off-target posting before fingerprinting or any dedup call', async () => {
     const deps = fakeDeps()
     const counts = emptyCounts()
     const perth: NormaliseResult = { ...CLEAN, job: { ...JOB, location: 'Perth' } }
@@ -116,6 +117,27 @@ describe('processPosting — targeting', () => {
     expect(counts.rejected).toBe(1)
     expect(deps.findExisting).not.toHaveBeenCalled()
     expect(deps.stage).not.toHaveBeenCalled()
+  })
+
+  it('records the removed posting with the rule and the text that fired it', async () => {
+    const deps = fakeDeps()
+    const needsYears: NormaliseResult = { ...CLEAN, job: { ...JOB, description: '<p>You bring 4+ years experience in brand.</p>' } }
+    await processPosting(POSTING, needsYears, SOURCE, deps, emptyCounts())
+
+    expect(deps.recordFiltered).toHaveBeenCalledWith({
+      sourceId: SOURCE.id,
+      externalId: POSTING.sourceJobId,
+      applyUrlHash: expect.any(String),
+      normalised: needsYears.job,
+      rule: 'experience_required',
+      evidence: '4+ years experience',
+    })
+  })
+
+  it('records nothing for a posting it keeps', async () => {
+    const deps = fakeDeps()
+    await processPosting(POSTING, CLEAN, SOURCE, deps, emptyCounts())
+    expect(deps.recordFiltered).not.toHaveBeenCalled()
   })
 
   it('holds an unsure posting for review with classifier_unsure, never publishing it', async () => {

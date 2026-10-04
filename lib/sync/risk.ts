@@ -28,6 +28,7 @@ export type RiskReason =
   | 'classifier_unsure'
   | 'new_adapter'
   | 'review_only_mode'
+  | 'admin_restored'
 
 /**
  * Human wording for each reason -- shared by the admin queue's chips and the
@@ -46,6 +47,7 @@ export const RISK_REASON_LABELS: Record<RiskReason, string> = {
   classifier_unsure: 'Unsure it fits',
   new_adapter: 'New source',
   review_only_mode: 'Review-only source',
+  admin_restored: 'Restored by admin',
 }
 
 /** A stored reason may predate a rename, so fall back to the raw value. */

@@ -51,6 +51,14 @@ export function fakeDb(handler: Handler = () => undefined) {
       )
       return builder
     },
+    /** Logged as table `rpc:<name>` with one `rpc` op carrying the arguments. */
+    rpc(name: string, args: unknown) {
+      const table = `rpc:${name}`
+      const ops: Op[] = [{ name: 'rpc', args: [args] }]
+      log.push({ table, ops })
+      const out = handler(table, ops) ?? {}
+      return Promise.resolve({ data: null, error: null, count: null, ...out })
+    },
   }
 
   return { db: db as unknown as SupabaseClient, log }

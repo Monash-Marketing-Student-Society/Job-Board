@@ -265,6 +265,7 @@ function memoryDeps() {
     },
     enrich: async () => {},
     touch: async () => {},
+    recordFiltered: async () => {},
   }
   return { rows, deps }
 }

@@ -52,7 +52,7 @@ export interface StagedJobRow {
 const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
 
 
-const REJECT_REASONS: Array<{ value: string; label: string }> = [
+export const REJECT_REASONS: Array<{ value: string; label: string }> = [
   { value: 'irrelevant', label: 'Not relevant' },
   { value: 'too_senior', label: 'Too senior' },
   { value: 'experience_required', label: 'Needs 2+ years’ experience' },

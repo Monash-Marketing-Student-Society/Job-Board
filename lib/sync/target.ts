@@ -37,6 +37,20 @@ export type TargetVerdict = 'pass' | 'reject' | 'unsure'
 /** Which check removed a posting -- stored so an admin can see why. */
 export type TargetRule = 'location' | 'excluded_field' | 'too_senior_title' | 'not_marketing' | 'experience_required'
 
+/** Admin-facing wording for each rule, shown on /admin/filters. */
+export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
+  location: 'Outside Melbourne/Sydney',
+  excluded_field: 'Excluded field',
+  too_senior_title: 'Too senior (title)',
+  not_marketing: 'Not marketing',
+  experience_required: 'Needs 2+ years',
+}
+
+/** A stored rule may predate a rename, so fall back to the raw value. */
+export function targetRuleLabel(rule: string): string {
+  return (TARGET_RULE_LABELS as Record<string, string>)[rule] ?? rule
+}
+
 export interface TargetResult {
   verdict: TargetVerdict
   /** Set on a reject: the first check that fired. */
