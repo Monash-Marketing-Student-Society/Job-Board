@@ -23,7 +23,11 @@ const STAGED_LIMIT = 100
 async function getPendingStagedJobs(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<StagedJobRow[]> {
   const { data, error } = await supabase
     .from('staged_jobs')
-    .select('id, created_at, risk_reasons, normalised, sources(name, slug, tier)')
+    // Only the fields a row shows -- `normalised` also carries the full
+    // description HTML, which for 100 rows was most of the page's payload.
+    .select(
+      'id, created_at, risk_reasons, title:normalised->>title, company:normalised->>company, location:normalised->>location, url:normalised->>url, closing_at:normalised->>closing_at, sources(name, slug, tier)'
+    )
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(STAGED_LIMIT)
@@ -35,7 +39,13 @@ async function getPendingStagedJobs(supabase: Awaited<ReturnType<typeof createSe
       id: row.id,
       created_at: row.created_at,
       risk_reasons: row.risk_reasons ?? [],
-      normalised: row.normalised as StagedJobRow['normalised'],
+      normalised: {
+        title: row.title ?? '',
+        company: row.company ?? '',
+        location: row.location ?? null,
+        url: row.url ?? '',
+        closing_at: row.closing_at ?? null,
+      },
       source: (src as StagedJobRow['source']) ?? null,
     }
   })
