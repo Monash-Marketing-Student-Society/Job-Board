@@ -14,6 +14,7 @@ import {
 } from '@/components/ui'
 import { RichTextEditor } from './rich-text-editor'
 import { LogoUploadField } from './logo-upload-field'
+import { NoClosingDateField } from './no-closing-date-field'
 import { createClient } from '@/lib/supabase/client'
 import { isValidApplicationUrl, isPastDateInput } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
@@ -60,6 +61,9 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
     tags: toJobFunctions(job?.tags ?? []),
     posted_at: job?.posted_at ? job.posted_at.split('T')[0] : '',
     closing_at: job?.closing_at ? job.closing_at.split('T')[0] : '',
+    // An existing job saved without a date was listed open-ended; a new job
+    // starts with a date required, as before.
+    no_closing_date: Boolean(job && !job.closing_at),
     is_active: job?.is_active ?? true,
     is_sponsored: job?.is_sponsored || false,
   })
@@ -87,7 +91,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
     // The board hides any job past its closing date, so an active job saved
     // with one in the past is live in the admin list but invisible to
     // students -- usually a mistyped year. Inactive jobs are left alone.
-    if (formData.is_active && isPastDateInput(formData.closing_at)) {
+    if (formData.is_active && !formData.no_closing_date && isPastDateInput(formData.closing_at)) {
       toast.error('That closing date has already passed, so this job won\u2019t show on the board.', {
         description: 'Check the year, or untick Active to save it as an inactive listing.',
       })
@@ -112,9 +116,13 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         summary: formData.summary || null,
         tags: tags.length > 0 ? tags : null,
         posted_at: formData.posted_at ? new Date(formData.posted_at).toISOString() : null,
-        closing_at: formData.closing_at ? new Date(formData.closing_at).toISOString() : null,
+        closing_at:
+          !formData.no_closing_date && formData.closing_at ? new Date(formData.closing_at).toISOString() : null,
         is_active: formData.is_active,
         is_sponsored: formData.is_sponsored,
+        // Saved as active: an admin has re-listed it, so the reason the nightly
+        // check took it down no longer applies.
+        ...(formData.is_active && { expired_reason: null }),
       }
 
       if (isEditing && job) {
@@ -299,15 +307,20 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="closing_at" required>Closing Date</Label>
+          <Label htmlFor="closing_at" required={!formData.no_closing_date}>Closing Date</Label>
           <Input
             id="closing_at"
             name="closing_at"
             type="date"
-            value={formData.closing_at}
+            value={formData.no_closing_date ? '' : formData.closing_at}
             onChange={handleChange}
-            required
+            required={!formData.no_closing_date}
+            disabled={formData.no_closing_date}
             className="mt-1.5"
+          />
+          <NoClosingDateField
+            checked={formData.no_closing_date}
+            onChange={(checked) => setFormData((prev) => ({ ...prev, no_closing_date: checked }))}
           />
         </div>
       </div>

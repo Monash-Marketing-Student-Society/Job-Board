@@ -8,6 +8,7 @@ import { Button, Input, Label, NativeSelect, NativeSelectOption, TagCombobox, us
 import { JobDetailPanel } from '@/components/jobs/job-detail-panel'
 import { RichTextEditor } from './rich-text-editor'
 import { JOB_TYPE_OPTIONS, WORK_MODE_OPTIONS } from './job-form'
+import { NoClosingDateField } from './no-closing-date-field'
 import { cn, decodeHtmlEntities, isValidApplicationUrl } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job } from '@/lib/types'
@@ -42,6 +43,7 @@ interface FormState {
   summary: string
   tags: JobFunction[]
   closing_at: string
+  no_closing_date: boolean
 }
 
 function toForm(job: Job): FormState {
@@ -58,6 +60,7 @@ function toForm(job: Job): FormState {
     summary: job.summary ?? '',
     tags: toJobFunctions(job.tags ?? []),
     closing_at: job.closing_at ? job.closing_at.split('T')[0] : '',
+    no_closing_date: !job.closing_at,
   }
 }
 
@@ -72,7 +75,7 @@ function toBody(form: FormState) {
     description: form.description || null,
     summary: form.summary || null,
     tags: form.tags,
-    closing_at: form.closing_at ? new Date(form.closing_at).toISOString() : null,
+    closing_at: !form.no_closing_date && form.closing_at ? new Date(form.closing_at).toISOString() : null,
   }
 }
 
@@ -104,6 +107,10 @@ export function DraftEditor({ kind, draft, approveNote }: DraftEditorProps) {
   const save = async (): Promise<boolean> => {
     if (!form.title.trim() || !form.company.trim()) {
       toast.error('A job needs a title and a company')
+      return false
+    }
+    if (!form.no_closing_date && !form.closing_at) {
+      toast.error('Add a closing date, or tick “No closing date”')
       return false
     }
     if (!isValidApplicationUrl(form.url.trim())) {
@@ -216,7 +223,16 @@ export function DraftEditor({ kind, draft, approveNote }: DraftEditorProps) {
 
         <div>
           <Label htmlFor="closing_at">Closing date</Label>
-          <Input id="closing_at" name="closing_at" type="date" value={form.closing_at} onChange={onField} className="mt-1.5" />
+          <Input
+            id="closing_at"
+            name="closing_at"
+            type="date"
+            value={form.no_closing_date ? '' : form.closing_at}
+            onChange={onField}
+            disabled={form.no_closing_date}
+            className="mt-1.5"
+          />
+          <NoClosingDateField checked={form.no_closing_date} onChange={(checked) => set('no_closing_date', checked)} />
         </div>
 
         <div>

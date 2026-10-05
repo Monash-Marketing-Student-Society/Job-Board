@@ -24,6 +24,8 @@ export interface Job {
   closing_at: string | null
   is_active: boolean
   is_sponsored: boolean
+  /** Why the nightly maintain task unpublished this job (0058); null if an admin did, or it is live. */
+  expired_reason?: string | null
   created_at: string
   updated_at: string
 }
@@ -329,4 +331,5 @@ export type AdminJobRow = Pick<
   | 'is_sponsored'
   | 'posted_at'
   | 'created_at'
+  | 'expired_reason'
 >
