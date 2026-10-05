@@ -3,7 +3,7 @@ import { descriptionText, requiredExperience } from './experience'
 
 // The same phrasings the Filter tab of the Job Sync doc lists -- keep the two
 // in step when either changes.
-describe('requiredExperience — removes a stated 2+ years', () => {
+describe('requiredExperience — removes a stated 1+ year', () => {
   const removed: Array<[string, number]> = [
     ["3+ years' experience in brand marketing", 3],
     ['minimum of 2 years agency experience', 2],
@@ -29,6 +29,18 @@ describe('requiredExperience — removes a stated 2+ years', () => {
     ['Experience: 3-5 years of experience in a similar role', 3],
     ['5+ years of digital marketing or content strategy experience', 5],
     ['Meticulous attention to detail 3-5 years work experience', 3],
+    // One year counts from 5 Oct 2026
+    ['1+ year experience', 1],
+    ["12 months' experience", 1],
+    ["18 months' experience in retail", 1.5],
+    ["1-2 years' experience", 1],
+    ["1-2 years' experience in a Design Assistant, Buying Assistant or similar role", 1],
+    // Real phrasings from the pending queue, 5 Oct 2026
+    ['You will bring: 1+ years’ experience in digital advertising, particularly across paid social', 1],
+    ['You’ll have at least one year of professional experience and around one year of hands-on experience', 1],
+    ["What You'll Bring 1-2 years integrated agency experience (account service or production management)", 1],
+    ['Fluent in Thai and English, both spoken and written 1-2 years of experience in affiliate marketing', 1],
+    ['Required Skills & Qualities 1–3 years’ experience in a marketing role', 1],
   ]
   for (const [text, years] of removed) {
     it(text, () => {
@@ -39,11 +51,8 @@ describe('requiredExperience — removes a stated 2+ years', () => {
 
 describe('requiredExperience — keeps everything else', () => {
   const kept = [
-    '1+ year experience',
-    "12 months' experience",
-    "18 months' experience in retail",
     "0-2 years' experience",
-    "1-2 years' experience",
+    "6 months' experience in retail",
     "up to 3 years' experience welcome",
     "less than 2 years' experience",
     'our 2 year graduate program builds your experience',
@@ -55,9 +64,19 @@ describe('requiredExperience — keeps everything else', () => {
     "Our agency has over 10 years' experience in retail",
     'Managing Directors have a collective 50 years of experience in Salesforce delivery',
     'Business or marketing-related tertiary qualifications, or 3–5 years’ experience in a marketing role',
-    "1-2 years' experience in a Design Assistant, Buying Assistant or similar role",
     '5 weeks annual leave after 2 years of service',
     'This role will be offered as a 12 month max term contract',
+    // Graduates or a degree offered as the other route in (queue, 5 Oct 2026)
+    'Recent graduates and those with 1-3 years of practical or professional work experience across analytics',
+    'seeking a journalism, media, communications or public relations graduate or emerging professional with 1-4 years’ experience',
+    'Graduate or early career professional with 1–4 years’ relevant experience',
+    'Bachelor’s degree in Marketing or related field or minimum 1 year experience in a similar role.',
+    // A preference, not a requirement
+    "What you can bring Ideally: Around 1-3 years' experience in copywriting, social content",
+    "1 year of experience in social media preferred",
+    "2+ years' agency experience is an advantage",
+    'Experience through internships, university projects, or 1-2 years in market research',
+    'a 12-month internship. This is an exciting opportunity to gain hands-on experience',
   ]
   for (const text of kept) {
     it(text, () => {
