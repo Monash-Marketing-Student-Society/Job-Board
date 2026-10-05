@@ -55,7 +55,7 @@ const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
 export const REJECT_REASONS: Array<{ value: string; label: string }> = [
   { value: 'irrelevant', label: 'Not relevant' },
   { value: 'too_senior', label: 'Too senior' },
-  { value: 'experience_required', label: 'Needs 2+ years’ experience' },
+  { value: 'experience_required', label: 'Needs 1+ year’s experience' },
   { value: 'duplicate', label: 'Duplicate' },
   { value: 'expired', label: 'Expired' },
   { value: 'employer_blocked', label: 'Employer blocked' },
