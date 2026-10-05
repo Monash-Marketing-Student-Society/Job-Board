@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon, FunnelIcon } from '@phosphor-icons/react'
@@ -124,6 +125,19 @@ function RowActions({ onApprove, onReject }: { onApprove: () => void; onReject: 
         </IconActionButton>
       </RejectMenu>
     </div>
+  )
+}
+
+/** The title: opens the job as students will see it, editable before approving. */
+function PreviewLink({ id, title, className }: { id: string; title: string; className?: string }) {
+  return (
+    <Link
+      href={`/admin/submissions/synced/${id}`}
+      title="Preview and edit before publishing"
+      className={cn('text-sm font-medium text-slate-800 hover:text-primary hover:underline underline-offset-2 transition-colors', className)}
+    >
+      {title}
+    </Link>
   )
 }
 
@@ -441,7 +455,7 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
 
                   <div className="min-w-0 px-3 py-3">
                     <div className="flex items-center gap-1">
-                      <p className="text-sm font-medium text-slate-800 truncate">{title}</p>
+                      <PreviewLink id={row.id} title={title} className="truncate" />
                       <PostingLink url={job.url} title={title} />
                     </div>
                     {secondary && <p className="text-xs text-muted-foreground truncate">{secondary}</p>}
@@ -487,7 +501,7 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
                   <SelectCheckbox label={`Select ${title}`} checked={selected.has(row.id)} onChange={() => toggle(row.id)} className="mt-1" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
-                      <p className="text-sm font-medium text-slate-800">{title}</p>
+                      <PreviewLink id={row.id} title={title} />
                       <PostingLink url={job.url} title={title} />
                     </div>
                     <p className="text-xs text-muted-foreground">

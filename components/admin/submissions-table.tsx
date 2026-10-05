@@ -4,7 +4,7 @@ import { useOptimistic, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowSquareOutIcon, CheckIcon, XIcon, DotsThreeVerticalIcon, ArchiveIcon } from '@phosphor-icons/react'
+import { CheckIcon, XIcon, DotsThreeVerticalIcon, ArchiveIcon } from '@phosphor-icons/react'
 import { Badge, Button, useConfirmDialog } from '@/components/ui'
 import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import {
@@ -485,18 +485,16 @@ export function SubmissionsTable({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-sm font-medium text-slate-800 truncate">{decodeHtmlEntities(submission.title)}</p>
-                      {/* Opens the draft preview — how this listing will look
-                          on the board — rather than the employer's own link,
-                          which stays in the overflow menu and on the preview
-                          page itself. */}
+                      {/* The title opens the preview — how this listing will
+                          look on the board, editable while pending. The
+                          employer's own link stays in the overflow menu and
+                          on the preview page itself. */}
                       <Link
                         href={`/admin/submissions/${submission.id}/preview`}
-                        aria-label={`Preview ${decodeHtmlEntities(submission.title)} as it will appear on the board`}
-                        title="Preview draft listing"
-                        className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                        title={submission.status === 'pending' ? 'Preview and edit before publishing' : 'Preview listing'}
+                        className="text-sm font-medium text-slate-800 truncate hover:text-primary hover:underline underline-offset-2 transition-colors"
                       >
-                        <ArrowSquareOutIcon className="size-3.5" />
+                        {decodeHtmlEntities(submission.title)}
                       </Link>
                       {submission.is_sponsored && (
                         <Badge className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">

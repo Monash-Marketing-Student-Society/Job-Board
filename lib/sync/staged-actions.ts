@@ -18,11 +18,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
+import { decodeHtmlEntities } from '../utils'
 import { computeFingerprint } from './fingerprint'
 import { resolveCity } from './location'
 import type { NormalisedJob } from './normalise'
 import type { RiskReason } from './risk'
 import { assessTarget, type TargetRule } from './target'
+import type { DraftEdit } from '../draft-edit'
 
 export const REJECT_REASONS = [
   'irrelevant',
@@ -104,10 +106,12 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
         .insert({
           source: `sync:${slug}`,
           external_id: row.external_id,
-          title: j.title,
-          company: j.company,
+          // Feeds can HTML-encode these ("Associate &amp; Creator"); the
+          // board renders them as text, so the entity would show literally.
+          title: decodeHtmlEntities(j.title),
+          company: decodeHtmlEntities(j.company),
           company_logo_url: logoUrl,
-          location: j.location,
+          location: j.location ? decodeHtmlEntities(j.location) : null,
           work_mode: j.work_mode,
           job_type: j.job_type,
           url: j.url,
@@ -160,6 +164,49 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
   if (fpError) return { ok: false, kind: 'error', message: `published, but fingerprint not repointed: ${fpError.message}` }
 
   return { ok: true, jobId: job.id }
+}
+
+/**
+ * Writes an admin's edits into a pending row's posting. Summary isn't kept --
+ * a synced job publishes without one and the card falls back to the
+ * description. Fields the edit doesn't cover (posted_at) keep the sync's
+ * value. Guarded on `status = 'pending'` like the actions: an edit to a row
+ * someone has just approved would change nothing on the board, so it is a
+ * conflict, not a silent no-op.
+ */
+export async function editStaged(db: SupabaseClient, id: string, edit: DraftEdit): Promise<ActionResult> {
+  const { data: row, error: readError } = await db
+    .from('staged_jobs')
+    .select('normalised')
+    .eq('id', id)
+    .eq('status', 'pending')
+    .maybeSingle()
+  if (readError) return { ok: false, kind: 'error', message: `read: ${readError.message}` }
+  if (!row) return { ok: false, kind: 'conflict' }
+
+  const normalised: NormalisedJob = {
+    ...(row.normalised as NormalisedJob),
+    title: edit.title,
+    company: edit.company,
+    location: edit.location,
+    work_mode: edit.work_mode,
+    job_type: edit.job_type,
+    url: edit.url,
+    description: edit.description,
+    tags: edit.tags,
+    closing_at: edit.closing_at,
+  }
+
+  const { data, error } = await db
+    .from('staged_jobs')
+    .update({ normalised, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
+  if (error) return { ok: false, kind: 'error', message: `edit: ${error.message}` }
+  if (!data) return { ok: false, kind: 'conflict' }
+  return { ok: true }
 }
 
 /**

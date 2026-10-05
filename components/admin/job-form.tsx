@@ -19,7 +19,7 @@ import { isValidApplicationUrl, isPastDateInput } from '@/lib/utils'
 import { toJobFunctions, type JobFunction } from '@/lib/tags'
 import type { Job, JobInsert, JobUpdate } from '@/lib/types'
 
-const JOB_TYPE_OPTIONS: SelectOption[] = [
+export const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select job type' },
   { value: 'internship', label: 'Internship' },
   { value: 'graduate', label: 'Graduate' },
@@ -29,7 +29,7 @@ const JOB_TYPE_OPTIONS: SelectOption[] = [
   { value: 'contract', label: 'Contract' },
 ]
 
-const WORK_MODE_OPTIONS: SelectOption[] = [
+export const WORK_MODE_OPTIONS: SelectOption[] = [
   { value: '', label: 'Select work mode' },
   { value: 'remote', label: 'Remote' },
   { value: 'hybrid', label: 'Hybrid' },
