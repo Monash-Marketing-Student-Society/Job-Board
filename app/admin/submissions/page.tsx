@@ -23,7 +23,7 @@ const STAGED_LIMIT = 100
 async function getPendingStagedJobs(supabase: Awaited<ReturnType<typeof createServerClient>>): Promise<StagedJobRow[]> {
   const { data, error } = await supabase
     .from('staged_jobs')
-    .select('id, created_at, risk_reasons, normalised, sources(name, slug, tier)')
+    .select('id, created_at, risk_reasons, normalised, sources(name, slug, tier, vendor:config->>vendor)')
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(STAGED_LIMIT)

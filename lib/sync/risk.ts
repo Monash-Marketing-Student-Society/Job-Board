@@ -35,19 +35,39 @@ export type RiskReason =
  * run digest, so the two can't describe the same hold differently.
  */
 export const RISK_REASON_LABELS: Record<RiskReason, string> = {
-  tier_b_or_c: 'Aggregator source',
+  tier_b_or_c: 'From a job board',
   missing_title: 'No title',
   missing_company: 'No company',
-  no_direct_link: 'Not a direct link',
-  missing_job_type: 'Job type unknown',
+  no_direct_link: 'Links to a listings page',
+  missing_job_type: 'No job type',
   missing_closing_date: 'No closing date',
-  inferred_closing_date: 'Closing date guessed',
-  inferred_location: 'Location guessed',
-  inferred_job_type: 'Job type guessed',
-  classifier_unsure: 'Unsure it fits',
+  inferred_closing_date: 'Closing date estimated',
+  inferred_location: 'Location estimated',
+  inferred_job_type: 'Job type estimated',
+  classifier_unsure: 'Check it suits students',
   new_adapter: 'New source',
   review_only_mode: 'Review-only source',
-  admin_restored: 'Restored by admin',
+  admin_restored: 'Restored from filter',
+}
+
+/**
+ * One sentence per reason saying what to check -- the hover text on each
+ * chip in the review queue, where the label alone is too short to act on.
+ */
+export const RISK_REASON_HELP: Record<RiskReason, string> = {
+  tier_b_or_c: 'Found on a job board rather than the employer’s own site, so it always gets a human look.',
+  missing_title: 'The posting had no title. Add one before publishing.',
+  missing_company: 'The posting didn’t name the employer. Add it before publishing.',
+  no_direct_link: 'The apply link goes to a list of jobs, not this one. Check it leads to the right role.',
+  missing_job_type: 'The posting didn’t say internship, graduate, part-time and so on. Set it before publishing.',
+  missing_closing_date: 'The posting has no closing date. Set one, or tick “No closing date”.',
+  inferred_closing_date: 'The posting didn’t give a closing date, so one was estimated. Check it against the original.',
+  inferred_location: 'The location was worked out from other text. Check it against the original.',
+  inferred_job_type: 'The job type was worked out from the title or description. Check it.',
+  classifier_unsure: 'The filter couldn’t tell whether this suits students. Check the level and the experience asked for.',
+  new_adapter: 'One of the first 10 jobs from this source, which always get a human look.',
+  review_only_mode: 'This source is review-only for now, so every job from it waits here.',
+  admin_restored: 'The filter removed this and an admin restored it for review.',
 }
 
 /** A stored reason may predate a rename, so fall back to the raw value. */

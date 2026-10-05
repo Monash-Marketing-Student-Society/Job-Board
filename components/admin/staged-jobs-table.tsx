@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon, FunnelIcon } from '@phosphor-icons/react'
-import { Badge, Button, NativeSelect, NativeSelectOption, useConfirmDialog } from '@/components/ui'
+import { ArrowSquareOutIcon, CheckIcon, XIcon, CaretDownIcon, FunnelIcon, GlobeIcon, LinkedinLogoIcon } from '@phosphor-icons/react'
+import { Button, NativeSelect, NativeSelectOption, useConfirmDialog } from '@/components/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
 } from '@/components/shadcn/dropdown-menu'
 import { GridRow, IconActionButton, SelectCheckbox, softButtonClassName, headerLabelClassName } from './table'
 import { cn, formatDate, decodeHtmlEntities, toApplicationHref } from '@/lib/utils'
-import { riskReasonLabel } from '@/lib/sync/risk'
+import { RISK_REASON_HELP, riskReasonLabel } from '@/lib/sync/risk'
 
 /**
  * Synced jobs held for review (staged_jobs), shown under the human
@@ -45,11 +45,11 @@ export interface StagedJobRow {
     url: string
     closing_at: string | null
   }
-  source: { name: string; slug: string; tier: string } | null
+  source: { name: string; slug: string; tier: string; vendor?: string | null } | null
 }
 
 /** Literal for Tailwind's JIT scanner: checkbox / job / source / closes / actions. */
-const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
+const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_160px_112px_88px]'
 
 
 export const REJECT_REASONS: Array<{ value: string; label: string }> = [
@@ -64,11 +64,11 @@ export const REJECT_REASONS: Array<{ value: string; label: string }> = [
 ]
 
 /**
- * 'review_only_mode' is on every row while a source is in its phase-1 soak,
- * so it says nothing about THIS job -- shown once in the section header
- * instead of repeated as a chip on every row.
+ * Chips that say nothing about THIS job: 'review_only_mode' is on every row
+ * while a source is in its soak (said once in the section header instead),
+ * and 'tier_b_or_c' repeats what the Source column's icon already shows.
  */
-const ROW_CHIP_EXCLUDED = new Set(['review_only_mode'])
+const ROW_CHIP_EXCLUDED = new Set(['review_only_mode', 'tier_b_or_c'])
 
 function RejectMenu({
   onReject,
@@ -100,10 +100,37 @@ function RiskChips({ reasons }: { reasons: string[] }) {
   return (
     <div className="mt-1.5 flex flex-wrap gap-1">
       {chips.map((reason) => (
-        <Badge key={reason} variant="warning" className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
+        <span
+          key={reason}
+          title={(RISK_REASON_HELP as Record<string, string>)[reason]}
+          className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium leading-5 text-slate-800"
+        >
           {riskReasonLabel(reason)}
-        </Badge>
+        </span>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Where a synced job came from, as a mark rather than a tier letter: the
+ * LinkedIn logo for LinkedIn, a globe for an employer's own careers site.
+ * Tiers stay on /admin/sources, where they're set.
+ */
+function SourceMark({ source }: { source: StagedJobRow['source'] }) {
+  if (!source) return <p className="text-xs text-muted-foreground">Unknown source</p>
+  const linkedin = source.vendor === 'linkedin'
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      {linkedin ? (
+        <LinkedinLogoIcon weight="fill" aria-hidden className="size-4 shrink-0 text-[#0A66C2]" />
+      ) : (
+        <GlobeIcon aria-hidden className="size-4 shrink-0 text-slate-500" />
+      )}
+      <div className="min-w-0">
+        <p className="truncate text-xs text-slate-700">{source.name}</p>
+        <p className="text-[11px] text-muted-foreground">{linkedin ? 'Job board' : 'Company website'}</p>
+      </div>
     </div>
   )
 }
@@ -422,9 +449,8 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
                     <RiskChips reasons={row.risk_reasons} />
                   </div>
 
-                  <div className="min-w-0 px-3 py-3">
-                    <p className="text-xs text-slate-700 truncate">{row.source?.name ?? 'Unknown source'}</p>
-                    {row.source && <p className="text-[11px] text-muted-foreground">Tier {row.source.tier}</p>}
+                  <div className="flex min-w-0 items-center px-3 py-3">
+                    <SourceMark source={row.source} />
                   </div>
 
                   <div className="px-3 py-3 flex items-center justify-end text-xs tabular-nums whitespace-nowrap">
@@ -445,7 +471,7 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
         </div>
       )}
 
-      {/* Below lg, the five fixed columns (368px) leave the job column no
+      {/* Below lg, the five fixed columns (400px) leave the job column no
           room -- cards instead, the same breakpoint SubmissionsTable uses. */}
       {visible.length > 0 && (
         <div className="lg:hidden space-y-2">
@@ -465,9 +491,12 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
                       <PostingLink url={job.url} title={title} />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {[job.company, job.location, row.source?.name].filter(Boolean).join(' · ')}
+                      {[job.company, job.location].filter(Boolean).join(' · ')}
                       {job.closing_at && ` · Closes ${formatDate(job.closing_at)}`}
                     </p>
+                    <div className="mt-1.5">
+                      <SourceMark source={row.source} />
+                    </div>
                     <RiskChips reasons={row.risk_reasons} />
                   </div>
                   <RowActions onApprove={() => approve([row.id])} onReject={(reason) => reject([row.id], reason)} />
