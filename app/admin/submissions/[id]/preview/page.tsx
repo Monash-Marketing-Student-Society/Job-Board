@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeftIcon, ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr'
 import { createServerClient } from '@/lib/supabase/server'
 import { DraftPreview } from './draft-preview'
+import { DraftEditor } from '@/components/admin/draft-editor'
 import { StatusDot, softButtonClassName, type StatusDotRole } from '@/components/admin/table'
 import { cn, toApplicationHref } from '@/lib/utils'
 import type { JobSubmission, Job } from '@/lib/types'
@@ -29,8 +30,10 @@ interface PageProps {
  * bespoke summary that would drift from the live layout. `preview` stops it
  * recording analytics against an id that isn't in `jobs` yet.
  *
- * Read-only on purpose: approve and reject stay in the queue, where the
- * confirmation dialogs and their emails already live.
+ * While the submission is pending the page is also the editor: fix the
+ * title, link, dates or description, watch the preview change, then publish
+ * from here. Reject stays in the queue, where its reason-and-email dialog
+ * lives. Once actioned, the page goes back to a read-only preview.
  *
  * The mapping below mirrors the insert in
  * app/api/admin/submissions/[id]/approve/route.ts field for field, so what
@@ -108,16 +111,25 @@ export default async function SubmissionPreviewPage({ params }: PageProps) {
           Draft preview — not published
         </p>
         <p className="mt-0.5 text-xs text-slate-600">
-          Exactly how this listing will appear on the board once approved. Approving publishes it
-          and emails {submission.submitter_name} at {submission.submitter_email}.
+          Exactly how this listing will appear on the board once approved.
+          {submission.status === 'pending' && ' Edit it on the left; the preview updates as you type.'} Approving
+          publishes it and emails {submission.submitter_name} at {submission.submitter_email}.
         </p>
       </div>
 
-      {/* min-h: JobDetailPanel's main view is a flex column with h-full and
-          its own scroll area, so it collapses without a height to fill. */}
-      <div className="min-h-[70vh]">
-        <DraftPreview job={draft} />
-      </div>
+      {submission.status === 'pending' ? (
+        <DraftEditor
+          kind="submission"
+          draft={draft}
+          approveNote={`${submission.submitter_name} is emailed to let them know.`}
+        />
+      ) : (
+        // min-h: JobDetailPanel's main view is a flex column with h-full and
+        // its own scroll area, so it collapses without a height to fill.
+        <div className="min-h-[70vh]">
+          <DraftPreview job={draft} />
+        </div>
+      )}
     </div>
   )
 }
