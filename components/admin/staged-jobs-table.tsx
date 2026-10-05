@@ -56,7 +56,7 @@ const STAGED_GRID_COLUMNS = 'grid-cols-[40px_minmax(0,1fr)_128px_112px_88px]'
 export const REJECT_REASONS: Array<{ value: string; label: string }> = [
   { value: 'irrelevant', label: 'Not relevant' },
   { value: 'too_senior', label: 'Too senior' },
-  { value: 'experience_required', label: 'Needs 2+ years’ experience' },
+  { value: 'experience_required', label: 'Needs 1+ year’s experience' },
   { value: 'duplicate', label: 'Duplicate' },
   { value: 'expired', label: 'Expired' },
   { value: 'employer_blocked', label: 'Employer blocked' },
@@ -157,6 +157,22 @@ function PostingLink({ url, title }: { url: string; title: string }) {
   )
 }
 
+/**
+ * POST a JSON body. A network failure comes back as a 503 Response rather than
+ * a throw, so a row hidden before the request can be put back.
+ */
+async function postJson(url: string, body: unknown): Promise<Response> {
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    return Response.json({ error: 'Network error. Check your connection and try again.' }, { status: 503 })
+  }
+}
+
 /** Each source with rows waiting, busiest first -- the filter's options. */
 function sourceOptions(rows: StagedJobRow[]): Array<{ slug: string; name: string; count: number }> {
   const bySlug = new Map<string, { slug: string; name: string; count: number }>()
@@ -190,6 +206,10 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
     setHidden((prev) => new Set([...prev, ...ids]))
     setSelected((prev) => new Set([...prev].filter((id) => !ids.includes(id))))
   }
+
+  /** Puts rows back after an action on them failed -- the counterpart of hiding them up front. */
+  const unhide = (ids: string[]) =>
+    setHidden((prev) => new Set([...prev].filter((id) => !ids.includes(id))))
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -292,36 +312,42 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
     })
   }
 
-  /** One route for one row, the bulk route for several -- both claim per row. */
+  /**
+   * One route for one row, the bulk route for several -- both claim per row.
+   *
+   * Rows leave the list the moment the admin confirms, not when the server
+   * answers: waiting on the round trip plus the refresh made every reject feel
+   * like a five-second hang. A failure puts the rows back.
+   */
   const run = (ids: string[], body: { action: string; reason?: string; comment?: string }, successText: string) => {
+    hide(ids)
     startTransition(async () => {
       if (ids.length === 1) {
-        const res = await fetch(`/api/admin/staged/${ids[0]}/${body.action}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: body.reason, comment: body.comment }),
+        const res = await postJson(`/api/admin/staged/${ids[0]}/${body.action}`, {
+          reason: body.reason,
+          comment: body.comment,
         })
         const payload = await res.json().catch(() => ({}))
         if (!res.ok) {
           toast.error(payload.error || 'Action failed')
+          // 409: someone else already actioned it, so it stays gone.
           if (res.status === 409) router.refresh()
+          else unhide(ids)
           return
         }
-        hide(ids)
         toast.success(successText)
       } else {
-        const res = await fetch('/api/admin/staged/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids, ...body }),
-        })
+        const res = await postJson('/api/admin/staged/bulk', { ids, ...body })
         const payload = await res.json().catch(() => ({}))
         if (!res.ok) {
           toast.error(payload.error || 'Bulk action failed')
+          unhide(ids)
           return
         }
-        hide(payload.succeeded ?? [])
-        const failed = (payload.failed ?? []).length
+        const failedRows: Array<{ id: string; reason: string }> = payload.failed ?? []
+        // A conflict was actioned by someone else and stays gone; an error comes back.
+        unhide(failedRows.filter((f) => f.reason !== 'conflict').map((f) => f.id))
+        const failed = failedRows.length
         if (failed > 0) {
           toast.warning(`${payload.succeeded.length} ${successText}, ${failed} failed`, {
             description: 'The failed ones were already actioned or hit an error — the list has been refreshed.',

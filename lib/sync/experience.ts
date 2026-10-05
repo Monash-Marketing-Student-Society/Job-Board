@@ -1,11 +1,16 @@
 /**
- * Reads a job description for an explicit experience requirement of two
- * years or more -- the point at which a student realistically can't get the
- * role, whatever its title says ("Marketing Coordinator", 3+ years required).
+ * Reads a job description for an explicit experience requirement of one
+ * year or more -- the point at which a student realistically can't get the
+ * role, whatever its title says ("Marketing Coordinator", 1+ years required).
  *
- * The threshold is 2, not 1, by the committee's call (3 Oct 2026): "1 year
- * experience" is often written loosely and students with a year of part-time
- * or placement work can still compete. Only an explicit requirement counts --
+ * The threshold was 2 from 3 Oct 2026 and dropped to 1 on 5 Oct 2026, after a
+ * run over the live queue showed "1+ years" / "1-3 years" roles were mostly
+ * not winnable from university. What the 2-year threshold protected against
+ * -- graduate-friendly ads that mention a year loosely -- is handled
+ * directly instead: a requirement offered as an alternative to a degree or to
+ * graduating ("graduates or emerging professionals with 1-4 years", "degree
+ * or minimum 1 year") or stated as a preference ("Ideally 1-3 years",
+ * "1 year preferred") doesn't count. Only an explicit requirement counts --
  * nothing is inferred from tone or seniority words here (target.ts does
  * titles).
  *
@@ -18,7 +23,7 @@
 import { decodeHtmlEntities } from '../utils'
 
 /** The threshold: a stated requirement at or above this many years rejects. */
-export const MIN_REJECT_YEARS = 2
+export const MIN_REJECT_YEARS = 1
 
 const NUMBER_WORDS: Record<string, number> = {
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
@@ -63,7 +68,25 @@ const NOT_A_REQUIREMENT = [
   // One route in among others: "tertiary qualifications, or 3–5 years'
   // experience" (Deloitte, 3 Oct 2026) -- a graduate qualifies by the degree.
   /\bor\s*$/i,
+  // A preference, not a requirement: "Ideally: around 1-3 years'".
+  /\b(?:ideally|preferably|desirable|desired)\b[^.;!?]{0,30}$/i,
 ]
+
+/**
+ * Further back than NOT_A_REQUIREMENT looks: a graduate or a degree offered as
+ * the other route in, a few words before the number. "Recent graduates and
+ * those with 1-3 years", "a graduate or emerging professional with 1-4 years",
+ * "Bachelor's degree in Marketing or related field or minimum 1 year".
+ *
+ * Errs towards keeping: bullet points flatten into one line, so "Degree in
+ * Marketing or Communications" followed by a "2+ years" bullet also matches
+ * and the job goes to human review instead of being removed. The safe miss.
+ */
+const GRADUATE_ALTERNATIVE =
+  /\b(?:graduates?|degree|qualifications?|diploma)\b[^.;!?]{0,80}?\b(?:or|and\s+(?:those|people|candidates|anyone))\s+(?:[\w’'-]+\s+){0,4}$/i
+
+/** Straight after the phrase: "1 year experience preferred", "is an advantage". */
+const PREFERENCE_AFTER = /^[^.;!?]{0,40}?\b(?:preferred|desirable|an advantage|a plus|advantageous|nice to have|beneficial)\b/i
 
 function toNumber(token: string): number {
   return NUMBER_WORDS[token.toLowerCase()] ?? Number(token)
@@ -95,6 +118,8 @@ export function requiredExperience(description: string | null | undefined): Expe
     if (years < MIN_REJECT_YEARS) return null
     const before = text.slice(Math.max(0, index - 60), index)
     if (NOT_A_REQUIREMENT.some((pattern) => pattern.test(before))) return null
+    if (GRADUATE_ALTERNATIVE.test(text.slice(Math.max(0, index - 120), index))) return null
+    if (PREFERENCE_AFTER.test(text.slice(index + phrase.length))) return null
     return { years, evidence: phrase.trim() }
   }
 

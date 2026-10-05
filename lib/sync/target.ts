@@ -43,7 +43,7 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   excluded_field: 'Excluded field',
   too_senior_title: 'Too senior (title)',
   not_marketing: 'Not marketing',
-  experience_required: 'Needs 2+ years',
+  experience_required: 'Needs 1+ year',
 }
 
 /** A stored rule may predate a rename, so fall back to the raw value. */
