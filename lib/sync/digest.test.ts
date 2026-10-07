@@ -50,7 +50,7 @@ describe('buildDigest', () => {
   it('lists each held job with readable reasons, leaving out the soak-wide one', () => {
     const { text } = buildDigest([ok()], [HELD], 'https://jobs.monashmss.com', RUN)
     expect(text).toContain('Unilever Future Leaders Programme')
-    expect(text).toContain('Held: Unsure it fits, New source')
+    expect(text).toContain('Held: Check it suits students, New source')
     expect(text).not.toContain('Review-only source')
   })
 

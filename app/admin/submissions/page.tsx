@@ -26,7 +26,7 @@ async function getPendingStagedJobs(supabase: Awaited<ReturnType<typeof createSe
     // Only the fields a row shows -- `normalised` also carries the full
     // description HTML, which for 100 rows was most of the page's payload.
     .select(
-      'id, created_at, risk_reasons, title:normalised->>title, company:normalised->>company, location:normalised->>location, url:normalised->>url, closing_at:normalised->>closing_at, sources(name, slug, tier)'
+      'id, created_at, risk_reasons, title:normalised->>title, company:normalised->>company, location:normalised->>location, url:normalised->>url, closing_at:normalised->>closing_at, sources(name, slug, tier, vendor:config->>vendor)'
     )
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
