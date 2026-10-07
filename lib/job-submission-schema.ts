@@ -27,8 +27,8 @@ import { isValidApplicationUrl } from './utils'
  * `JobType` unions in lib/types.ts.
  */
 
-const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const
-const JOB_TYPES = [
+export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const
+export const JOB_TYPES = [
   'internship',
   'graduate',
   'part-time',
@@ -80,7 +80,7 @@ const optionalText = (max: number) =>
 // location/description/summary succeeded — none of these fields (an enum
 // member, a URL, an array, an ISO datetime) is ever legitimately "", so
 // treating it as "absent" instead of "invalid" is strictly more permissive.
-const nullableDefault = <T extends z.ZodTypeAny>(schema: T) =>
+export const nullableDefault = <T extends z.ZodTypeAny>(schema: T) =>
   z
     .preprocess((v) => (typeof v === 'string' && v.trim() === '' ? null : v), schema.nullish())
     .transform((v) => v ?? null)

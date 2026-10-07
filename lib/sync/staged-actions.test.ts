@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { approveStaged, rejectStaged, bulkAction, isRejectReason, parseRejectComment, recheckPending, restoreFiltered } from './staged-actions'
+import { approveStaged, editStaged, rejectStaged, bulkAction, isRejectReason, parseRejectComment, recheckPending, restoreFiltered } from './staged-actions'
 import { fakeDb, type Handler, type Op } from './test-helpers/fake-db'
 
 const NORMALISED = {
@@ -276,5 +276,55 @@ describe('restoreFiltered', () => {
     expect(result).toMatchObject({ ok: false, kind: 'error' })
     const release = log.filter((c) => c.table === 'filtered_postings' && has(c.ops, 'update')).at(-1)!
     expect(argOf(release.ops, 'update')).toMatchObject({ status: 'filtered', restored_by: null })
+  })
+})
+
+describe('editStaged', () => {
+  const EDIT = {
+    title: 'Brand Intern',
+    company: 'Unilever',
+    url: 'https://careers.unilever.com/job/1',
+    location: 'Sydney NSW',
+    work_mode: null,
+    job_type: 'internship' as const,
+    description: '<p>Edited</p>',
+    summary: 'not stored',
+    tags: ['Brand' as const],
+    closing_at: null,
+  }
+
+  it('merges the edit into the posting, keeping fields it does not cover, only while pending', async () => {
+    const { db, log } = fakeDb((table, ops) =>
+      has(ops, 'update') ? { data: { id: 's1' } } : { data: { normalised: { ...NORMALISED, posted_at: '2026-10-01' } } }
+    )
+    expect(await editStaged(db, 's1', EDIT)).toEqual({ ok: true })
+
+    const write = log[1]
+    const normalised = argOf(write.ops, 'update').normalised as Record<string, unknown>
+    expect(normalised).toMatchObject({ title: 'Brand Intern', closing_at: null, posted_at: '2026-10-01' })
+    expect(normalised).not.toHaveProperty('summary')
+    expect(write.ops).toContainEqual({ name: 'eq', args: ['status', 'pending'] })
+  })
+
+  it('is a conflict once the row has left the queue', async () => {
+    const { db, log } = fakeDb(() => ({ data: null }))
+    expect(await editStaged(db, 's1', EDIT)).toEqual({ ok: false, kind: 'conflict' })
+    expect(log).toHaveLength(1)
+  })
+})
+
+describe('approveStaged — encoded text', () => {
+  it('publishes the title and company decoded', async () => {
+    const encoded = { ...CLAIMED, normalised: { ...NORMALISED, title: 'Associate &amp; Creator', company: 'M&amp;C Saatchi' } }
+    const { db, log } = fakeDb((table, ops) =>
+      table === 'staged_jobs' && has(ops, 'update') && argOf(ops, 'update').status === 'approved'
+        ? { data: encoded }
+        : happy()(table, ops)
+    )
+    await approveStaged(db, 's1', 'admin-1')
+    expect(argOf(log.find((c) => c.table === 'jobs')!.ops, 'insert')).toMatchObject({
+      title: 'Associate & Creator',
+      company: 'M&C Saatchi',
+    })
   })
 })

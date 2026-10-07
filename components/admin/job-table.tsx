@@ -35,6 +35,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn, formatDate } from '@/lib/utils'
 import { BulkImport } from './bulk-import'
 import type { AdminJobRow } from '@/lib/types'
+import { expiredReasonLabel } from '@/lib/maintain/open-ended'
 
 /** Literal so Tailwind's JIT scanner can see it — see components/admin/table/grid-row.tsx.
  *  checkbox / job / status / posted / actions. No Source track: Phase 3 folds source into
@@ -74,7 +75,8 @@ function applyJobAction(rows: AdminJobRow[], action: JobAction): AdminJobRow[] {
 
   const isActive = action.type === 'activate'
   return rows.map((job) =>
-    ids.has(job.id) ? { ...job, is_active: isActive } : job
+    // Activating clears why maintenance took it down -- an admin re-listed it.
+    ids.has(job.id) ? { ...job, is_active: isActive, ...(isActive && { expired_reason: null }) } : job
   )
 }
 
@@ -162,7 +164,8 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
       applyOptimistic({ type: 'activate', ids: [jobId] })
 
       const supabase = createClient()
-      const { error } = await supabase.from('jobs').update({ is_active: true }).eq('id', jobId)
+      // expired_at stays: it restarts the 60-day clock for a job with no closing date.
+      const { error } = await supabase.from('jobs').update({ is_active: true, expired_reason: null }).eq('id', jobId)
 
       if (error) {
         toast.error('Failed to activate job', { description: error.message })
@@ -443,11 +446,16 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-3">
+              <div className="flex min-w-0 flex-col justify-center px-3 py-3">
                 <StatusDot
                   role={job.is_active ? 'success' : 'muted'}
                   label={job.is_active ? 'Active' : 'Inactive'}
                 />
+                {!job.is_active && expiredReasonLabel(job.expired_reason) && (
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={expiredReasonLabel(job.expired_reason) ?? undefined}>
+                    {expiredReasonLabel(job.expired_reason)}
+                  </p>
+                )}
               </div>
               <div className="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums text-muted-foreground">
                 {formatDate(job.posted_at || job.created_at)}
