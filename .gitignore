@@ -54,3 +54,6 @@ supabase/snippets/
 supabase/functions/.env
 
 .trigger
+
+# scripts/tidy-synced-descriptions.ts --apply
+tidy-synced-descriptions.backup-*.json

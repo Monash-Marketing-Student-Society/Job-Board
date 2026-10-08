@@ -20,7 +20,7 @@
  */
 
 import { normalizeJobType, truncateText, decodeHtmlEntities } from '../utils'
-import { sanitizeDescription } from '../sanitize'
+import { sanitizeSyncedDescription } from '../sanitize'
 import { JOB_FUNCTIONS, toJobFunctions, type JobFunction } from '../tags'
 import { matchesAny } from './text-match'
 import { mapJobPostingToData } from '../prefill/extract'
@@ -99,11 +99,13 @@ export function inferJobFunctions(title: string, description: string | null): Jo
 
 function cleanDescription(html: string | null | undefined): string | null {
   if (!html) return null
-  return sanitizeDescription(truncateText(html, DESCRIPTION_MAX_LENGTH * 4)) || null
-  // truncateText runs before sanitizeDescription, generously, purely to cap
+  return sanitizeSyncedDescription(truncateText(html, DESCRIPTION_MAX_LENGTH * 4)) || null
+  // truncateText runs before sanitizeSyncedDescription, generously, purely to cap
   // pathological input size before the HTML parser touches it -- the real
   // length limit belongs on the rendered/plain-text form, not the markup,
   // which is why it's 4x the target and not the final word on length.
+  // sanitizeSyncedDescription also evens out the ATS's headings and blank
+  // lines; an admin's later edit in the review queue is left as typed.
 }
 
 // ── Workday ──────────────────────────────────────────────────────────────
@@ -204,7 +206,7 @@ export interface GreenhouseRawPosting {
  *
  * `content` is HTML, but double-escaped: the literal string starts
  * `&lt;p&gt;`, not `<p>`. decodeHtmlEntities() (lib/utils.ts) unwraps that
- * one layer before sanitizeDescription() gets a chance to see real markup --
+ * one layer before sanitizeSyncedDescription() gets a chance to see real markup --
  * skipping this step would store literal `&lt;p&gt;` text on the board.
  */
 export function normaliseGreenhousePosting(raw: GreenhouseRawPosting, company: string): NormaliseResult {
