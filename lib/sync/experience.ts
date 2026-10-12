@@ -37,7 +37,10 @@ const UNIT = `(years?|yrs?|months?)`
 // sentence or list item, which the character class can't step over. A filler
 // word that names the program itself ("2 year graduate program that builds
 // experience") means the number is the program's length, not a requirement.
-const FILLER = `(?:(?!program|rotation|contract|course|degree|stud|internship|placement)[\\w'’&/,-]+\\s+){0,5}?`
+// "Combined" or "collective" between the two ("25+ years combined
+// experience between our two Founders", Oct 2026) means a total across
+// people, never what a candidate must bring.
+const FILLER = `(?:(?!program|rotation|contract|course|degree|stud|internship|placement|combined|collective)[\\w'’&/,-]+\\s+){0,5}?`
 const AFTER_NUMBER = new RegExp(
   `(up\\s+to\\s+|under\\s+|less\\s+than\\s+)?\\b${RANGE}\\s*${UNIT}\\b['’]?\\s*(?:of\\s+)?${FILLER}(?:experience|in\\s+a\\s+(?:similar|related|relevant|comparable)\\s+(?:role|position))\\b`,
   'gi'
@@ -65,6 +68,11 @@ const NOT_A_REQUIREMENT = [
   // collective 50 years of experience" (Accenture, 3 Oct 2026).
   /\b(?:we|we've|our\s+\w+|the\s+(?:company|business|agency|group))\s+(?:have|has|bring|brings|boasts?)(?:\s+(?:over|more\s+than|almost|nearly))?\s*$/i,
   /\b(?:collective|combined)\s*$/i,
+  // A named person or the team describing themselves: "StudioBetter's
+  // founder, who has over nine years of experience" (Oct 2026). A bare
+  // "someone who has 2+ years" stays a requirement -- the subject has to
+  // be the employer's own people.
+  /\b(?:founders?|co-founders?|ceo|owners?|directors?|principals?|leadership|our\s+team|the\s+team)\b[^.;!?]{0,40}?\b(?:has|have|brings?|boasts?)(?:\s+(?:over|more\s+than|almost|nearly))?\s*$/i,
   // One route in among others: "tertiary qualifications, or 3–5 years'
   // experience" (Deloitte, 3 Oct 2026) -- a graduate qualifies by the degree.
   /\bor\s*$/i,

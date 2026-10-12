@@ -41,6 +41,7 @@ describe('requiredExperience — removes a stated 1+ year', () => {
     ["What You'll Bring 1-2 years integrated agency experience (account service or production management)", 1],
     ['Fluent in Thai and English, both spoken and written 1-2 years of experience in affiliate marketing', 1],
     ['Required Skills & Qualities 1–3 years’ experience in a marketing role', 1],
+    ["We're looking for someone who has 2+ years of experience in social", 2],
   ]
   for (const [text, years] of removed) {
     it(text, () => {
@@ -77,6 +78,10 @@ describe('requiredExperience — keeps everything else', () => {
     "2+ years' agency experience is an advantage",
     'Experience through internships, university projects, or 1-2 years in market research',
     'a 12-month internship. This is an exciting opportunity to gain hands-on experience',
+    // The employer's own people, not the candidate (Oct 2026 wrong removals)
+    'We are privileged to have 25+ years combined experience between our two Founders',
+    "You'll work closely with Caleb, StudioBetter's founder, who has over nine years of experience across agency-side",
+    'Our CEO brings 15 years of experience in retail',
   ]
   for (const text of kept) {
     it(text, () => {

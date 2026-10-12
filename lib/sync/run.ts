@@ -120,6 +120,9 @@ export async function processPosting(
     location: job.location,
     tags: job.tags,
     description: job.description,
+    company: job.company,
+    industries: typeof posting.raw.job_industries === 'string' ? posting.raw.job_industries : null,
+    closingAt: job.closing_at,
   })
   const applyUrlHash = computeApplyUrlHash(job.url)
   if (verdict === 'reject') {

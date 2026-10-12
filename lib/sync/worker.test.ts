@@ -59,6 +59,9 @@ describe('loadSources', () => {
 
 describe('runOneSource', () => {
   beforeEach(() => {
+    // The fixture closes 28 Sep 2026; pin the clock before it so the
+    // two-week closing rule doesn't remove it.
+    vi.setSystemTime(new Date('2026-09-01T00:00:00Z'))
     vi.mocked(dns.lookup).mockResolvedValue([{ address: '93.184.216.34', family: 4 }] as never)
     vi.stubGlobal(
       'fetch',
@@ -71,7 +74,10 @@ describe('runOneSource', () => {
       )
     )
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
 
   const handler: Handler = (table) => (table === 'staged_jobs' ? { data: { id: 'st1' } } : undefined)
 
