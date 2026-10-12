@@ -137,7 +137,7 @@ describe('targets — level gate', () => {
   })
 
   it('sends a title with no level signal at all to review, not a reject', () => {
-    expect(targets(job({ title: 'Marketing Executive', jobType: null, tags: ['Brand'] }))).toBe('unsure')
+    expect(targets(job({ title: 'Marketing Officer', jobType: null, tags: ['Brand'] }))).toBe('unsure')
   })
 })
 
@@ -195,5 +195,82 @@ describe('assessTarget — the reason for a reject', () => {
 
   it('leaves a clean posting alone when the description asks for less', () => {
     expect(assessTarget(job({ description: '0-2 years experience welcome' }))).toEqual({ verdict: 'pass' })
+  })
+})
+
+// The admin decisions of 12 Oct 2026, from the trial's comments.
+describe('assessTarget — description-first rules (12 Oct 2026)', () => {
+  const mid = (title: string, description: string | null = null) =>
+    assessTarget(job({ title, jobType: null, tags: ['Brand'], description }))
+
+  it('removes mid-level titles: executive, specialist, owner, consultant, partner, strategist', () => {
+    for (const title of ['Digital Brand Specialist', 'Account Executive', 'Product Owner', 'Travel Sales Consultant', 'People Partner', 'Content Strategist']) {
+      expect(mid(title).rule).toBe('too_senior_title')
+    }
+  })
+
+  it('keeps a mid-level title that is also an entry route', () => {
+    expect(mid('2026 Brand Specialist (e-Commerce) Intern').verdict).not.toBe('reject')
+    expect(mid('Graduate Marketing Executive').verdict).not.toBe('reject')
+  })
+
+  it('keeps a mid-level title when the description welcomes students', () => {
+    expect(mid('Marketing Executive', '<p>Perfect for recent graduates.</p>').verdict).not.toBe('reject')
+    expect(mid('Social Specialist', '<p>This is an entry-level role.</p>').verdict).not.toBe('reject')
+  })
+
+  it('removes any title whose description states seniority', () => {
+    const result = mid('Marketing Coordinator', '<p>You will have a track record of managing a team.</p>')
+    expect(result).toMatchObject({ verdict: 'reject', rule: 'too_senior_description' })
+    expect(mid('News Editor', '<p>Ideal for an early-to-mid-career journalist.</p>').rule).toBe('too_senior_description')
+  })
+
+  it('does not read generic experience wording as seniority', () => {
+    for (const text of ['Proven experience in partnerships', 'Experience managing multiple deadlines', 'This role has no direct reports', 'Sales pipeline management']) {
+      expect(mid('Marketing Coordinator', `<p>${text}</p>`).verdict).not.toBe('reject')
+    }
+  })
+
+  it('removes non-marketing roles by title phrase', () => {
+    for (const title of ['People Solutions Coordinator', 'Customer Care Team Member', 'Design Assistant (Womenswear)', 'Accounts Payable Officer', 'Game Development Officer - Barkly', 'Retail Merchandiser']) {
+      expect(mid(title).rule).toBe('not_marketing')
+    }
+  })
+
+  it('leaves marketing roles that share a word with those phrases', () => {
+    for (const title of ['Junior Media Buyer', 'Junior Graphic Designer', 'Customer Marketing Assistant', 'Social Media Coordinator (Footwear)']) {
+      expect(mid(title).verdict).not.toBe('reject')
+    }
+  })
+
+  it('keeps only programs at professional-services firms', () => {
+    const firm = (title: string, company: string) => assessTarget(job({ title, jobType: null, company }))
+    expect(firm('Events & Marketing Coordinator', 'Deloitte')).toMatchObject({ verdict: 'reject', rule: 'employer_rule' })
+    expect(firm('Marketing Coordinator', 'EY').rule).toBe('employer_rule')
+    expect(firm('2027 Graduate Program - Marketing', 'KPMG').verdict).not.toBe('reject')
+    expect(firm('Summer Vacationer Program', 'Deloitte').verdict).not.toBe('reject')
+    expect(firm('Marketing Coordinator', 'Monkey Agency').verdict).not.toBe('reject')
+  })
+
+  it('keeps only the Monash Red Bull Student Marketeer', () => {
+    const redBull = (title: string) => assessTarget(job({ title, jobType: null, company: 'Red Bull' }))
+    expect(redBull('Student Marketeer - Monash University').verdict).not.toBe('reject')
+    expect(redBull('Student Marketeer - La Trobe University').rule).toBe('employer_rule')
+  })
+
+  it('removes blue-collar industries, not consumer manufacturers', () => {
+    const industry = (industries: string) => assessTarget(job({ industries }))
+    expect(industry('Mining').rule).toBe('industry')
+    expect(industry('Wholesale Building Materials').rule).toBe('industry')
+    expect(industry('Agriculture, Construction, Mining Machinery Manufacturing').rule).toBe('industry')
+    expect(industry('Manufacturing').verdict).not.toBe('reject')
+    expect(industry('Appliances, Electrical, and Electronics Manufacturing, Industrial Machinery Manufacturing, and Medical Equipment Manufacturing').verdict).not.toBe('reject')
+  })
+
+  it('removes a job closing within two weeks, keeps one with no closing date', () => {
+    const now = new Date('2026-10-12T00:00:00Z')
+    expect(assessTarget(job({ closingAt: '2026-10-20', now }))).toMatchObject({ verdict: 'reject', rule: 'closing_soon' })
+    expect(assessTarget(job({ closingAt: '2026-11-01', now })).verdict).toBe('pass')
+    expect(assessTarget(job({ closingAt: null, now })).verdict).toBe('pass')
   })
 })

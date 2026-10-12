@@ -269,6 +269,10 @@ const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
   location: 'irrelevant',
   excluded_field: 'irrelevant',
   not_marketing: 'irrelevant',
+  too_senior_description: 'too_senior',
+  employer_rule: 'irrelevant',
+  industry: 'irrelevant',
+  closing_soon: 'expired',
 }
 
 export interface RecheckRemoval {
@@ -294,18 +298,22 @@ export async function recheckPending(
   reviewerId: string,
   { apply }: { apply: boolean }
 ): Promise<RecheckRemoval[] | { error: string }> {
-  const { data, error } = await db.from('staged_jobs').select('id, normalised').eq('status', 'pending')
+  const { data, error } = await db.from('staged_jobs').select('id, normalised, raw').eq('status', 'pending')
   if (error) return { error: error.message }
 
   const removals: RecheckRemoval[] = []
-  for (const row of (data ?? []) as Array<{ id: string; normalised: NormalisedJob }>) {
+  for (const row of (data ?? []) as Array<{ id: string; normalised: NormalisedJob; raw: Record<string, unknown> | null }>) {
     const j = row.normalised
+    const industries = row.raw?.job_industries
     const verdict = assessTarget({
       title: j.title,
       jobType: j.job_type,
       location: j.location,
       tags: j.tags ?? [],
       description: j.description,
+      company: j.company,
+      industries: typeof industries === 'string' ? industries : null,
+      closingAt: j.closing_at,
     })
     if (verdict.verdict !== 'reject' || !verdict.rule) continue
 

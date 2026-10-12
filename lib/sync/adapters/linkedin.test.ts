@@ -238,8 +238,10 @@ describe('LinkedIn postings through the existing filter', () => {
     expect(verdictFor('4400000006')).toMatchObject({ verdict: 'reject', rule: 'experience_required' })
   })
 
-  it('holds the real Delaware North posting as unsure (a specialist title with no level signal)', () => {
-    expect(verdictFor('4471733100').verdict).toBe('unsure')
+  // A Specialist title goes unless the description welcomes students
+  // (12 Oct 2026); this one asks for an experienced paid-media marketer.
+  it('removes the real Delaware North posting (a specialist title, no student wording)', () => {
+    expect(verdictFor('4471733100')).toMatchObject({ verdict: 'reject', rule: 'too_senior_title' })
   })
 })
 
@@ -280,10 +282,10 @@ describe('the same snapshot delivered twice', () => {
     const first = await processSource(SOURCE, adapter, normalise, deps)
     const second = await processSource(SOURCE, adapter, normalise, deps)
 
-    // 7 postings: Senior, Perth and 3+ years rejected; 4 held for review.
-    expect(first).toEqual({ ...emptyCounts(), seen: 7, rejected: 3, held: 4 })
-    expect(second).toEqual({ ...emptyCounts(), seen: 7, rejected: 3, deduped: 4 })
-    expect(rows).toHaveLength(4)
+    // 7 postings: Senior, Specialist, Perth and 3+ years rejected; 3 held for review.
+    expect(first).toEqual({ ...emptyCounts(), seen: 7, rejected: 4, held: 3 })
+    expect(second).toEqual({ ...emptyCounts(), seen: 7, rejected: 4, deduped: 3 })
+    expect(rows).toHaveLength(3)
     expect(rows.every((r) => r.riskReasons.includes('tier_b_or_c'))).toBe(true)
   })
 })
