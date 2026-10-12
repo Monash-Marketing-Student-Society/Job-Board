@@ -32,6 +32,15 @@
  * text), `job_seniority_level`, `job_employment_type`, `job_posted_date`
  * (ISO), `application_availability`. Error records (include_errors) carry
  * `error`/`error_code` and no posting id.
+ *
+ * Employer size (12 Oct 2026): after the jobs arrive, every Sydney
+ * employer not yet in `linkedin_companies` is looked up in one more
+ * snapshot (lib/sync/linkedin-companies.ts) and its size band's lower bound
+ * is attached to the record as `company_employees_min`, for the Sydney size
+ * rule in target.ts. Employers of Sydney jobs already waiting for review
+ * are looked up too, so Recheck can apply the rule to them. A failed or
+ * unaffordable lookup never fails the run: those jobs carry no size and go
+ * to review.
  */
 
 import {
@@ -41,7 +50,14 @@ import {
   searchInputs,
   type LinkedInSearchInput,
 } from './linkedin-config'
-import type { Adapter, AdapterContext, RawPosting, SourceRow } from './types'
+import {
+  COMPANY_DATASET_ID,
+  companyRef,
+  isSydneyRecord,
+  toCompanySizes,
+  type CompanyRecord,
+} from '../linkedin-companies'
+import type { Adapter, AdapterContext, CompanyRef, RawPosting, SourceRow } from './types'
 
 export const DATASET_ID = 'gd_lpfll7v5hcqtkxl6l'
 const API = 'https://api.brightdata.com/datasets/v3'
@@ -52,6 +68,9 @@ const POLL_INTERVAL_MS = 30_000
 const MAX_WAIT_MS = 40 * 60_000
 /** Consecutive failed polls (timeouts, 5xx) before giving up on this run. */
 const MAX_POLL_FAILURES = 5
+
+/** Employers looked up in one run at most -- a first run's backlog, after that a few a week. */
+export const MAX_COMPANY_LOOKUPS = 150
 
 /** The snapshot isn't lost, only not ready (or not reachable) yet: the next run collects it. */
 export class SnapshotPendingError extends Error {}
@@ -174,8 +193,68 @@ export function createLinkedInAdapter(deps: LinkedInDeps = defaultDeps): Adapter
     return body.snapshot_id
   }
 
+  async function triggerCompanies(refs: CompanyRef[]): Promise<string> {
+    const params = new URLSearchParams({ dataset_id: COMPANY_DATASET_ID, include_errors: 'true' })
+    const res = await call(`/trigger?${params}`, { method: 'POST', body: JSON.stringify(refs.map((r) => ({ url: r.url }))) })
+    const body = (await res.json().catch(() => null)) as { snapshot_id?: string } | null
+    if (!res.ok || !body?.snapshot_id) {
+      throw new Error(`Bright Data company trigger failed (${res.status}): ${JSON.stringify(body).slice(0, 300)}`)
+    }
+    return body.snapshot_id
+  }
+
+  /**
+   * Looks up the Sydney employers not yet cached -- within what the month
+   * can still afford -- and attaches every known size to its postings.
+   * Never throws: a job with no size goes to review, which is the safe miss.
+   */
+  async function attachEmployerSizes(postings: RawPosting[], source: SourceRow, ctx: AdapterContext): Promise<void> {
+    const { companies, ledger } = ctx
+    if (!companies) return
+    const sydney = postings.flatMap((p) => {
+      const ref = isSydneyRecord(p.raw) ? companyRef(p.raw) : null
+      return ref ? [{ posting: p, ref }] : []
+    })
+
+    let sizes: Map<string, number | null>
+    try {
+      sizes = await companies.sizes(sydney.map((s) => s.ref.companyId))
+      const wanted = new Map<string, CompanyRef>()
+      for (const { ref } of sydney) if (!sizes.has(ref.companyId)) wanted.set(ref.companyId, ref)
+      for (const ref of await companies.pendingUnknown(MAX_COMPANY_LOOKUPS)) wanted.set(ref.companyId, ref)
+
+      // A dry run reads the cache but buys nothing.
+      const cap = configNumber(source, 'monthly_cap', MONTHLY_RECORD_CAP)
+      const room = ctx.dryRun ? 0 : Math.max(0, cap - (await ledger.recordsThisMonth()))
+      const asked = [...wanted.values()].slice(0, Math.min(MAX_COMPANY_LOOKUPS, room))
+      if (asked.length > 0) {
+        const snapshotId = await triggerCompanies(asked)
+        await ledger.triggered({ snapshotId, inputs: asked.map((r) => ({ url: r.url })), maxRecords: asked.length, dryRun: false, kind: 'companies' })
+        let records: CompanyRecord[]
+        try {
+          records = (await collect(snapshotId, ctx)) as CompanyRecord[]
+        } catch (e) {
+          await ledger.finished(snapshotId, { status: 'failed', error: e instanceof Error ? e.message : String(e) })
+          throw e
+        }
+        await ledger.finished(snapshotId, { status: 'collected', records: records.length, postingIds: [] })
+        const found = toCompanySizes(asked, records)
+        await companies.save(found)
+        for (const row of found) sizes.set(row.companyId, row.employeesMin)
+      }
+    } catch (e) {
+      console.warn(`[linkedin] employer size lookup skipped: ${e instanceof Error ? e.message : String(e)}`)
+      return
+    }
+
+    for (const { posting, ref } of sydney) {
+      const size = sizes.get(ref.companyId)
+      if (typeof size === 'number') posting.raw.company_employees_min = size
+    }
+  }
+
   /** The snapshot's records once ready. Throws if it fails, or is still running after MAX_WAIT_MS. */
-  async function collect(snapshotId: string, ctx: AdapterContext): Promise<LinkedInRecord[]> {
+  async function collect(snapshotId: string, ctx: AdapterContext): Promise<unknown[]> {
     const deadline = deps.now() + MAX_WAIT_MS
     let failures = 0
     for (;;) {
@@ -188,7 +267,7 @@ export function createLinkedInAdapter(deps: LinkedInDeps = defaultDeps): Adapter
 
       if (res?.status === 200) {
         const body: unknown = await res.json()
-        if (Array.isArray(body)) return body as LinkedInRecord[]
+        if (Array.isArray(body)) return body
         throw new Error(`Bright Data snapshot ${snapshotId} returned ${JSON.stringify(body).slice(0, 300)}`)
       }
       if (res?.status === 202) {
@@ -236,7 +315,7 @@ export function createLinkedInAdapter(deps: LinkedInDeps = defaultDeps): Adapter
 
       let records: LinkedInRecord[]
       try {
-        records = await collect(snapshotId, ctx)
+        records = (await collect(snapshotId, ctx)) as LinkedInRecord[]
       } catch (e) {
         // Still running or unreachable: leave it 'triggered' so the next run collects it.
         if (!(e instanceof SnapshotPendingError)) {
@@ -247,7 +326,9 @@ export function createLinkedInAdapter(deps: LinkedInDeps = defaultDeps): Adapter
 
       const postingIds = records.map((r) => r.job_posting_id).filter((id): id is string => Boolean(id))
       await ledger.finished(snapshotId, { status: 'collected', records: records.length, postingIds })
-      return toPostings(records)
+      const postings = toPostings(records)
+      await attachEmployerSizes(postings, source, ctx)
+      return postings
     },
   }
 }

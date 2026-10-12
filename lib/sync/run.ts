@@ -122,6 +122,7 @@ export async function processPosting(
     description: job.description,
     company: job.company,
     industries: typeof posting.raw.job_industries === 'string' ? posting.raw.job_industries : null,
+    employerSize: typeof posting.raw.company_employees_min === 'number' ? posting.raw.company_employees_min : null,
     closingAt: job.closing_at,
   })
   const applyUrlHash = computeApplyUrlHash(job.url)

@@ -272,6 +272,7 @@ const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
   too_senior_description: 'too_senior',
   employer_rule: 'irrelevant',
   industry: 'irrelevant',
+  employer_size: 'irrelevant',
   closing_soon: 'expired',
 }
 
@@ -301,10 +302,21 @@ export async function recheckPending(
   const { data, error } = await db.from('staged_jobs').select('id, normalised, raw').eq('status', 'pending')
   if (error) return { error: error.message }
 
+  const rows = (data ?? []) as Array<{ id: string; normalised: NormalisedJob; raw: Record<string, unknown> | null }>
+  // LinkedIn employer sizes come from the cache, not the stored record: the
+  // lookup may have run after the job was staged.
+  const companyIds = rows.map((r) => r.raw?.company_id).filter((id) => typeof id === 'string' || typeof id === 'number').map(String)
+  const sizes = new Map<string, number | null>()
+  if (companyIds.length > 0) {
+    const { data: companies } = await db.from('linkedin_companies').select('company_id, employees_min').in('company_id', companyIds)
+    for (const c of companies ?? []) sizes.set(c.company_id as string, (c.employees_min as number | null) ?? null)
+  }
+
   const removals: RecheckRemoval[] = []
-  for (const row of (data ?? []) as Array<{ id: string; normalised: NormalisedJob; raw: Record<string, unknown> | null }>) {
+  for (const row of rows) {
     const j = row.normalised
     const industries = row.raw?.job_industries
+    const companyId = row.raw?.company_id
     const verdict = assessTarget({
       title: j.title,
       jobType: j.job_type,
@@ -313,6 +325,7 @@ export async function recheckPending(
       description: j.description,
       company: j.company,
       industries: typeof industries === 'string' ? industries : null,
+      employerSize: companyId == null ? null : (sizes.get(String(companyId)) ?? null),
       closingAt: j.closing_at,
     })
     if (verdict.verdict !== 'reject' || !verdict.rule) continue

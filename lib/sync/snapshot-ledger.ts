@@ -57,6 +57,7 @@ export function snapshotLedger(db: SupabaseClient, sourceId: string): SnapshotLe
         .select('snapshot_id')
         .eq('source_id', sourceId)
         .eq('status', 'triggered')
+        .eq('kind', 'jobs')
         .gte('triggered_at', since)
         .order('triggered_at', { ascending: false })
         .limit(1)
@@ -85,9 +86,10 @@ export function snapshotLedger(db: SupabaseClient, sourceId: string): SnapshotLe
       return [...ids]
     },
 
-    async triggered({ snapshotId, inputs, maxRecords, dryRun }) {
+    async triggered({ snapshotId, inputs, maxRecords, dryRun, kind = 'jobs' }) {
       const { error } = await db.from('brightdata_snapshots').insert({
         source_id: sourceId,
+        kind,
         snapshot_id: snapshotId,
         inputs,
         max_records: maxRecords,
