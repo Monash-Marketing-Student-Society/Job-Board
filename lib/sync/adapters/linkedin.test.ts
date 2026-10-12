@@ -10,7 +10,7 @@ import {
   type LinkedInRecord,
 } from './linkedin'
 import { LIMIT_PER_INPUT, MONTHLY_RECORD_CAP, searchInputs } from './linkedin-config'
-import type { AdapterContext, SnapshotLedger, SourceRow } from './types'
+import type { AdapterContext, CompanyStore, SnapshotLedger, SourceRow } from './types'
 import { assessTarget } from '../target'
 import { normaliseLinkedInPosting, type LinkedInRawPosting } from '../normalise'
 import { emptyCounts, processSource, type StagedInsert, type SyncDeps } from '../run'
@@ -287,5 +287,81 @@ describe('the same snapshot delivered twice', () => {
     expect(second).toEqual({ ...emptyCounts(), seen: 7, rejected: 4, deduped: 3 })
     expect(rows).toHaveLength(3)
     expect(rows.every((r) => r.riskReasons.includes('tier_b_or_c'))).toBe(true)
+  })
+})
+
+describe('linkedin adapter: Sydney employer sizes', () => {
+  const sydneyRecord = (id: string, slug: string): LinkedInRecord =>
+    ({
+      ...RECORDS[0],
+      job_posting_id: id,
+      job_location: 'Sydney, New South Wales, Australia',
+      company_id: `c-${slug}`,
+      company_url: `https://au.linkedin.com/company/${slug}?trk=public_jobs_topcard-org-name`,
+    }) as LinkedInRecord
+
+  function fakeStore(cached: Record<string, number | null> = {}): CompanyStore {
+    return {
+      sizes: vi.fn(async (ids: string[]) => new Map(ids.filter((id) => id in cached).map((id) => [id, cached[id]] as const))),
+      save: vi.fn().mockResolvedValue(undefined),
+      pendingUnknown: vi.fn().mockResolvedValue([]),
+    }
+  }
+
+  it('looks up uncached Sydney employers once, counts them in the ledger, and attaches the size', async () => {
+    const records = [sydneyRecord('9001', 'hatch-team'), sydneyRecord('9002', 'tiktok'), RECORDS[0]]
+    const { deps, calls } = fakeApi([
+      json(200, records),
+      json(200, [{ input: { url: 'https://www.linkedin.com/company/hatch-team' }, company_size: '11-50 employees' }]),
+    ])
+    const ledger = fakeLedger()
+    const companies = fakeStore({ 'c-tiktok': 10001 })
+
+    const postings = await createLinkedInAdapter(deps).fetch(SOURCE, { ...ctx(ledger), companies })
+
+    const companyTrigger = calls.filter((c) => c.url.includes('/trigger?'))[1]
+    expect(companyTrigger.url).toContain('dataset_id=gd_l1vikfnt1wgvvqz95w')
+    expect(JSON.parse(String(companyTrigger.init?.body))).toEqual([{ url: 'https://www.linkedin.com/company/hatch-team' }])
+    expect(ledger.triggered).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'companies', maxRecords: 1 }))
+    expect(companies.save).toHaveBeenCalledWith([expect.objectContaining({ companyId: 'c-hatch-team', employeesMin: 11 })])
+    const size = (id: string) => postings.find((p) => p.sourceJobId === id)?.raw.company_employees_min
+    expect(size('9001')).toBe(11)
+    expect(size('9002')).toBe(10001)
+    expect(size(RECORDS[0].job_posting_id!)).toBeUndefined() // Melbourne: not looked up
+  })
+
+  it('buys nothing on a dry run, and still uses the cache', async () => {
+    const { deps, calls } = fakeApi([json(200, [sydneyRecord('9001', 'hatch-team'), sydneyRecord('9002', 'tiktok')])])
+    const companies = fakeStore({ 'c-tiktok': 10001 })
+
+    const postings = await createLinkedInAdapter(deps).fetch(SOURCE, { ...ctx(fakeLedger()), dryRun: true, companies })
+
+    expect(calls.filter((c) => c.url.includes('/trigger?'))).toHaveLength(1)
+    expect(postings.find((p) => p.sourceJobId === '9002')?.raw.company_employees_min).toBe(10001)
+  })
+
+  it('never fails the run when the lookup fails; those jobs carry no size', async () => {
+    const { deps } = fakeApi([json(200, [sydneyRecord('9001', 'hatch-team')]), json(400, { error: 'bad input' })])
+    const ledger = fakeLedger()
+
+    const postings = await createLinkedInAdapter(deps).fetch(SOURCE, { ...ctx(ledger), companies: fakeStore() })
+
+    expect(postings).toHaveLength(1)
+    expect(postings[0].raw.company_employees_min).toBeUndefined()
+    expect(ledger.finished).toHaveBeenLastCalledWith('sd_test', expect.objectContaining({ status: 'failed' }))
+  })
+
+  it('looks up no more than the month can still afford', async () => {
+    const { deps, calls } = fakeApi([json(200, [sydneyRecord('9001', 'hatch-team')])])
+    // A resumed job snapshot: the job search's own budget check would refuse at the cap first.
+    const ledger = fakeLedger({
+      recordsThisMonth: vi.fn().mockResolvedValue(MONTHLY_RECORD_CAP),
+      findResumable: vi.fn().mockResolvedValue({ snapshotId: 'sd_old' }),
+    })
+
+    const postings = await createLinkedInAdapter(deps).fetch(SOURCE, { ...ctx(ledger), companies: fakeStore() })
+
+    expect(calls.filter((c) => c.url.includes('/trigger?'))).toHaveLength(0)
+    expect(postings[0].raw.company_employees_min).toBeUndefined()
   })
 })

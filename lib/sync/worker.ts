@@ -18,6 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { SourceRow } from './adapters/types'
 import { emptyCounts, processSource, zeroGuardTripped } from './run'
 import { checkConsent } from './robots'
+import { companyStore } from './linkedin-companies'
 import { snapshotLedger } from './snapshot-ledger'
 import { dryRunDeps, recordSourceRun, supabaseDeps, type SourceRunResult } from './supabase-deps'
 import { vendorFor } from './vendors'
@@ -60,7 +61,12 @@ export async function runOneSource(db: SupabaseClient, source: LoadedSource, opt
     if (!consent.ok) throw new Error(consent.reason)
     const real = supabaseDeps(db, source)
     // The ledger writes even on a dry run: a paid source's records are spent either way.
-    const ctx = { ledger: snapshotLedger(db, source.id), sleep: opts.sleep ?? timerSleep, dryRun: opts.dryRun }
+    const ctx = {
+      ledger: snapshotLedger(db, source.id),
+      companies: companyStore(db),
+      sleep: opts.sleep ?? timerSleep,
+      dryRun: opts.dryRun,
+    }
     const counts = await processSource(source, vendor.adapter, vendor.normalise, opts.dryRun ? dryRunDeps(real) : real, ctx)
     result = { counts, error: null, zeroGuardTripped: zeroGuardTripped(counts.seen, source.usual_count) }
   } catch (e) {

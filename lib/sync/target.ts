@@ -35,6 +35,8 @@ export interface TargetInput {
   company?: string | null
   /** LinkedIn's industry string ("Mining", "Construction"); absent for career sites. */
   industries?: string | null
+  /** Lower bound of the employer's LinkedIn size band; absent when unknown (career sites, failed lookups). */
+  employerSize?: number | null
   /** ISO closing date, if the posting states one. */
   closingAt?: string | null
   /** Injected for tests; defaults to the current time. */
@@ -53,6 +55,7 @@ export type TargetRule =
   | 'too_senior_description'
   | 'employer_rule'
   | 'industry'
+  | 'employer_size'
   | 'closing_soon'
 
 /** Admin-facing wording for each rule, shown on /admin/filters. */
@@ -65,6 +68,7 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   too_senior_description: 'Too senior (description)',
   employer_rule: 'Employer rule',
   industry: 'Industry',
+  employer_size: 'Small employer (Sydney)',
   closing_soon: 'Closes within 2 weeks',
 }
 
@@ -220,6 +224,23 @@ function blueCollarIndustry(industries: string | null | undefined): string | nul
   return matchesAny(industries, BLUE_COLLAR_INDUSTRIES) ? industries : null
 }
 
+// Sydney employer size (12 Oct 2026): a Melbourne student rarely moves for a
+// small firm, least of all for an internship. Measured on the trial's Sydney
+// LinkedIn decisions: 1,000+ for internships kept 6 of 7 approved and removed
+// all 4 rejected; 51+ for other roles drops the 2-50 person firms while
+// keeping the 51-200 agencies admins approved (Digivizer, One Green Bean).
+// Only applied when the size is known -- an unknown one goes to review.
+export const SYDNEY_INTERNSHIP_MIN_EMPLOYEES = 1000
+export const SYDNEY_ROLE_MIN_EMPLOYEES = 51
+
+function smallSydneyEmployer(job: TargetInput, city: string): string | null {
+  if (city !== 'sydney' || typeof job.employerSize !== 'number') return null
+  const internship = job.jobType === 'internship' || matchesAny(job.title, ['intern', 'internship', 'vacationer'])
+  const min = internship ? SYDNEY_INTERNSHIP_MIN_EMPLOYEES : SYDNEY_ROLE_MIN_EMPLOYEES
+  if (job.employerSize >= min) return null
+  return `LinkedIn size band starts at ${job.employerSize.toLocaleString('en-AU')}; a Sydney ${internship ? 'internship' : 'role'} needs ${min.toLocaleString('en-AU')}+`
+}
+
 // Admins review once a week (12 Oct 2026), so a job has to stay open for at
 // least two: a week waiting for review, then a week live. No closing date is
 // fine -- the nightly check retires those when they disappear (#135).
@@ -298,6 +319,9 @@ export function assessTarget(job: TargetInput): TargetResult {
 
   const industry = blueCollarIndustry(job.industries)
   if (industry) return { verdict: 'reject', rule: 'industry', evidence: industry }
+
+  const small = smallSydneyEmployer(job, city)
+  if (small) return { verdict: 'reject', rule: 'employer_size', evidence: small }
 
   const level = levelGate(job)
   if (level === 'no' || midLevelTitle(job)) return { verdict: 'reject', rule: 'too_senior_title', evidence: job.title }

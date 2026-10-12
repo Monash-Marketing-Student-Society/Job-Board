@@ -274,3 +274,24 @@ describe('assessTarget — description-first rules (12 Oct 2026)', () => {
     expect(assessTarget(job({ closingAt: null, now })).verdict).toBe('pass')
   })
 })
+
+describe('assessTarget — Sydney employer size', () => {
+  const sydney = (title: string, employerSize: number | null, jobType: TargetInput['jobType'] = null) =>
+    assessTarget(job({ title, jobType, location: 'Sydney, New South Wales, Australia', employerSize }))
+
+  it('needs 1,000+ employees for a Sydney internship', () => {
+    expect(sydney('Social Media Intern', 2)).toMatchObject({ verdict: 'reject', rule: 'employer_size' })
+    expect(sydney('Marketing Internship', 201, 'internship').rule).toBe('employer_size')
+    expect(sydney('Marketing Internship', 1001, 'internship').verdict).toBe('pass')
+  })
+
+  it('needs 51+ employees for any other Sydney role', () => {
+    expect(sydney('Marketing Coordinator', 11).rule).toBe('employer_size')
+    expect(sydney('Marketing Coordinator', 51).verdict).not.toBe('reject')
+  })
+
+  it('leaves Melbourne and unknown sizes alone', () => {
+    expect(assessTarget(job({ title: 'Social Media Intern', location: 'Melbourne', employerSize: 2 })).verdict).toBe('pass')
+    expect(sydney('Social Media Intern', null).verdict).not.toBe('reject')
+  })
+})

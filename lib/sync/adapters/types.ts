@@ -38,16 +38,44 @@ export interface SnapshotLedger {
   findResumable(): Promise<{ snapshotId: string } | null>
   /** Posting ids already bought recently -- kept and rejected alike -- so the next search skips them. */
   recentPostingIds(limit: number): Promise<string[]>
-  triggered(entry: { snapshotId: string; inputs: unknown[]; maxRecords: number; dryRun: boolean }): Promise<void>
+  /** `kind` defaults to 'jobs'; company lookups share the budget but are never resumed as a job search. */
+  triggered(entry: { snapshotId: string; inputs: unknown[]; maxRecords: number; dryRun: boolean; kind?: 'jobs' | 'companies' }): Promise<void>
   finished(
     snapshotId: string,
     outcome: { status: 'collected'; records: number; postingIds: string[] } | { status: 'failed'; error: string }
   ): Promise<void>
 }
 
+/** A LinkedIn employer, as a job record names it. */
+export interface CompanyRef {
+  companyId: string
+  /** Canonical company page, e.g. https://www.linkedin.com/company/hatch-team */
+  url: string
+}
+
+/** One looked-up employer, as cached in linkedin_companies. */
+export interface CompanySize extends CompanyRef {
+  name: string | null
+  companySize: string | null
+  /** Lower bound of LinkedIn's size band; null when the lookup returned no size. */
+  employeesMin: number | null
+  employeesOnLinkedIn: number | null
+}
+
+/** The employer-size cache behind the Sydney size rule (lib/sync/linkedin-companies.ts). */
+export interface CompanyStore {
+  /** Cached sizes by company id. An id missing from the map was never looked up; null = looked up, no size. */
+  sizes(companyIds: string[]): Promise<Map<string, number | null>>
+  save(rows: CompanySize[]): Promise<void>
+  /** Sydney LinkedIn employers waiting in the review queue that were never looked up. */
+  pendingUnknown(limit: number): Promise<CompanyRef[]>
+}
+
 /** What an adapter may need beyond its source row. Free adapters ignore it. */
 export interface AdapterContext {
   ledger: SnapshotLedger
+  /** LinkedIn only: where employer sizes are cached. Absent in tests that don't need it. */
+  companies?: CompanyStore
   /** Waits between polls. Trigger.dev passes `wait.for`, which checkpoints instead of billing compute. */
   sleep(ms: number): Promise<void>
   dryRun: boolean
