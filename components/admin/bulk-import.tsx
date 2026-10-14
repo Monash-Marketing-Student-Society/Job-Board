@@ -8,6 +8,7 @@ import { Button, Alert, AlertDescription } from '@/components/ui'
 import { TRACK_SHAPE, softButtonClassName } from './table/table-styles'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { comparableName } from '@/lib/logos'
 import { generateTemplate, SAMPLE_ROW_TITLE } from '@/lib/excel-template'
 import {
   JOB_FUNCTIONS,
@@ -286,10 +287,29 @@ export function BulkImport() {
       let success = 0
       let failed = 0
 
+      // Every job on the board must have a logo. A row without one takes its
+      // company's approved logo (/admin/logos); a row with neither is skipped
+      // rather than published bare (the database would refuse it anyway).
+      const { data: approved } = await supabase.from('company_logos').select('company_key, logo_url')
+      const approvedByKey = new Map((approved ?? []).map((a) => [a.company_key as string, a.logo_url as string]))
+      const rows = preview.map((r) => ({
+        ...r.data,
+        company_logo_url: r.data.company_logo_url || approvedByKey.get(comparableName(r.data.company)) || null,
+      }))
+      const noLogo = rows.filter((r) => !r.company_logo_url)
+      const withLogo = rows.filter((r) => r.company_logo_url)
+      failed += noLogo.length
+      if (noLogo.length > 0) {
+        toast.error(`${noLogo.length} job${noLogo.length === 1 ? '' : 's'} skipped: no logo`, {
+          description: `Approve a logo on the Logos page or add a Logo URL for: ${[...new Set(noLogo.map((r) => r.company))].join(', ')}`,
+          duration: 15000,
+        })
+      }
+
       // Insert in batches of 20
       const batchSize = 20
-      for (let i = 0; i < preview.length; i += batchSize) {
-        const batch = preview.slice(i, i + batchSize).map((r) => r.data)
+      for (let i = 0; i < withLogo.length; i += batchSize) {
+        const batch = withLogo.slice(i, i + batchSize)
         const { error: insertError } = await supabase
           .from('jobs')
           .insert(batch)

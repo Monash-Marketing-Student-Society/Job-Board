@@ -62,6 +62,7 @@ export type ActionResult =
   | { ok: true; jobId?: string }
   | { ok: false; kind: 'conflict' }
   | { ok: false; kind: 'duplicate' }
+  | { ok: false; kind: 'no_logo'; company: string }
   | { ok: false; kind: 'error'; message: string; stranded?: boolean }
 
 interface ClaimedRow {
@@ -99,6 +100,13 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
   const j = row.normalised
   // An admin-approved logo (/admin/logos) wins; otherwise the source's own domain.
   const logoUrl = (await approvedLogoFor(db, j.company)) ?? sourceLogoUrl(src?.config)
+  if (!logoUrl) {
+    // Every job on the board needs a logo. Hand the row back to the queue
+    // untouched; if that fails it is stranded, as with a failed publish.
+    const { error: releaseError } = await db.from('staged_jobs').update({ status: 'pending', reviewed_by: null }).eq('id', id)
+    if (releaseError) return { ok: false, kind: 'error', message: `no logo, and release failed: ${releaseError.message}`, stranded: true }
+    return { ok: false, kind: 'no_logo', company: j.company }
+  }
 
   const { data: job, error: insertError } = slug
     ? await db

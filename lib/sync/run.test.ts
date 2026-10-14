@@ -52,6 +52,7 @@ function fakeDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
   return {
     findExisting: vi.fn().mockResolvedValue(null),
     countPublished: vi.fn().mockResolvedValue(50),
+    logoFor: vi.fn().mockResolvedValue('https://cdn.brandfetch.io/domain/unilever.com/icon'),
     stage: vi.fn().mockResolvedValue(undefined),
     publish: vi.fn().mockResolvedValue(undefined),
     enrich: vi.fn().mockResolvedValue(undefined),
@@ -86,6 +87,15 @@ describe('processPosting — routing', () => {
     expect(deps.publish).toHaveBeenCalledOnce()
     expect(deps.stage).not.toHaveBeenCalled()
     expect(counts.created).toBe(1)
+  })
+
+  it('holds a clean posting on an auto-publish source when its company has no logo', async () => {
+    const deps = fakeDeps({ logoFor: vi.fn().mockResolvedValue(null) })
+    const counts = emptyCounts()
+    await processPosting(POSTING, CLEAN, AUTO_SOURCE, deps, counts)
+
+    expect(deps.publish).not.toHaveBeenCalled()
+    expect(vi.mocked(deps.stage).mock.calls[0][0].riskReasons).toEqual(['missing_logo'])
   })
 
   it('still holds a risky posting on an auto-publish source', async () => {

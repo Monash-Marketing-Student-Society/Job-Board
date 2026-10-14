@@ -73,6 +73,8 @@ export interface SyncDeps {
   }): Promise<StoredMatch | null>
   /** Jobs this source has already published (drives the new-adapter hold). */
   countPublished(sourceSlug: string): Promise<number>
+  /** The logo a job from this company would publish with, or null (drives the missing-logo hold). */
+  logoFor(company: string): Promise<string | null>
   /** Insert into staged_jobs (and record its fingerprint). */
   stage(row: StagedInsert): Promise<void>
   /** Insert straight into jobs with auto_published_at set (and record its fingerprint). */
@@ -174,6 +176,7 @@ export async function processPosting(
     verdict,
     publishedFromSource: await deps.countPublished(source.slug),
     reviewOnly: isReviewOnly(source),
+    hasLogo: Boolean(await deps.logoFor(job.company)),
   })
 
   const row: StagedInsert = {

@@ -103,6 +103,17 @@ describe('approveStaged', () => {
     expect(log.some((c) => c.table === 'jobs')).toBe(false)
   })
 
+  it('refuses a job whose company has no logo, handing it back to the queue', async () => {
+    const noDomain = { ...CLAIMED, sources: { slug: 'linkedin', config: {} } }
+    const { db, log } = fakeDb(happy({ claim: { data: noDomain } }))
+    const result = await approveStaged(db, 's1', 'admin-1')
+
+    expect(result).toEqual({ ok: false, kind: 'no_logo', company: NORMALISED.company })
+    expect(log.some((c) => c.table === 'jobs')).toBe(false)
+    const release = log.filter((c) => c.table === 'staged_jobs')[1]
+    expect(argOf(release.ops, 'update')).toEqual({ status: 'pending', reviewed_by: null })
+  })
+
   it('releases the claim back to pending if the publish fails', async () => {
     const { db, log } = fakeDb(happy({ insert: { error: { message: 'duplicate key' } } }))
     const result = await approveStaged(db, 's1', 'admin-1')

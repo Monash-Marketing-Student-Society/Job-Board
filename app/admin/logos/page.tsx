@@ -9,20 +9,22 @@ export const metadata = {
 }
 
 /**
- * TEMPORARY page (Oct 2026): approve a logo for each allowlisted employer and
- * each company on the board, in one pass. Approvals land in company_logos
- * (0040), which the sync reads, so they outlive this page. Not in the admin
- * nav; delete this folder, employers.ts and components/admin/logo-approvals.tsx
- * once the pass is done.
+ * Approve a logo for each allowlisted employer, each company on the board, and
+ * each company waiting in a review queue. Approvals land in company_logos
+ * (0040), which the sync and both approve routes read. Every job on the board
+ * must have a logo (15 Oct 2026), so a queued job from a company without one
+ * can't be published until it is approved here.
  *
  * Read through the admin's own session (jobs and company_logos both have
  * admin SELECT policies); writes go through /api/admin/company-logos.
  */
 export default async function AdminLogosPage() {
   const supabase = await createServerClient()
-  const [jobsResult, approvedResult] = await Promise.all([
+  const [jobsResult, approvedResult, stagedResult, submissionsResult] = await Promise.all([
     supabase.from('jobs').select('company, company_logo_url, is_active'),
     supabase.from('company_logos').select('company_key, company, domain, logo_url, approved_at'),
+    supabase.from('staged_jobs').select('normalised->>company').eq('status', 'pending'),
+    supabase.from('job_submissions').select('company, company_logo_url').eq('status', 'pending'),
   ])
 
   if (jobsResult.error) throw new Error(`Could not load jobs: ${jobsResult.error.message}`)
@@ -30,7 +32,13 @@ export default async function AdminLogosPage() {
   const approved = approvedResult.error ? [] : ((approvedResult.data ?? []) as ReviewApproved[])
 
   const hidden = new Set(HIDDEN_COMPANIES.map(comparableName))
-  const rows = buildLogoReviewRows(EMPLOYERS, (jobsResult.data ?? []) as ReviewJob[], approved).filter(
+  // Every job needs a logo before it can be published, so companies waiting
+  // in either review queue are listed too -- approve their logo here first.
+  const queued: ReviewJob[] = [
+    ...((stagedResult.data ?? []) as { company: string | null }[]).map((r) => ({ company: r.company ?? '', company_logo_url: null, is_active: false })),
+    ...((submissionsResult.data ?? []) as { company: string; company_logo_url: string | null }[]).map((r) => ({ ...r, is_active: false })),
+  ].filter((r) => r.company.trim())
+  const rows = buildLogoReviewRows(EMPLOYERS, [...((jobsResult.data ?? []) as ReviewJob[]), ...queued], approved).filter(
     (r) => !hidden.has(r.key)
   )
 

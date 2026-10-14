@@ -19,6 +19,7 @@ export type RiskReason =
   | 'tier_b_or_c'
   | 'missing_title'
   | 'missing_company'
+  | 'missing_logo'
   | 'no_direct_link'
   | 'missing_job_type'
   | 'missing_closing_date'
@@ -38,6 +39,7 @@ export const RISK_REASON_LABELS: Record<RiskReason, string> = {
   tier_b_or_c: 'From a job board',
   missing_title: 'No title',
   missing_company: 'No company',
+  missing_logo: 'No logo',
   no_direct_link: 'Links to a listings page',
   missing_job_type: 'No job type',
   missing_closing_date: 'No closing date',
@@ -58,6 +60,7 @@ export const RISK_REASON_HELP: Record<RiskReason, string> = {
   tier_b_or_c: 'Found on a job board rather than the employer’s own site, so it always gets a human look.',
   missing_title: 'The posting had no title. Add one before publishing.',
   missing_company: 'The posting didn’t name the employer. Add it before publishing.',
+  missing_logo: 'Every job on the board needs a logo, and this company has none yet. Approve one on the Logos page, then publish.',
   no_direct_link: 'The apply link goes to a list of jobs, not this one. Check it leads to the right role.',
   missing_job_type: 'The posting didn’t say internship, graduate, part-time and so on. Set it before publishing.',
   missing_closing_date: 'The posting has no closing date. Set one, or tick “No closing date”.',
@@ -87,10 +90,12 @@ export interface RiskInput {
   publishedFromSource: number
   /** True unless the source has been explicitly flipped to auto-publish. */
   reviewOnly: boolean
+  /** An approved company logo or the source's own domain exists: every live job must have a logo. */
+  hasLogo: boolean
 }
 
 export function assessRisk(input: RiskInput): RiskReason[] {
-  const { job, confidence, tier, verdict, publishedFromSource, reviewOnly } = input
+  const { job, confidence, tier, verdict, publishedFromSource, reviewOnly, hasLogo } = input
   const reasons: RiskReason[] = []
 
   if (tier !== 'A') reasons.push('tier_b_or_c')
@@ -100,6 +105,7 @@ export function assessRisk(input: RiskInput): RiskReason[] {
   // job_type, and a closing date.
   if (!job.title.trim()) reasons.push('missing_title')
   if (!job.company.trim()) reasons.push('missing_company')
+  if (!hasLogo) reasons.push('missing_logo')
   if (!job.url || !isJobSpecificUrl(job.url)) reasons.push('no_direct_link')
   if (!job.job_type) reasons.push('missing_job_type')
   if (!job.closing_at) reasons.push('missing_closing_date')

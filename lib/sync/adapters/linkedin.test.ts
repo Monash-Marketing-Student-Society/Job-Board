@@ -259,6 +259,7 @@ function memoryDeps() {
       return hit ? { kind: 'staged', id: hit.externalId ?? '', source: 'sync:linkedin', tier: 'C' } : null
     },
     countPublished: async () => 0,
+    logoFor: async () => null,
     stage: async (row) => {
       rows.push(row)
     },

@@ -82,6 +82,15 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
     e.preventDefault()
     setIsSubmitting(true)
 
+    // Every live job on the board must have a logo (the database refuses one without).
+    if (formData.is_active && !formData.company_logo_url.trim()) {
+      toast.error('Add a company logo before saving an active job.', {
+        description: 'Pick a suggestion, paste a link, or upload one. Or untick Active to save it as an inactive listing.',
+      })
+      setIsSubmitting(false)
+      return
+    }
+
     if (!isValidApplicationUrl(formData.url.trim())) {
       toast.error('Application URL must be a valid http(s) link or an email address.')
       setIsSubmitting(false)
@@ -184,6 +193,7 @@ export function JobForm({ job, isEditing = false }: JobFormProps) {
           id="company_logo_url"
           name="company_logo_url"
           label="Company Logo URL"
+          required={formData.is_active}
           value={formData.company_logo_url}
           onChange={(url) => setFormData((prev) => ({ ...prev, company_logo_url: url }))}
           companyName={formData.company}

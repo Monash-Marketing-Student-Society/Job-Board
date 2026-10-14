@@ -7,6 +7,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { approvalEmail } from '@/lib/email-templates'
 import { sanitizeDescription } from '@/lib/sanitize'
+import { approvedLogoFor } from '@/lib/company-logos'
+import { noLogoResponse } from '@/lib/sync/staged-http'
 
 export async function POST(
   _request: Request,
@@ -20,6 +22,22 @@ export async function POST(
   }
 
   const supabase = await createServerClient()
+  const adminClient = createAdminClient()
+
+  // Every job on the board needs a logo: the submitter's own, else the
+  // company's approved one. Checked before the claim so a refusal leaves the
+  // submission pending.
+  const { data: pending } = await supabase
+    .from('job_submissions')
+    .select('company, company_logo_url')
+    .eq('id', id)
+    .eq('status', 'pending')
+    .maybeSingle()
+  let logoUrl: string | null = null
+  if (pending) {
+    logoUrl = pending.company_logo_url?.trim() || (await approvedLogoFor(adminClient, pending.company))
+    if (!logoUrl) return noLogoResponse(pending.company)
+  }
 
   // Claim the submission BEFORE publishing anything.
   //
@@ -60,7 +78,6 @@ export async function POST(
   }
 
   // Insert into live jobs table using service-role client (bypasses RLS)
-  const adminClient = createAdminClient()
   const { error: insertError } = await adminClient.from('jobs').insert({
     source: 'submission',
     title: submission.title,
@@ -74,7 +91,7 @@ export async function POST(
     // approving one reviews the rendered output, where a payload is invisible.
     description: sanitizeDescription(submission.description) || null,
     summary: submission.summary,
-    company_logo_url: submission.company_logo_url,
+    company_logo_url: logoUrl ?? submission.company_logo_url,
     tags: submission.tags,
     posted_at: new Date().toISOString(),
     closing_at: submission.closing_at,
