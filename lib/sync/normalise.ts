@@ -601,6 +601,22 @@ export interface LinkedInRawPosting {
 }
 
 /**
+ * Hatch posts other employers' roles on LinkedIn under its own name, as
+ * "SEO Coordinator @ Jaywing" or with a "This is a … role with Deloitte
+ * based in …" line opening the description. The tidy drops that line, so
+ * the employer has to move into `company` here or the board shows "Hatch".
+ * A role at Hatch itself carries neither and is left alone.
+ */
+export function hatchEmployer(title: string, company: string, descriptionText: string): { title: string; company: string } {
+  if (company.trim().toLowerCase() !== 'hatch') return { title, company }
+  const at = title.match(/^(.+?)\s+@\s+(.+)$/)
+  if (at) return { title: at[1].trim(), company: at[2].trim() }
+  const roleWith = descriptionText.match(/This is an? .+? role with (.+?) based in /i) ?? descriptionText.match(/This is a role with (.+?) not with Hatch/i)
+  if (roleWith) return { title, company: roleWith[1].trim() }
+  return { title, company }
+}
+
+/**
  * Verified fields (live, 3 Oct 2026) -- see lib/sync/adapters/linkedin.ts.
  * `company` is LinkedIn's company name for this posting, not the source's
  * name: one source, every employer. The logo is left to the approved-logo
@@ -612,6 +628,8 @@ export function normaliseLinkedInPosting(raw: LinkedInRawPosting, company: strin
   // "Melbourne, Victoria, Australia" -> "Melbourne, Victoria"
   const location = raw.job_location?.replace(/,\s*Australia$/i, '').trim() || null
   if (location) confidence.location = 'read'
+
+  const employer = hatchEmployer(raw.job_title, company, `${raw.job_summary ?? ''} ${raw.job_description_formatted?.replace(/<[^>]+>/g, ' ') ?? ''}`)
 
   const formatted = linkedInDescriptionHtml(raw.job_description_formatted)
   const description = cleanDescription(formatted ?? (raw.job_summary ? plainTextHtml(raw.job_summary) : null))
@@ -637,8 +655,8 @@ export function normaliseLinkedInPosting(raw: LinkedInRawPosting, company: strin
   const url = isLinkedInPage ? linkedInJobPage(raw.job_posting_id) : applyUrl
 
   const job: NormalisedJob = {
-    title: raw.job_title,
-    company,
+    title: employer.title,
+    company: employer.company,
     location,
     work_mode: null,
     job_type: jobType,
