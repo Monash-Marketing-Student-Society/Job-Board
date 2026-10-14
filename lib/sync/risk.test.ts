@@ -23,6 +23,7 @@ function input(overrides: Partial<RiskInput> = {}): RiskInput {
     verdict: 'pass',
     publishedFromSource: 50,
     reviewOnly: false,
+    hasLogo: true,
     ...overrides,
   }
 }
@@ -30,6 +31,10 @@ function input(overrides: Partial<RiskInput> = {}): RiskInput {
 describe('assessRisk', () => {
   it('holds nothing for a complete, all-read, tier-A posting from an established source', () => {
     expect(assessRisk(input())).toEqual([])
+  })
+
+  it('holds a posting whose company has no logo yet', () => {
+    expect(assessRisk(input({ hasLogo: false }))).toEqual(['missing_logo'])
   })
 
   it('holds every tier B or C posting', () => {

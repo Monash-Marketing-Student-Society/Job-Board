@@ -147,6 +147,10 @@ export function supabaseDeps(db: SupabaseClient, source: SourceRow): SyncDeps {
       if (fpError) throw new Error(`stage fingerprint: ${fpError.message}`)
     },
 
+    logoFor(company) {
+      return logoFor(db, source, company)
+    },
+
     async publish(row) {
       const { data, error } = await db
         .from('jobs')
