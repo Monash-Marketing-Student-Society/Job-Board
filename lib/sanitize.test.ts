@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeDescription, sanitizeSyncedDescription } from './sanitize'
+import { opensWithHeading, sanitizeDescription, sanitizeSyncedDescription } from './sanitize'
 
 describe('sanitizeDescription', () => {
   it('returns an empty string for missing input', () => {
@@ -96,7 +96,7 @@ describe('sanitizeSyncedDescription', () => {
 
   it('removes empty paragraphs (Ticketmaster via Workday)', () => {
     const html = '<p>Job Summary:</p><h2>THE TEAM</h2><p>&nbsp;</p><p>&nbsp;</p><p></p><p><br></p><p>The Marketing team.</p>'
-    expect(sanitizeSyncedDescription(html)).toBe('<p>Job Summary:</p><p><strong>THE TEAM</strong></p><p>The Marketing team.</p>')
+    expect(sanitizeSyncedDescription(html)).toBe('<p><strong>THE TEAM</strong></p><p>The Marketing team.</p>')
   })
 
   it('drops the leading &nbsp; feeds indent paragraphs with (ANZ)', () => {
@@ -110,7 +110,7 @@ describe('sanitizeSyncedDescription', () => {
       '<strong>Description<br><br></strong>We are looking for students.<br><br>Key job responsibilities<br><br>' +
       '<ul><li> Work alongside our team.</li></ul>'
     expect(sanitizeSyncedDescription(html)).toBe(
-      '<p><strong>Description</strong></p><p>We are looking for students.</p><p>Key job responsibilities</p>' +
+      '<p>We are looking for students.</p><p><strong>Key job responsibilities</strong></p>' +
         '<ul><li> Work alongside our team.</li></ul>'
     )
   })
@@ -140,9 +140,106 @@ describe('sanitizeSyncedDescription', () => {
     expect(out).not.toContain('onclick')
   })
 
+  it('drops Hatch preamble the board already shows, and its closing template (Deloitte via LinkedIn)', () => {
+    const html =
+      '<strong>This is a Junior Graphic Designer role with Deloitte based in Sydney, NSW, AU<br><br></strong>' +
+      '<strong> == Deloitte ==<br><br></strong><strong>Role Seniority</strong> - intern<br><br>' +
+      '<strong>More About The Junior Graphic Designer Role At Deloitte<br><br></strong>' +
+      'We’re looking for a Junior Graphic Designer.<br><br><strong>What You’ll Do<br><br></strong>' +
+      '<ul><li>Create presentations</li><li>Turn briefs into stories<br><br></li></ul>' +
+      'Before we jump into the responsibilities of the role. No matter what you come in knowing.<br><br>' +
+      '🟢 <strong>Please consider applying even if you don\'t meet 100% of what’s outlined</strong> 🟢<br><br>' +
+      '<strong>Key Strengths<br><br></strong><ul><li>🎨 Graphic design</li></ul>' +
+      '<strong>Why Deloitte is partnering with Hatch on this role.</strong> <em>Hatch exists.<br><br></em>' +
+      '<strong>A Final Note: This is a role with Deloitte not with Hatch.</strong>'
+    expect(sanitizeSyncedDescription(html)).toBe(
+      '<p>We’re looking for a Junior Graphic Designer.</p><p><strong>What You’ll Do</strong></p>' +
+        '<ul><li>Create presentations</li><li>Turn briefs into stories</li></ul>'
+    )
+  })
+
+  it('drops a leading "About The Role" and Hatch’s "More about…" heading under it', () => {
+    expect(
+      sanitizeSyncedDescription('<p><strong>About The Role</strong></p><p><strong>More about the SEO Coordinator role at Jaywing</strong></p><p>This role…</p>')
+    ).toBe('<p>This role…</p>')
+  })
+
+  it('keeps a leading heading that is not a stand-in for "Job Description"', () => {
+    expect(sanitizeSyncedDescription('<p><strong>Company Description</strong></p><p>Nine is…</p>')).toBe(
+      '<p><strong>Company Description</strong></p><p>Nine is…</p>'
+    )
+  })
+
+  it('splits a bold label off the line it is glued to (Roy Morgan via LinkedIn)', () => {
+    const html =
+      '<p><br> <br> <strong>About You</strong> <br> Successful applicants will demonstrate:</p>' +
+      '<ul><li>Excellent communication skills.</li></ul><ul><li>Initiative.</li></ul>'
+    expect(sanitizeSyncedDescription(html)).toBe(
+      '<p><strong>About You</strong></p><p>Successful applicants will demonstrate:</p>' +
+        '<ul><li>Excellent communication skills.</li><li>Initiative.</li></ul>'
+    )
+  })
+
+  it('bolds plain-text section labels (Marketing Volunteer via LinkedIn)', () => {
+    const html =
+      '<p>A Marketing Volunteer supports an organisation.&nbsp;&nbsp;</p><p>&nbsp;</p><p><br></p>' +
+      '<p>Key Responsibilities&nbsp;</p><ul><li><strong>Content Creation:</strong> Develop materials.</li></ul>' +
+      '<p><br></p><p>Benefits of the Role&nbsp;</p><ul><li>Gain experience.</li></ul>'
+    expect(sanitizeSyncedDescription(html)).toBe(
+      '<p>A Marketing Volunteer supports an organisation.  </p>' +
+        '<p><strong>Key Responsibilities</strong></p><ul><li><strong>Content Creation:</strong> Develop materials.</li></ul>' +
+        '<p><strong>Benefits of the Role</strong></p><ul><li>Gain experience.</li></ul>'
+    )
+  })
+
+  it('leaves an ordinary short sentence and a colon lead-in as text', () => {
+    const html = '<p>Interested? Apply now.</p><p>We offer:</p><ul><li>A mentor</li></ul>'
+    expect(sanitizeSyncedDescription(html)).toBe(html)
+  })
+
+  it('turns lines after a colon lead-in into a list', () => {
+    expect(sanitizeSyncedDescription('We offer:<br><br>A dedicated mentor<br><br>Paid training<br><br><strong>Next</strong><br><br>Text')).toBe(
+      '<p>We offer:</p><ul><li>A dedicated mentor</li><li>Paid training</li></ul><p><strong>Next</strong></p><p>Text</p>'
+    )
+    expect(sanitizeSyncedDescription('<p>You will need:<br>A degree<br>Working rights</p>')).toBe(
+      '<p>You will need:</p><ul><li>A degree</li><li>Working rights</li></ul>'
+    )
+  })
+
+  it('turns bullets typed as characters into a list', () => {
+    expect(sanitizeSyncedDescription('<p>• One</p><p>• Two</p><p>After.</p>')).toBe('<ul><li>One</li><li>Two</li></ul><p>After.</p>')
+    expect(sanitizeSyncedDescription('<p>Perks<br>- Gym<br>- Lunch</p>')).toBe('<p><strong>Perks</strong></p><ul><li>Gym</li><li>Lunch</li></ul>')
+  })
+
+  it('removes tags a feed escaped into the text (Coles)', () => {
+    expect(sanitizeSyncedDescription('<p>&lt;p&gt;We’ve been serving since 1914.</p>')).toBe('<p>We’ve been serving since 1914.</p>')
+  })
+
+  it('is idempotent on a restructured description', () => {
+    const html = '<p>Location: Melbourne, VIC.</p><p>Intro.</p><p>Your Responsibilities</p><p>We offer:<br>A<br>B</p><p>• C</p><p>• D</p>'
+    const once = sanitizeSyncedDescription(html)
+    expect(once).toBe(
+      '<p>Intro.</p><p><strong>Your Responsibilities</strong></p><p>We offer:</p><ul><li>A</li><li>B</li><li>C</li><li>D</li></ul>'
+    )
+    expect(sanitizeSyncedDescription(once)).toBe(once)
+  })
+
   it('is idempotent', () => {
     const html = '<strong>Description<br><br></strong>Text<br><br><h2>Next</h2><p>&nbsp;</p><p>More<br>lines</p>'
     const once = sanitizeSyncedDescription(html)
     expect(sanitizeSyncedDescription(once)).toBe(once)
+  })
+})
+
+describe('opensWithHeading', () => {
+  it('spots a description that leads with its own heading', () => {
+    expect(opensWithHeading('<p><strong>Company Description</strong></p><p>Nine is…</p>')).toBe(true)
+    expect(opensWithHeading('<h2>About us</h2><p>Text</p>')).toBe(true)
+  })
+
+  it('ignores a description that leads with text, even text that starts in bold', () => {
+    expect(opensWithHeading('<p>We are hiring.</p>')).toBe(false)
+    expect(opensWithHeading('<p><strong>Graduate</strong> roles open now.</p>')).toBe(false)
+    expect(opensWithHeading('')).toBe(false)
   })
 })
