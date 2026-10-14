@@ -7,6 +7,7 @@ import {
   linkedInDescriptionHtml,
   linkedInJobType,
   normaliseLinkedInPosting,
+  hatchEmployer,
   type LinkedInRawPosting,
 } from './normalise'
 
@@ -246,5 +247,28 @@ describe('linkedInJobType', () => {
 
   it('does not read "internal" or "international" as an internship', () => {
     expect(linkedInJobType('Internal Communications Coordinator', null, 'Full-time')).toBe('full-time')
+  })
+})
+
+describe('hatchEmployer', () => {
+  it('takes the employer from "Title @ Employer"', () => {
+    expect(hatchEmployer('SEO Coordinator @ Jaywing', 'Hatch', '')).toEqual({ title: 'SEO Coordinator', company: 'Jaywing' })
+  })
+
+  it("takes the employer from Hatch's opening line", () => {
+    const text = 'This is a Junior Graphic Designer role with Deloitte based in Sydney, NSW, AU == Deloitte =='
+    expect(hatchEmployer('Junior Graphic Designer', 'Hatch', text)).toEqual({ title: 'Junior Graphic Designer', company: 'Deloitte' })
+    expect(hatchEmployer('Designer', 'Hatch', 'A Final Note: This is a role with Best and Less not with Hatch.')).toEqual({
+      title: 'Designer',
+      company: 'Best and Less',
+    })
+  })
+
+  it("leaves a role at Hatch itself, and other employers' titles, alone", () => {
+    expect(hatchEmployer('Customer Success Intern', 'Hatch', "Hatch needs a Customer Success Intern")).toEqual({
+      title: 'Customer Success Intern',
+      company: 'Hatch',
+    })
+    expect(hatchEmployer('Analyst @ Home', 'Deloitte', '')).toEqual({ title: 'Analyst @ Home', company: 'Deloitte' })
   })
 })
