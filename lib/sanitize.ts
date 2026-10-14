@@ -167,6 +167,16 @@ const PREAMBLE = [
   /^More about the .+ role at .+$/i, // Hatch, under "About The Role"
 ]
 
+/**
+ * Sections a student never needs before applying: how the employer stores
+ * their data. Only a *labelled* section goes -- a background or criminal
+ * history check written into the requirements is something they must meet.
+ */
+const NOISE_LABEL = /^(privacy (statement|notice|policy|collection notice)|background (screening|checks?))\s*:?$/i
+
+/** Whole paragraphs that only point at a privacy policy. */
+const NOISE_LINE = /^(please (read|review|see) our (full )?privacy (notice|policy|statement)\b|this site is protected by reCAPTCHA)/i
+
 /** Where Hatch's own template starts at the bottom of a LinkedIn post. */
 const HATCH_TAIL = /^Before we jump into the responsibilities|consider applying even if you don.t meet 100%|partnering with Hatch/i
 
@@ -198,6 +208,7 @@ function isPlainParagraph(node: Node): boolean {
  */
 function looksLikeLabel(text: string, nextIsList: boolean): boolean {
   if (!text || text.length > 60 || /[.!,;]$/.test(text) || !/^[A-Z0-9]/.test(text)) return false
+  if (text.slice(0, -1).includes(':')) return false // "STEP 6: Background Check" is a line, not a label
   const words = text.split(' ')
   if (words.length > 6) return false
   const significant = words.filter((w) => !MINOR_WORDS.has(w.toLowerCase().replace(/[:?]$/, '')))
@@ -340,12 +351,31 @@ function boldenLabels(body: HTMLElement) {
   }
 }
 
-/** Removes the leading lines in PREAMBLE, then Hatch's closing template. */
+/** Removes the leading lines in PREAMBLE, privacy and screening notices, then Hatch's closing template. */
 function dropBoilerplate(body: HTMLElement) {
   let first = body.firstElementChild
   while (first && first.nodeName === 'P' && PREAMBLE.some((re) => re.test(textOf(first!)))) {
     first.remove()
     first = body.firstElementChild
+  }
+
+  for (const el of Array.from(body.children)) {
+    if (!el.parentNode || el.nodeName !== 'P') continue
+    const text = textOf(el)
+    if (isHeading(el) && NOISE_LABEL.test(text)) {
+      // The heading and everything under it, up to the next heading.
+      let next = nextElement(el)
+      while (next && !isHeading(next)) {
+        const after = nextElement(next)
+        next.remove()
+        next = after
+      }
+      el.remove()
+      continue
+    }
+    const lead = meaningfulChildren(el)[0]
+    if (lead?.nodeName === 'STRONG' && NOISE_LABEL.test(textOf(lead))) el.remove()
+    else if (NOISE_LINE.test(text) && text.length <= 250) el.remove()
   }
 
   if (!/not with Hatch|partnering with Hatch/i.test(textOf(body))) return
@@ -391,7 +421,8 @@ export function opensWithHeading(html: string): boolean {
  *   a leading &nbsp;.
  * - Structure is evened out without rewording (see restructure): labels
  *   become bold headings, typed bullets and colon lead-ins become lists, and
- *   aggregator preamble and Hatch's closing template are dropped.
+ *   aggregator preamble, labelled privacy/screening notices and Hatch's
+ *   closing template are dropped.
  *
  * Only for synced descriptions. Anything typed in the editor -- by an admin
  * or an employer -- keeps its blank lines; that spacing is deliberate.

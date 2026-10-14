@@ -215,6 +215,35 @@ describe('sanitizeSyncedDescription', () => {
     expect(sanitizeSyncedDescription('<p>&lt;p&gt;We’ve been serving since 1914.</p>')).toBe('<p>We’ve been serving since 1914.</p>')
   })
 
+  it('drops labelled privacy and screening notices (Roy Morgan via LinkedIn)', () => {
+    const html =
+      '<p>Apply now. <br> <br> <strong><em>Diversity &amp; Inclusion: </em></strong><em>We value diversity.</em> <br> <br> ' +
+      '<strong><em>Privacy Statement:</em></strong> <em>We protect your privacy.</em> <br> <br> ' +
+      '<strong>Background Screening:</strong><em> Successful applications will be checked.</em></p>'
+    expect(sanitizeSyncedDescription(html)).toBe(
+      '<p>Apply now. </p><p><strong><em>Diversity &amp; Inclusion: </em></strong><em>We value diversity.</em></p>'
+    )
+  })
+
+  it('drops a privacy section under its own heading, up to the next heading', () => {
+    const html = '<p><strong>Privacy Notice</strong></p><p>We store data.</p><p>For 2 years.</p><p><strong>Apply</strong></p><p>Now.</p>'
+    expect(sanitizeSyncedDescription(html)).toBe('<p><strong>Apply</strong></p><p>Now.</p>')
+  })
+
+  it('drops lines that only point at a privacy policy (WPP, reCAPTCHA)', () => {
+    const html =
+      '<p>Talk to us.<br><br>Please read our Privacy Notice for more information on how we process the information you provide.<br><br>' +
+      'This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.</p>'
+    expect(sanitizeSyncedDescription(html)).toBe('<p>Talk to us.</p>')
+  })
+
+  it('keeps background checks written into the requirements', () => {
+    const html =
+      '<ul><li>A satisfactory criminal history check.</li></ul><p>STEP 6: Background Check</p>' +
+      '<p>The preferred candidate will be subject to background screening.</p>'
+    expect(sanitizeSyncedDescription(html)).toBe(html)
+  })
+
   it('is idempotent on a restructured description', () => {
     const html = '<p>Location: Melbourne, VIC.</p><p>Intro.</p><p>Your Responsibilities</p><p>We offer:<br>A<br>B</p><p>• C</p><p>• D</p>'
     const once = sanitizeSyncedDescription(html)
