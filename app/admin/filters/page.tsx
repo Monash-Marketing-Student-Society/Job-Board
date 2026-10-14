@@ -5,14 +5,15 @@ import {
   type FeedbackRow,
   type FilteredRow,
   type ReasonCount,
+  type RuleCount,
 } from '@/components/admin/filter-review'
+import { TARGET_RULE_LABELS, type TargetRule } from '@/lib/sync/target'
+import { parseFilteredParams, searchFilter, type FilteredParams } from '@/lib/sync/filtered-query'
 
 export const metadata = {
   title: 'Filters | Admin | MMSS Job Board',
 }
 
-/** Most recent first; past this the oldest drop off until they are pruned or restored. */
-const FILTERED_LIMIT = 300
 const FEEDBACK_LIMIT = 200
 /** The reason tally covers the trial so far with room either side. */
 const REASON_WINDOW_DAYS = 30
@@ -28,18 +29,25 @@ function sourceName(sources: unknown): string | null {
  * Only the fields the list shows -- `normalised` carries the whole
  * description, which would make a few hundred rows several MB.
  */
-async function getFiltered(supabase: Db): Promise<FilteredRow[]> {
-  const { data, error } = await supabase
+async function getFiltered(
+  supabase: Db,
+  { q, rule, limit }: FilteredParams
+): Promise<{ rows: FilteredRow[]; total: number }> {
+  let query = supabase
     .from('filtered_postings')
     .select(
-      'id, rule, evidence, seen_count, first_seen_at, last_seen_at, title:normalised->>title, company:normalised->>company, location:normalised->>location, url:normalised->>url, sources(name)'
+      'id, rule, evidence, seen_count, first_seen_at, last_seen_at, title:normalised->>title, company:normalised->>company, location:normalised->>location, url:normalised->>url, sources(name)',
+      { count: 'exact' }
     )
     .eq('status', 'filtered')
-    .order('last_seen_at', { ascending: false })
-    .limit(FILTERED_LIMIT)
+  const search = searchFilter(q)
+  if (search) query = query.or(search)
+  if (rule) query = query.eq('rule', rule)
+  // Most recent first; "Show more" raises the limit.
+  const { data, error, count } = await query.order('last_seen_at', { ascending: false }).limit(limit)
 
-  if (error || !data) return []
-  return data.map((row) => ({
+  if (error || !data) return { rows: [], total: 0 }
+  const rows = data.map((row) => ({
     id: row.id,
     rule: row.rule,
     evidence: row.evidence,
@@ -52,6 +60,29 @@ async function getFiltered(supabase: Db): Promise<FilteredRow[]> {
     url: (row.url as string | null) ?? '',
     source: sourceName(row.sources),
   }))
+  return { rows, total: count ?? rows.length }
+}
+
+/**
+ * Per-rule totals across every filtered posting matching the search, not
+ * just the loaded page -- one head count per rule, since PostgREST has no
+ * GROUP BY and a plain select would stop at its row cap.
+ */
+async function getRuleCounts(supabase: Db, q: string): Promise<RuleCount[]> {
+  const search = searchFilter(q)
+  const counts = await Promise.all(
+    (Object.keys(TARGET_RULE_LABELS) as TargetRule[]).map(async (rule) => {
+      let query = supabase
+        .from('filtered_postings')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'filtered')
+        .eq('rule', rule)
+      if (search) query = query.or(search)
+      const { count } = await query
+      return { rule, count: count ?? 0 }
+    })
+  )
+  return counts.filter((c) => c.count > 0).sort((a, b) => b.count - a.count)
 }
 
 /**
@@ -98,10 +129,16 @@ async function getReasonCounts(supabase: Db): Promise<ReasonCount[]> {
   return [...counts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count)
 }
 
-export default async function FiltersPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function FiltersPage({ searchParams }: PageProps) {
+  const params = parseFilteredParams(await searchParams)
   const supabase = await createServerClient()
-  const [filtered, feedback, reasonCounts] = await Promise.all([
-    getFiltered(supabase),
+  const [filtered, ruleCounts, feedback, reasonCounts] = await Promise.all([
+    getFiltered(supabase, params),
+    getRuleCounts(supabase, params.q),
     getFeedback(supabase),
     getReasonCounts(supabase),
   ])
@@ -118,7 +155,10 @@ export default async function FiltersPage() {
 
       <div className={tableCardClassName}>
         <FilterReview
-          filtered={filtered}
+          filtered={filtered.rows}
+          filteredTotal={filtered.total}
+          ruleCounts={ruleCounts}
+          params={params}
           feedback={feedback}
           reasonCounts={reasonCounts}
           reasonWindowDays={REASON_WINDOW_DAYS}

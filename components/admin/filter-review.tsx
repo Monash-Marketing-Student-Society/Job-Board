@@ -1,15 +1,23 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowCounterClockwiseIcon, ArrowSquareOutIcon } from '@phosphor-icons/react'
-import { Badge, Button, useConfirmDialog } from '@/components/ui'
+import { ArrowCounterClockwiseIcon, ArrowSquareOutIcon, MagnifyingGlassIcon } from '@phosphor-icons/react'
+import { Badge, Button, Input, useConfirmDialog } from '@/components/ui'
 import { segmentedTabsListClassName, segmentedTabsTriggerClassName } from '@/components/ui/segmented-tabs'
 import { softButtonClassName } from './table'
+import { TRACK_SHAPE } from './table/table-styles'
 import { REJECT_REASONS } from './staged-jobs-table'
 import { cn, decodeHtmlEntities, formatDate, formatRelativeTime, toApplicationHref } from '@/lib/utils'
-import { targetRuleLabel } from '@/lib/sync/target'
+import { targetRuleLabel, type TargetRule } from '@/lib/sync/target'
+import {
+  FILTERED_MAX_LIMIT,
+  FILTERED_PAGE_SIZE,
+  cleanSearch,
+  filteredHref,
+  type FilteredParams,
+} from '@/lib/sync/filtered-query'
 
 /**
  * The filter trial's two lists (Oct 2026):
@@ -17,6 +25,8 @@ import { targetRuleLabel } from '@/lib/sync/target'
  * - Filtered out: postings the sync gate removed before review, with the rule
  *   and the text that fired it. A wrong removal is invisible anywhere else, so
  *   this is where one gets caught -- and Restore puts it in the review queue.
+ *   Search, rule and page size live in the URL and are applied on the server
+ *   (lib/sync/filtered-query.ts), so every filtered posting is reachable.
  * - Feedback: synced jobs an admin rejected with a comment. What the rules
  *   get tuned from.
  */
@@ -48,6 +58,11 @@ export interface FeedbackRow {
 
 export interface ReasonCount {
   reason: string
+  count: number
+}
+
+export interface RuleCount {
+  rule: TargetRule
   count: number
 }
 
@@ -89,16 +104,45 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   )
 }
 
-function FilteredList({ rows }: { rows: FilteredRow[] }) {
+/** How long typing pauses before the search goes to the server. */
+const SEARCH_DEBOUNCE_MS = 300
+
+function FilteredList({
+  rows,
+  total,
+  ruleCounts,
+  params,
+}: {
+  rows: FilteredRow[]
+  total: number
+  ruleCounts: RuleCount[]
+  params: FilteredParams
+}) {
   const router = useRouter()
+  const [navigating, startNavigation] = useTransition()
   const [, startTransition] = useTransition()
-  const [rule, setRule] = useState<string | null>(null)
+  const [search, setSearch] = useState(params.q)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const { confirm, dialog } = useConfirmDialog()
 
-  const live = rows.filter((r) => !hidden.has(r.id))
-  const rules = [...new Set(live.map((r) => r.rule))]
-  const visible = rule ? live.filter((r) => r.rule === rule) : live
+  const go = (next: Partial<FilteredParams>) => {
+    // A new search or rule starts again from the first page.
+    const limit = next.limit ?? FILTERED_PAGE_SIZE
+    startNavigation(() => router.replace(filteredHref({ ...params, ...next, limit }), { scroll: false }))
+  }
+
+  useEffect(() => {
+    const q = cleanSearch(search)
+    if (q === params.q) return
+    const timer = setTimeout(() => go({ q }), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `go` is rebuilt each render; params.q is what matters
+  }, [search, params.q])
+
+  const visible = rows.filter((r) => !hidden.has(r.id))
+  const allCount = ruleCounts.reduce((sum, r) => sum + r.count, 0)
+  const remaining = total - rows.length
+  const canShowMore = remaining > 0 && params.limit < FILTERED_MAX_LIMIT
 
   const restore = async (row: FilteredRow) => {
     const { confirmed } = await confirm({
@@ -124,56 +168,98 @@ function FilteredList({ rows }: { rows: FilteredRow[] }) {
     })
   }
 
-  if (live.length === 0) {
+  if (allCount === 0 && !params.q) {
     return <p className="py-6 text-sm text-slate-500">Nothing filtered yet. Postings appear here after the next nightly sync.</p>
   }
 
   return (
     <div>
+      <div className="relative mb-3 w-full sm:w-72">
+        {/* Decorative — the input itself is the whole hit target. */}
+        <MagnifyingGlassIcon
+          aria-hidden="true"
+          weight="bold"
+          className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-slate-400"
+        />
+        <Input
+          type="search"
+          aria-label="Search filtered postings by title or company"
+          placeholder="Search title or company"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className={cn(
+            TRACK_SHAPE,
+            'border-0 bg-slate-100 pl-8 pr-3 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0'
+          )}
+        />
+      </div>
+
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <FilterChip active={rule === null} onClick={() => setRule(null)}>
-          All {live.length}
+        <FilterChip active={params.rule === null} onClick={() => go({ rule: null })}>
+          All {allCount}
         </FilterChip>
-        {rules.map((r) => (
-          <FilterChip key={r} active={rule === r} onClick={() => setRule(r)}>
-            {targetRuleLabel(r)} {live.filter((row) => row.rule === r).length}
+        {ruleCounts.map((r) => (
+          <FilterChip key={r.rule} active={params.rule === r.rule} onClick={() => go({ rule: r.rule })}>
+            {targetRuleLabel(r.rule)} {r.count}
           </FilterChip>
         ))}
       </div>
 
-      <ul className="divide-y divide-slate-100">
-        {visible.map((row) => {
-          const title = decodeHtmlEntities(row.title)
-          return (
-            <li key={row.id} className="flex items-start gap-3 py-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-slate-800 truncate">{title}</p>
-                  <PostingLink url={row.url} title={title} />
+      {visible.length === 0 ? (
+        <p className="py-6 text-sm text-slate-500">No filtered postings match.</p>
+      ) : (
+        <ul className={cn('divide-y divide-slate-100 transition-opacity', navigating && 'opacity-60')}>
+          {visible.map((row) => {
+            const title = decodeHtmlEntities(row.title)
+            return (
+              <li key={row.id} className="flex items-start gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-medium text-slate-800 truncate">{title}</p>
+                    <PostingLink url={row.url} title={title} />
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {[row.company, row.location, row.source].filter(Boolean).join(' · ')}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="warning" className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
+                      {targetRuleLabel(row.rule)}
+                    </Badge>
+                    {row.evidence && row.rule === 'experience_required' && (
+                      <span className="text-xs text-slate-600">“{row.evidence}”</span>
+                    )}
+                    <span className="text-[11px] text-muted-foreground">
+                      Seen {row.seenCount}× · last {formatRelativeTime(row.lastSeenAt)}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {[row.company, row.location, row.source].filter(Boolean).join(' · ')}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <Badge variant="warning" className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4">
-                    {targetRuleLabel(row.rule)}
-                  </Badge>
-                  {row.evidence && row.rule === 'experience_required' && (
-                    <span className="text-xs text-slate-600">“{row.evidence}”</span>
-                  )}
-                  <span className="text-[11px] text-muted-foreground">
-                    Seen {row.seenCount}× · last {formatRelativeTime(row.lastSeenAt)}
-                  </span>
-                </div>
-              </div>
-              <Button className={cn(softButtonClassName, 'shrink-0')} onClick={() => restore(row)}>
-                <ArrowCounterClockwiseIcon className="size-4" />
-                Restore
-              </Button>
-            </li>
-          )
-        })}
-      </ul>
+                <Button className={cn(softButtonClassName, 'shrink-0')} onClick={() => restore(row)}>
+                  <ArrowCounterClockwiseIcon className="size-4" />
+                  Restore
+                </Button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {remaining > 0 && (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+          <p className="text-xs text-muted-foreground">
+            Showing {rows.length} of {total}
+            {!canShowMore && ' — search to find the rest'}
+          </p>
+          {canShowMore && (
+            <Button
+              className={softButtonClassName}
+              disabled={navigating}
+              onClick={() => go({ limit: params.limit + FILTERED_PAGE_SIZE })}
+            >
+              Show {Math.min(remaining, FILTERED_PAGE_SIZE)} more
+            </Button>
+          )}
+        </div>
+      )}
       {dialog}
     </div>
   )
@@ -221,11 +307,17 @@ function FeedbackList({ rows, reasonCounts, windowDays }: { rows: FeedbackRow[];
 
 export function FilterReview({
   filtered,
+  filteredTotal,
+  ruleCounts,
+  params,
   feedback,
   reasonCounts,
   reasonWindowDays,
 }: {
   filtered: FilteredRow[]
+  filteredTotal: number
+  ruleCounts: RuleCount[]
+  params: FilteredParams
   feedback: FeedbackRow[]
   reasonCounts: ReasonCount[]
   reasonWindowDays: number
@@ -242,7 +334,7 @@ export function FilterReview({
           className={segmentedTabsTriggerClassName(tab === 'filtered', 'normal-case')}
           onClick={() => setTab('filtered')}
         >
-          Filtered out ({filtered.length})
+          Filtered out ({ruleCounts.reduce((sum, r) => sum + r.count, 0)})
         </button>
         <button
           type="button"
@@ -256,7 +348,7 @@ export function FilterReview({
       </div>
 
       {tab === 'filtered' ? (
-        <FilteredList rows={filtered} />
+        <FilteredList rows={filtered} total={filteredTotal} ruleCounts={ruleCounts} params={params} />
       ) : (
         <FeedbackList rows={feedback} reasonCounts={reasonCounts} windowDays={reasonWindowDays} />
       )}
