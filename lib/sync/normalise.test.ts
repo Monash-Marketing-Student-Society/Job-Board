@@ -208,7 +208,9 @@ describe('normaliseLinkedInPosting', () => {
       'X',
       linkedInPage
     )
-    expect(plain.description).toContain('Pay &lt;b&gt;great&lt;/b&gt; &amp; more')
+    // Never markup. The tag text itself goes too: the sync drops tags a feed escaped into its text.
+    expect(plain.description).not.toContain('<b>')
+    expect(plain.description).toBe('<p>Pay great &amp; more</p>')
   })
 
   it('infers marketing tags from the title and description', () => {

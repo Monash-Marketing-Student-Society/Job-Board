@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn, toApplicationHref } from '@/lib/utils'
 import { sourceAttribution } from '@/lib/job-attribution'
-import { sanitizeDescription } from '@/lib/sanitize'
+import { opensWithHeading, sanitizeDescription } from '@/lib/sanitize'
 import { trackEvent } from '@/lib/analytics/track'
 import { handleApplyClick } from './apply-link'
 import type { Job } from '@/lib/types'
@@ -181,7 +181,13 @@ export function JobDetailPanel({ job, isMainView = false, onBack, preview = fals
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
             >
-              <h2 className="text-sm font-semibold text-slate-800 mb-2">Job Description</h2>
+              {/* A description that opens with its own heading ("Company Description",
+                  "About Us") would read as two headings stacked; let it lead instead. */}
+              {opensWithHeading(safeDescription) ? (
+                <h2 className="sr-only">Job Description</h2>
+              ) : (
+                <h2 className="text-sm font-semibold text-slate-800 mb-2">Job Description</h2>
+              )}
               <div
                 className="prose prose-sm max-w-none text-slate-600 prose-headings:text-slate-800 prose-a:text-primary prose-img:rounded-lg"
                 dangerouslySetInnerHTML={{ __html: safeDescription }}
