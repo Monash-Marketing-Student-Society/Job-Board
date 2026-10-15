@@ -10,8 +10,7 @@ import { autoMatch, brandfetchLogoUrl, brandSearchUrl, parseBrandSearch, type Br
  * Shared by the admin job form and the public /submit form (same pairing
  * as RichTextEditor, which /submit also reaches into components/admin for)
  * — both just need "a URL, or a file that becomes a URL". The upload itself,
- * and the bucket's type/size rules, live in lib/logo-upload.ts (also used by
- * /admin/logos). The public form's anon uploads are covered by
+ * and the bucket's type/size rules, live in lib/logo-upload.ts. The public form's anon uploads are covered by
  * 0015_public_logo_upload.sql; admin uploads by 0014's own is_admin() policy.
  */
 const PREVIEW_DEBOUNCE_MS = 400

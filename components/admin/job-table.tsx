@@ -171,7 +171,7 @@ export function JobTable({ jobs, totalJobs, currentPage, totalPages, counts }: J
         toast.error('Failed to activate job', {
           // 23514: jobs_live_needs_logo (0060) -- every live job must have a logo.
           description:
-            error.code === '23514' ? 'It has no logo. Add one with Edit or on the Logos page, then activate it.' : error.message,
+            error.code === '23514' ? 'It has no logo. Add one with Edit, then activate it.' : error.message,
         })
         return
       }

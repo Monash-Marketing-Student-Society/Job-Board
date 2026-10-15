@@ -56,7 +56,7 @@ async function matchFromFingerprint(
   return null
 }
 
-/** An admin-approved logo (/admin/logos) wins; otherwise the source's own domain. */
+/** The company's saved logo wins; otherwise the source's own domain. */
 async function logoFor(db: SupabaseClient, source: SourceRow, company: string): Promise<string | null> {
   return (await approvedLogoFor(db, company)) ?? sourceLogoUrl(source.config)
 }

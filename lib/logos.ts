@@ -121,132 +121,24 @@ export function autoMatch(company: string, matches: BrandMatch[]): BrandMatch | 
   return same[0].quality >= AUTO_MIN_QUALITY ? same[0] : null
 }
 
-const BRANDFETCH_SITE_HOSTS = new Set(['brandfetch.com', 'www.brandfetch.com'])
-const BRANDFETCH_CDN_HOST = 'cdn.brandfetch.io'
+/** Mailbox providers, universities and MMSS itself: the domain says nothing about the employer. */
+const NON_EMPLOYER_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'outlook.com', 'outlook.com.au', 'hotmail.com', 'hotmail.com.au', 'live.com', 'live.com.au',
+  'msn.com', 'yahoo.com', 'yahoo.com.au', 'ymail.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com', 'proton.me',
+  'protonmail.com', 'pm.me', 'gmx.com', 'zoho.com', 'fastmail.com', 'bigpond.com', 'bigpond.net.au', 'optusnet.com.au',
+  'tpg.com.au', 'iinet.net.au', 'internode.on.net', 'westnet.com.au', 'monashmss.com', 'monashclubs.org',
+])
 
 /**
- * What an admin pastes when a suggested logo is wrong, turned into a logo URL
- * that carries our client ID. Accepts:
- *   - a bare domain                          (ogilvy.com)
- *   - a Brandfetch brand page                (https://brandfetch.com/ogilvy.com)
- *   - a Logo API link by domain              (https://cdn.brandfetch.io/ogilvy.com?c=...)
- *   - an asset link copied off Brandfetch    (https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=...)
- * The last kind names one specific logo file rather than a domain, so it is
- * kept as that file with its query replaced by our ID (someone else's `c=`
- * would bill their quota and can be revoked). Anything else is null: only
- * Brandfetch-hosted logos go through this page.
+ * The logo for an HR submitter's work email domain, for a submission that
+ * came without one. Only when the submitter works for the company the job is
+ * at (`submitterCompany` matches `company`): an agency posting for a client
+ * would otherwise give the job the agency's logo.
  */
-export function parseBrandfetchInput(input: string): { logoUrl: string; domain: string | null } | null {
-  const raw = input.trim()
-  if (!raw) return null
-
-  if (!/^https?:\/\//i.test(raw)) {
-    const domain = normaliseDomain(raw)
-    return domain && !raw.includes('/') ? { logoUrl: brandfetchLogoUrl(domain)!, domain } : null
-  }
-
-  let url: URL
-  try {
-    url = new URL(raw)
-  } catch {
-    return null
-  }
-  const host = url.hostname.toLowerCase()
-  const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent)
-
-  if (BRANDFETCH_SITE_HOSTS.has(host)) {
-    const domain = normaliseDomain(segments[0])
-    return domain ? { logoUrl: brandfetchLogoUrl(domain)!, domain } : null
-  }
-
-  if (host !== BRANDFETCH_CDN_HOST || segments.length === 0) return null
-
-  const named = segments[0] === 'domain' ? segments[1] : segments[0]
-  const domain = named && named.includes('.') ? normaliseDomain(named) : null
-  if (domain) return { logoUrl: brandfetchLogoUrl(domain)!, domain }
-
-  // A Brandfetch brand/asset id (they start "id"): keep the file, swap in our ID.
-  if (!/^id[A-Za-z0-9_-]+$/.test(segments[0])) return null
-  return {
-    logoUrl: `https://${BRANDFETCH_CDN_HOST}/${segments.map(encodeURIComponent).join('/')}?c=${BRANDFETCH_CLIENT_ID}`,
-    domain: null,
-  }
-}
-
-/**
- * Hosts whose links are pages, not images. Someone pasting a company's
- * Facebook or LinkedIn page means "use its logo", but the URL is HTML, so it
- * would render as a broken image.
- */
-const PAGE_HOSTS = /(^|\.)(facebook\.com|instagram\.com|linkedin\.com|x\.com|twitter\.com|tiktok\.com|youtube\.com)$/
-
-/** An image link expiring sooner than this is refused: it would break on the board within weeks. */
-export const MIN_LINK_LIFETIME_DAYS = 30
-
-export interface ParsedLogo {
-  logoUrl: string
-  domain: string | null
-  /** When a signed CDN link stops working, if it says; null = no known expiry. */
-  expiresAt: Date | null
-}
-
-export type LogoInputResult = { ok: true; logo: ParsedLogo } | { ok: false; reason: string }
-
-/**
- * When a signed social-CDN image link expires. LinkedIn's media.licdn.com
- * carries `e=` in Unix seconds; Facebook and Instagram (fbcdn.net,
- * cdninstagram.com) carry `oe=` in hex seconds.
- */
-export function linkExpiry(url: URL): Date | null {
-  const host = url.hostname.toLowerCase()
-  if (host.endsWith('licdn.com')) {
-    const e = Number(url.searchParams.get('e'))
-    return Number.isFinite(e) && e > 0 ? new Date(e * 1000) : null
-  }
-  if (host.endsWith('fbcdn.net') || host.endsWith('cdninstagram.com')) {
-    const oe = url.searchParams.get('oe')
-    const seconds = oe && /^[0-9a-f]+$/i.test(oe) ? parseInt(oe, 16) : NaN
-    return Number.isFinite(seconds) ? new Date(seconds * 1000) : null
-  }
-  return null
-}
-
-/**
- * What an admin pastes on /admin/logos: any Brandfetch form (see
- * parseBrandfetchInput), or a direct https link to an image anywhere -- a
- * LinkedIn or Google Play logo, or our own storage bucket after an upload.
- * Refuses pages (a Facebook profile URL) and signed links that expire within
- * MIN_LINK_LIFETIME_DAYS; those should be uploaded instead.
- */
-export function parseLogoInput(input: string, now: Date = new Date()): LogoInputResult {
-  const brandfetch = parseBrandfetchInput(input)
-  if (brandfetch) return { ok: true, logo: { ...brandfetch, expiresAt: null } }
-
-  const raw = input.trim()
-  let url: URL
-  try {
-    url = new URL(raw)
-  } catch {
-    return { ok: false, reason: 'Paste a link to the logo image, a Brandfetch link, or a domain like ogilvy.com.' }
-  }
-  if (url.protocol !== 'https:') return { ok: false, reason: 'The image link must start with https://' }
-  if (url.hostname === BRANDFETCH_CDN_HOST || BRANDFETCH_SITE_HOSTS.has(url.hostname.toLowerCase())) {
-    return { ok: false, reason: 'That Brandfetch link has no domain or logo in it.' }
-  }
-  if (PAGE_HOSTS.test(url.hostname.toLowerCase())) {
-    return {
-      ok: false,
-      reason: "That's a page, not an image. Right-click the logo, copy the image address and paste that, or save it and upload it.",
-    }
-  }
-
-  const expiresAt = linkExpiry(url)
-  if (expiresAt && expiresAt.getTime() - now.getTime() < MIN_LINK_LIFETIME_DAYS * 86_400_000) {
-    const when = expiresAt.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Melbourne' })
-    return {
-      ok: false,
-      reason: `This link ${expiresAt < now ? 'expired' : 'expires'} on ${when}. Save the image and upload it instead.`,
-    }
-  }
-  return { ok: true, logo: { logoUrl: url.toString(), domain: null, expiresAt } }
+export function emailDomainLogo(email: string | null | undefined, submitterCompany: string | null | undefined, company: string): string | null {
+  if (!submitterCompany || !comparableName(company) || comparableName(submitterCompany) !== comparableName(company)) return null
+  const domain = normaliseDomain(email?.trim().split('@')[1] ?? null)
+  if (!domain || !email?.includes('@')) return null
+  if (NON_EMPLOYER_DOMAINS.has(domain) || /(^|\.)edu(\.[a-z]{2})?$/.test(domain)) return null
+  return brandfetchLogoUrl(domain)
 }

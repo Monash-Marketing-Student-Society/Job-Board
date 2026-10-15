@@ -18,12 +18,12 @@ export function unauthorized() {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 }
 
-/** Every job on the board needs a logo: the refusal both approve routes give. */
-export function noLogoResponse(company: string) {
-  return NextResponse.json(
-    { error: `${company} has no logo yet. Approve one on the Logos page (/admin/logos), then publish.`, code: 'no_logo' },
-    { status: 422 }
-  )
+/**
+ * Every job on the board needs a logo: the refusal both approve routes give
+ * when none could be found automatically. `next` says what can still fix it.
+ */
+export function noLogoResponse(company: string, next = "None came with the job, so it can't go on the board.") {
+  return NextResponse.json({ error: `${company} has no logo. ${next}`, code: 'no_logo' }, { status: 422 })
 }
 
 export function toResponse(result: ActionResult) {

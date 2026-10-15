@@ -1,7 +1,6 @@
 /**
  * Upload a logo file to the public `company-logos` bucket from the browser
- * and return its public URL. Shared by the job forms' LogoUploadField and
- * /admin/logos.
+ * and return its public URL. Used by the job forms' LogoUploadField.
  *
  * Mirrors the bucket's own file_size_limit / allowed_mime_types
  * (supabase/migrations/0014_add_company_logo_storage.sql), checked here too so
