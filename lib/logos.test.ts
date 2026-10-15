@@ -8,8 +8,7 @@ import {
   comparableName,
   normaliseDomain,
   parseBrandSearch,
-  parseBrandfetchInput,
-  parseLogoInput,
+  emailDomainLogo,
   sourceLogoUrl,
 } from './logos'
 
@@ -131,98 +130,24 @@ describe('autoMatch', () => {
   })
 })
 
-describe('parseBrandfetchInput', () => {
-  const byDomain = (d: string) => ({ logoUrl: brandfetchLogoUrl(d), domain: d })
-
-  it('takes a bare domain', () => {
-    expect(parseBrandfetchInput(' ogilvy.com ')).toEqual(byDomain('ogilvy.com'))
+describe('emailDomainLogo', () => {
+  it("uses the submitter's work domain when they work for the company they post", () => {
+    expect(emailDomainLogo('jane@unilever.com.au', 'Unilever', 'Unilever')).toBe(brandfetchLogoUrl('unilever.com.au'))
+    expect(emailDomainLogo('Jane@Mail.CBA.com.au', 'Commonwealth Bank', 'Commonwealth Bank')).toBe(brandfetchLogoUrl('mail.cba.com.au'))
   })
 
-  it('takes a Brandfetch brand page', () => {
-    expect(parseBrandfetchInput('https://brandfetch.com/www.commbank.com.au?view=logos')).toEqual(byDomain('commbank.com.au'))
-  })
-
-  it('takes Logo API links by domain, with or without the /domain/ prefix, and drops their client id', () => {
-    expect(parseBrandfetchInput('https://cdn.brandfetch.io/ogilvy.com/w/400?c=someoneelse')).toEqual(byDomain('ogilvy.com'))
-    expect(parseBrandfetchInput('https://cdn.brandfetch.io/domain/pg.com/fallback/404?c=x')).toEqual(byDomain('pg.com'))
-  })
-
-  it('keeps a copied asset link as that file, with our client id in place of theirs', () => {
-    expect(
-      parseBrandfetchInput('https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=1bxid64Mup7aczewSAYMX&t=1740370812106')
-    ).toEqual({
-      logoUrl: `https://cdn.brandfetch.io/id-0D6OFrq/theme/dark/idGIofJnQn.svg?c=${BRANDFETCH_CLIENT_ID}`,
-      domain: null,
-    })
-  })
-
-  it('rejects anything that is not a Brandfetch logo', () => {
-    for (const bad of [
-      '',
-      'not a link',
-      'https://media.licdn.com/dms/image/v2/logo.png',
-      'https://evil.example/cdn.brandfetch.io/ogilvy.com',
-      'https://brandfetch.com/',
-      'https://cdn.brandfetch.io/',
-      'https://cdn.brandfetch.io/<script>/x',
-      'ogilvy.com/path',
-      'javascript:alert(1)',
-    ]) {
-      expect(parseBrandfetchInput(bad)).toBeNull()
-    }
-  })
-})
-
-describe('parseLogoInput', () => {
-  const NOW = new Date('2026-10-02T03:00:00Z')
-  const LINKEDIN =
-    'https://media.licdn.com/dms/image/v2/D560BAQHsq-9WUnexGg/company-logo_200_200/company-logo_200_200/0/1714699432894/talaria_asset_management_logo?e=2147483647&v=beta&t=abc'
-  const INSTAGRAM_7_OCT = 'https://instagram.fmel17-1.fna.fbcdn.net/v/t51.2885-19/1_n.jpg?_nc_ht=x&oe=6AC4FDD4&_nc_sid=10d13b'
-
-  it('still takes every Brandfetch form, with no expiry', () => {
-    expect(parseLogoInput('ogilvy.com', NOW)).toEqual({
-      ok: true,
-      logo: { logoUrl: brandfetchLogoUrl('ogilvy.com'), domain: 'ogilvy.com', expiresAt: null },
-    })
-  })
-
-  it('takes a long-lived LinkedIn logo link as-is, with its expiry', () => {
-    const result = parseLogoInput(LINKEDIN, NOW)
-    expect(result).toMatchObject({ ok: true, logo: { logoUrl: LINKEDIN, domain: null } })
-    expect(result.ok && result.logo.expiresAt?.getUTCFullYear()).toBe(2038)
-  })
-
-  it('takes an image link with no expiry, e.g. Google Play or our own bucket', () => {
-    for (const link of [
-      'https://play-lh.googleusercontent.com/AZEIGHgTZc-T2LXJ6N4GeiA9GSMbQI_SYS4WZ1kew58',
-      'https://olyzdpqfecawcueffrsq.supabase.co/storage/v1/object/public/company-logos/a.png',
-    ]) {
-      expect(parseLogoInput(link, NOW)).toMatchObject({ ok: true, logo: { logoUrl: link, expiresAt: null } })
+  it('refuses personal, university and MMSS addresses', () => {
+    for (const email of ['jane@gmail.com', 'jane@outlook.com', 'jane@bigpond.com', 'jane@student.monash.edu', 'jane@uni.edu.au', 'x@monashmss.com']) {
+      expect(emailDomainLogo(email, 'Mars', 'Mars')).toBeNull()
     }
   })
 
-  it('refuses a signed link that expires within 30 days, naming the date', () => {
-    const result = parseLogoInput(INSTAGRAM_7_OCT, NOW)
-    expect(result.ok).toBe(false)
-    expect(!result.ok && result.reason).toMatch(/expires on 7 Oct 2026.*upload/)
+  it('refuses an agency posting for another employer', () => {
+    expect(emailDomainLogo('rec@hays.com.au', 'Hays', 'Unilever')).toBeNull()
   })
 
-  it('refuses an already-expired LinkedIn link', () => {
-    const result = parseLogoInput('https://media.licdn.com/dms/image/x/logo?e=1775088000&v=beta', NOW)
-    expect(!result.ok && result.reason).toMatch(/expired on/)
-  })
-
-  it('refuses pages, plain http, and junk', () => {
-    for (const bad of [
-      'https://www.facebook.com/melbournesocialco',
-      'https://au.linkedin.com/company/mcmpr',
-      'https://www.instagram.com/mangocomms/',
-      'http://example.com/logo.png',
-      'javascript:alert(1)',
-      'not a link',
-      'https://brandfetch.com/',
-    ]) {
-      expect(parseLogoInput(bad, NOW).ok).toBe(false)
-    }
+  it('refuses junk', () => {
+    expect(emailDomainLogo('not an email', 'Mars', 'Mars')).toBeNull()
+    expect(emailDomainLogo(null, 'Mars', 'Mars')).toBeNull()
   })
 })

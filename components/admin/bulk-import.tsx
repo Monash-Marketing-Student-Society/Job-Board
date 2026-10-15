@@ -288,7 +288,7 @@ export function BulkImport() {
       let failed = 0
 
       // Every job on the board must have a logo. A row without one takes its
-      // company's approved logo (/admin/logos); a row with neither is skipped
+      // company's saved logo; a row with neither is skipped
       // rather than published bare (the database would refuse it anyway).
       const { data: approved } = await supabase.from('company_logos').select('company_key, logo_url')
       const approvedByKey = new Map((approved ?? []).map((a) => [a.company_key as string, a.logo_url as string]))
@@ -301,7 +301,7 @@ export function BulkImport() {
       failed += noLogo.length
       if (noLogo.length > 0) {
         toast.error(`${noLogo.length} job${noLogo.length === 1 ? '' : 's'} skipped: no logo`, {
-          description: `Approve a logo on the Logos page or add a Logo URL for: ${[...new Set(noLogo.map((r) => r.company))].join(', ')}`,
+          description: `Add a Logo URL for: ${[...new Set(noLogo.map((r) => r.company))].join(', ')}`,
           duration: 15000,
         })
       }

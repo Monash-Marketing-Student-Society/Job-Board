@@ -104,7 +104,7 @@ export async function approveStaged(
   const src = sourceOf(row)
   const slug = src?.slug ?? null
   const j = row.normalised
-  // An admin-approved logo (/admin/logos) wins; otherwise the source's own
+  // The company's saved logo wins; otherwise the source's own
   // domain; otherwise the employer's own logo from the record, saved for next time.
   let logoUrl = (await approvedLogoFor(db, j.company)) ?? sourceLogoUrl(src?.config)
   const image = logoUrl ? null : adoptableLogo(row.raw?.company_logo, row.raw?.company_name, j.company)

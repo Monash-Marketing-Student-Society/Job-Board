@@ -8,6 +8,7 @@ import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { approvalEmail } from '@/lib/email-templates'
 import { sanitizeDescription } from '@/lib/sanitize'
 import { approvedLogoFor } from '@/lib/company-logos'
+import { emailDomainLogo } from '@/lib/logos'
 import { noLogoResponse } from '@/lib/sync/staged-http'
 
 export async function POST(
@@ -25,18 +26,21 @@ export async function POST(
   const adminClient = createAdminClient()
 
   // Every job on the board needs a logo: the submitter's own, else the
-  // company's approved one. Checked before the claim so a refusal leaves the
-  // submission pending.
+  // company's saved one, else the one for their work email's domain. Checked
+  // before the claim so a refusal leaves the submission pending.
   const { data: pending } = await supabase
     .from('job_submissions')
-    .select('company, company_logo_url')
+    .select('company, company_logo_url, submitter_email, submitter_company_name')
     .eq('id', id)
     .eq('status', 'pending')
     .maybeSingle()
   let logoUrl: string | null = null
   if (pending) {
-    logoUrl = pending.company_logo_url?.trim() || (await approvedLogoFor(adminClient, pending.company))
-    if (!logoUrl) return noLogoResponse(pending.company)
+    logoUrl =
+      pending.company_logo_url?.trim() ||
+      (await approvedLogoFor(adminClient, pending.company)) ||
+      emailDomainLogo(pending.submitter_email, pending.submitter_company_name, pending.company)
+    if (!logoUrl) return noLogoResponse(pending.company, 'Ask the submitter to add one with the edit link in their confirmation email, then publish.')
   }
 
   // Claim the submission BEFORE publishing anything.
