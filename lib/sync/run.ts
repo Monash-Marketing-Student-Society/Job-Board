@@ -20,6 +20,7 @@
  * added later without changing this shape.
  */
 
+import { adoptableLogo } from '../company-logos'
 import { computeApplyUrlHash, computeFingerprint } from './fingerprint'
 import { resolveDuplicate, sourceRank, type SourceRank } from './dedup'
 import { resolveCity } from './location'
@@ -75,6 +76,8 @@ export interface SyncDeps {
   countPublished(sourceSlug: string): Promise<number>
   /** The logo a job from this company would publish with, or null (drives the missing-logo hold). */
   logoFor(company: string): Promise<string | null>
+  /** Save `imageUrl` as the company's logo when it has none; the logo it has afterwards, or null if that failed. */
+  adoptLogo(company: string, imageUrl: string): Promise<string | null>
   /** Insert into staged_jobs (and record its fingerprint). */
   stage(row: StagedInsert): Promise<void>
   /** Insert straight into jobs with auto_published_at set (and record its fingerprint). */
@@ -105,6 +108,18 @@ export function emptyCounts(): RunCounts {
 /** A source publishes unattended only once it has been explicitly flipped. */
 function isReviewOnly(source: SourceRow): boolean {
   return source.config.auto_publish !== true
+}
+
+/**
+ * The company's logo, or -- when it has none and the posting carries the
+ * employer's own -- that one, saved for every later job from them. Only for
+ * postings that got past targeting and dedup, so rejects copy nothing.
+ */
+async function logoForPosting(posting: RawPosting, job: NormalisedJob, deps: SyncDeps): Promise<string | null> {
+  const logo = await deps.logoFor(job.company)
+  if (logo) return logo
+  const image = adoptableLogo(posting.logoUrl, posting.company, job.company)
+  return image ? deps.adoptLogo(job.company, image) : null
 }
 
 export async function processPosting(
@@ -176,7 +191,7 @@ export async function processPosting(
     verdict,
     publishedFromSource: await deps.countPublished(source.slug),
     reviewOnly: isReviewOnly(source),
-    hasLogo: Boolean(await deps.logoFor(job.company)),
+    hasLogo: Boolean(await logoForPosting(posting, job, deps)),
   })
 
   const row: StagedInsert = {

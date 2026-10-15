@@ -15,7 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { approvedLogoFor } from '../company-logos'
+import { adoptableLogo, adoptCompanyLogo, approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import { sanitizeDescription } from '../sanitize'
 import { decodeHtmlEntities } from '../utils'
@@ -70,6 +70,7 @@ interface ClaimedRow {
   external_id: string | null
   fingerprint: string
   normalised: NormalisedJob
+  raw: Record<string, unknown> | null
   sources: ClaimedSource | ClaimedSource[] | null
 }
 
@@ -82,13 +83,18 @@ function sourceOf(row: ClaimedRow): ClaimedSource | null {
   return (Array.isArray(row.sources) ? row.sources[0] : row.sources) ?? null
 }
 
-export async function approveStaged(db: SupabaseClient, id: string, reviewerId: string): Promise<ActionResult> {
+export async function approveStaged(
+  db: SupabaseClient,
+  id: string,
+  reviewerId: string,
+  fetchImpl: typeof fetch = (...args) => globalThis.fetch(...args)
+): Promise<ActionResult> {
   const { data: claimed, error: claimError } = await db
     .from('staged_jobs')
     .update({ status: 'approved', reviewed_by: reviewerId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'pending')
-    .select('id, external_id, fingerprint, normalised, sources(slug, config)')
+    .select('id, external_id, fingerprint, normalised, raw, sources(slug, config)')
     .maybeSingle()
 
   if (claimError) return { ok: false, kind: 'error', message: `claim: ${claimError.message}` }
@@ -98,8 +104,11 @@ export async function approveStaged(db: SupabaseClient, id: string, reviewerId: 
   const src = sourceOf(row)
   const slug = src?.slug ?? null
   const j = row.normalised
-  // An admin-approved logo (/admin/logos) wins; otherwise the source's own domain.
-  const logoUrl = (await approvedLogoFor(db, j.company)) ?? sourceLogoUrl(src?.config)
+  // An admin-approved logo (/admin/logos) wins; otherwise the source's own
+  // domain; otherwise the employer's own logo from the record, saved for next time.
+  let logoUrl = (await approvedLogoFor(db, j.company)) ?? sourceLogoUrl(src?.config)
+  const image = logoUrl ? null : adoptableLogo(row.raw?.company_logo, row.raw?.company_name, j.company)
+  if (image) logoUrl = await adoptCompanyLogo(db, j.company, image, fetchImpl)
   if (!logoUrl) {
     // Every job on the board needs a logo. Hand the row back to the queue
     // untouched; if that fails it is stranded, as with a failed publish.
