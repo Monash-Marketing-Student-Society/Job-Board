@@ -258,13 +258,21 @@ describe('assessTarget — description-first rules (12 Oct 2026)', () => {
     expect(redBull('Student Marketeer - La Trobe University').rule).toBe('employer_rule')
   })
 
-  it('removes blue-collar industries, not consumer manufacturers', () => {
-    const industry = (industries: string) => assessTarget(job({ industries }))
+  it('removes blue-collar industries at small employers, not consumer manufacturers', () => {
+    const industry = (industries: string, employerSize: number | null = 201) => assessTarget(job({ industries, employerSize }))
     expect(industry('Mining').rule).toBe('industry')
-    expect(industry('Wholesale Building Materials').rule).toBe('industry')
+    expect(industry('Wholesale Building Materials', 501).rule).toBe('industry')
     expect(industry('Agriculture, Construction, Mining Machinery Manufacturing').rule).toBe('industry')
     expect(industry('Manufacturing').verdict).not.toBe('reject')
     expect(industry('Appliances, Electrical, and Electronics Manufacturing, Industrial Machinery Manufacturing, and Medical Equipment Manufacturing').verdict).not.toBe('reject')
+  })
+
+  // 15 Oct 2026: a large national employer in these industries often runs an
+  // established graduate program (Reece's Retail Leadership Graduate Program).
+  it('keeps blue-collar employers of 1,000+, and sends an unknown size to review', () => {
+    expect(assessTarget(job({ title: 'Retail Leadership Graduate Program VIC', industries: 'Wholesale Building Materials', employerSize: 5001 })).verdict).toBe('pass')
+    expect(assessTarget(job({ industries: 'Construction', employerSize: 1000 })).verdict).toBe('pass')
+    expect(assessTarget(job({ industries: 'Construction', employerSize: null })).verdict).not.toBe('reject')
   })
 
   it('removes a job closing within two weeks, keeps one with no closing date', () => {

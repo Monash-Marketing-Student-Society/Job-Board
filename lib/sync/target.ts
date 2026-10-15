@@ -208,6 +208,13 @@ function employerRule(job: TargetInput): string | null {
 // consumer-facing industry stays -- Stryker lists "Industrial Machinery
 // Manufacturing" beside medical equipment -- and plain "Manufacturing" is
 // not here at all: Ferrero, PepsiCo and Henkel sit under it.
+//
+// Small firms only (15 Oct 2026): a large national employer in these
+// industries -- Reece, CNH -- has the budget and often an established
+// graduate or internship program, so it stays. The block applies only when
+// LinkedIn's size band says the employer is under LARGE_EMPLOYER_MIN; an
+// unknown size goes to review rather than being removed.
+export const LARGE_EMPLOYER_MIN = 1000
 const BLUE_COLLAR_INDUSTRIES = [
   'mining', 'construction', 'building materials', 'machinery manufacturing',
   'climate technology product manufacturing', 'oil and gas', 'civil engineering',
@@ -218,10 +225,17 @@ const CONSUMER_INDUSTRIES = [
   'marketing', 'advertising', 'media', 'appliances', 'personal care', 'entertainment',
 ]
 
-function blueCollarIndustry(industries: string | null | undefined): string | null {
-  if (!industries) return null
-  if (matchesAny(industries, CONSUMER_INDUSTRIES)) return null
-  return matchesAny(industries, BLUE_COLLAR_INDUSTRIES) ? industries : null
+/** True for a LinkedIn industry string the block covers; the adapter looks these employers' sizes up. */
+export function isBlueCollarIndustry(industries: string | null | undefined): boolean {
+  if (!industries) return false
+  if (matchesAny(industries, CONSUMER_INDUSTRIES)) return false
+  return matchesAny(industries, BLUE_COLLAR_INDUSTRIES)
+}
+
+function smallBlueCollarEmployer(job: TargetInput): string | null {
+  if (!isBlueCollarIndustry(job.industries)) return null
+  if (typeof job.employerSize !== 'number' || job.employerSize >= LARGE_EMPLOYER_MIN) return null
+  return `${job.industries}; LinkedIn size band starts at ${job.employerSize.toLocaleString('en-AU')} (under ${LARGE_EMPLOYER_MIN.toLocaleString('en-AU')})`
 }
 
 // Sydney employer size (12 Oct 2026): a Melbourne student rarely moves for a
@@ -317,7 +331,7 @@ export function assessTarget(job: TargetInput): TargetResult {
   const employer = employerRule(job)
   if (employer) return { verdict: 'reject', rule: 'employer_rule', evidence: employer }
 
-  const industry = blueCollarIndustry(job.industries)
+  const industry = smallBlueCollarEmployer(job)
   if (industry) return { verdict: 'reject', rule: 'industry', evidence: industry }
 
   const small = smallSydneyEmployer(job, city)

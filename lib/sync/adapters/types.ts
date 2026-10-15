@@ -69,7 +69,7 @@ export interface CompanyStore {
   /** Cached sizes by company id. An id missing from the map was never looked up; null = looked up, no size. */
   sizes(companyIds: string[]): Promise<Map<string, number | null>>
   save(rows: CompanySize[]): Promise<void>
-  /** Sydney LinkedIn employers waiting in the review queue that were never looked up. */
+  /** Employers of waiting LinkedIn jobs that a rule needs a size for, never looked up. */
   pendingUnknown(limit: number): Promise<CompanyRef[]>
 }
 
