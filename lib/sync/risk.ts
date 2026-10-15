@@ -60,7 +60,7 @@ export const RISK_REASON_HELP: Record<RiskReason, string> = {
   tier_b_or_c: 'Found on a job board rather than the employer’s own site, so it always gets a human look.',
   missing_title: 'The posting had no title. Add one before publishing.',
   missing_company: 'The posting didn’t name the employer. Add it before publishing.',
-  missing_logo: 'Every job on the board needs a logo, and this company has none yet. Approve one on the Logos page, then publish.',
+  missing_logo: "Every job on the board needs a logo, and this company has none yet. Publishing copies the employer's own LinkedIn logo when the job came with one; otherwise approve one on the Logos page first.",
   no_direct_link: 'The apply link goes to a list of jobs, not this one. Check it leads to the right role.',
   missing_job_type: 'The posting didn’t say internship, graduate, part-time and so on. Set it before publishing.',
   missing_closing_date: 'The posting has no closing date. Set one, or tick “No closing date”.',
@@ -90,7 +90,7 @@ export interface RiskInput {
   publishedFromSource: number
   /** True unless the source has been explicitly flipped to auto-publish. */
   reviewOnly: boolean
-  /** An approved company logo or the source's own domain exists: every live job must have a logo. */
+  /** An approved company logo, the source's own domain, or the employer's logo copied from the record: every live job must have a logo. */
   hasLogo: boolean
 }
 

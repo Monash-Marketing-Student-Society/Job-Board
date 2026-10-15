@@ -107,6 +107,11 @@ describe('toPostings', () => {
     expect(linkedInApplyUrl({ url: 'javascript:alert(1)' })).toBeNull()
   })
 
+  it("carries the employer's LinkedIn logo, for a company the board has no logo for yet", () => {
+    expect(postings[0].logoUrl).toMatch(/^https:\/\/media\.licdn\.com\//)
+    expect(postings[1].logoUrl).toBeNull()
+  })
+
   it("takes each posting's own company, not the source's name", () => {
     expect(postings[0].company).toBe('Delaware North, Australia & New Zealand')
   })
@@ -260,6 +265,7 @@ function memoryDeps() {
     },
     countPublished: async () => 0,
     logoFor: async () => null,
+    adoptLogo: async () => null,
     stage: async (row) => {
       rows.push(row)
     },

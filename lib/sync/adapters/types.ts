@@ -23,6 +23,8 @@ export interface RawPosting {
   raw: Record<string, unknown>
   /** Which fields were read from structured data on THIS posting, not guessed. */
   read: Set<string>
+  /** The employer's logo image as the source shows it, if any (LinkedIn's company_logo). Copied when the company has none. */
+  logoUrl?: string | null
 }
 
 /**

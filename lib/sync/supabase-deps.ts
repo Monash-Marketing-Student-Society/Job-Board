@@ -14,7 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { approvedLogoFor } from '../company-logos'
+import { adoptCompanyLogo, approvedLogoFor } from '../company-logos'
 import { sourceLogoUrl } from '../logos'
 import type { SourceRow } from './adapters/types'
 import { rollingMedian, zeroGuardTripped, type RunCounts, type StagedInsert, type StoredMatch, type SyncDeps } from './run'
@@ -149,6 +149,10 @@ export function supabaseDeps(db: SupabaseClient, source: SourceRow): SyncDeps {
 
     logoFor(company) {
       return logoFor(db, source, company)
+    },
+
+    adoptLogo(company, imageUrl) {
+      return adoptCompanyLogo(db, company, imageUrl)
     },
 
     async publish(row) {

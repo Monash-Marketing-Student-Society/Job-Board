@@ -161,6 +161,7 @@ export function toPostings(records: LinkedInRecord[]): RawPosting[] {
       company,
       raw: record as Record<string, unknown>,
       read,
+      logoUrl: record.company_logo ?? null,
     })
   }
   return postings

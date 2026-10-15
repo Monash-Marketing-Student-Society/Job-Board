@@ -53,6 +53,7 @@ function fakeDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     findExisting: vi.fn().mockResolvedValue(null),
     countPublished: vi.fn().mockResolvedValue(50),
     logoFor: vi.fn().mockResolvedValue('https://cdn.brandfetch.io/domain/unilever.com/icon'),
+    adoptLogo: vi.fn().mockResolvedValue(null),
     stage: vi.fn().mockResolvedValue(undefined),
     publish: vi.fn().mockResolvedValue(undefined),
     enrich: vi.fn().mockResolvedValue(undefined),
@@ -93,6 +94,36 @@ describe('processPosting — routing', () => {
     const deps = fakeDeps({ logoFor: vi.fn().mockResolvedValue(null) })
     const counts = emptyCounts()
     await processPosting(POSTING, CLEAN, AUTO_SOURCE, deps, counts)
+
+    expect(deps.publish).not.toHaveBeenCalled()
+    expect(vi.mocked(deps.stage).mock.calls[0][0].riskReasons).toEqual(['missing_logo'])
+  })
+
+  it("publishes with the employer's own logo when the company has none yet", async () => {
+    const image = 'https://media.licdn.com/dms/image/v2/X/company-logo_100_100/0/1/unilever_logo?e=2147483647&v=beta&t=x'
+    const deps = fakeDeps({
+      logoFor: vi.fn().mockResolvedValue(null),
+      adoptLogo: vi.fn().mockResolvedValue('https://x.supabase.co/storage/v1/object/public/company-logos/auto/a.jpg'),
+    })
+    await processPosting({ ...POSTING, logoUrl: image }, CLEAN, AUTO_SOURCE, deps, emptyCounts())
+
+    expect(deps.adoptLogo).toHaveBeenCalledWith('Unilever', image)
+    expect(deps.publish).toHaveBeenCalledOnce()
+  })
+
+  it("never adopts the poster's logo for a job it re-attributes to another employer", async () => {
+    const image = 'https://media.licdn.com/dms/image/v2/X/company-logo_100_100/0/1/hatch_logo?e=2147483647&v=beta&t=x'
+    const deps = fakeDeps({ logoFor: vi.fn().mockResolvedValue(null) })
+    await processPosting({ ...POSTING, company: 'Hatch', logoUrl: image }, CLEAN, AUTO_SOURCE, deps, emptyCounts())
+
+    expect(deps.adoptLogo).not.toHaveBeenCalled()
+    expect(vi.mocked(deps.stage).mock.calls[0][0].riskReasons).toEqual(['missing_logo'])
+  })
+
+  it('still holds the posting when copying the logo fails', async () => {
+    const image = 'https://media.licdn.com/dms/image/v2/X/company-logo_100_100/0/1/unilever_logo?e=2147483647&v=beta&t=x'
+    const deps = fakeDeps({ logoFor: vi.fn().mockResolvedValue(null) })
+    await processPosting({ ...POSTING, logoUrl: image }, CLEAN, AUTO_SOURCE, deps, emptyCounts())
 
     expect(deps.publish).not.toHaveBeenCalled()
     expect(vi.mocked(deps.stage).mock.calls[0][0].riskReasons).toEqual(['missing_logo'])

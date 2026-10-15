@@ -114,6 +114,26 @@ describe('approveStaged', () => {
     expect(argOf(release.ops, 'update')).toEqual({ status: 'pending', reviewed_by: null })
   })
 
+  it("publishes with the employer's own LinkedIn logo, saved for the company, when it has none", async () => {
+    const image = 'https://media.licdn.com/dms/image/v2/X/company-logo_100_100/0/1/unilever_logo?e=2147483647&v=beta&t=x'
+    const publicUrl = 'https://x.supabase.co/storage/v1/object/public/company-logos/auto/abc.png'
+    const linkedIn = { ...CLAIMED, raw: { company_name: 'Unilever', company_logo: image }, sources: { slug: 'linkedin', config: {} } }
+    let saved = false
+    const base = happy({ claim: { data: linkedIn } })
+    const { db, log } = fakeDb((table, ops) => {
+      if (table === 'company_logos' && has(ops, 'upsert')) saved = true
+      if (table === 'company_logos' && has(ops, 'maybeSingle')) return { data: saved ? { logo_url: publicUrl } : null }
+      return base(table, ops)
+    })
+    ;(db as unknown as { storage: unknown }).storage = {
+      from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: { publicUrl } }) }),
+    }
+    const fetchImpl = async () => new Response(new Uint8Array(1500), { headers: { 'content-type': 'image/png' } })
+
+    expect(await approveStaged(db, 's1', 'admin-1', fetchImpl)).toEqual({ ok: true, jobId: 'job-1' })
+    expect(argOf(log.find((c) => c.table === 'jobs')!.ops, 'insert').company_logo_url).toBe(publicUrl)
+  })
+
   it('releases the claim back to pending if the publish fails', async () => {
     const { db, log } = fakeDb(happy({ insert: { error: { message: 'duplicate key' } } }))
     const result = await approveStaged(db, 's1', 'admin-1')
