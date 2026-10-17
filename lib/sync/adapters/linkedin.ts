@@ -33,8 +33,9 @@
  * (ISO), `application_availability`. Error records (include_errors) carry
  * `error`/`error_code` and no posting id.
  *
- * Employer size (12 Oct 2026): after the jobs arrive, every Sydney
- * employer not yet in `linkedin_companies` is looked up in one more
+ * Employer size (12 Oct 2026): after the jobs arrive, every employer a size
+ * rule needs -- Sydney jobs, and blue-collar industries anywhere (15 Oct) --
+ * not yet in `linkedin_companies` is looked up in one more
  * snapshot (lib/sync/linkedin-companies.ts) and its size band's lower bound
  * is attached to the record as `company_employees_min`, for the Sydney size
  * rule in target.ts. Employers of Sydney jobs already waiting for review
@@ -53,7 +54,7 @@ import {
 import {
   COMPANY_DATASET_ID,
   companyRef,
-  isSydneyRecord,
+  needsEmployerSize,
   toCompanySizes,
   type CompanyRecord,
 } from '../linkedin-companies'
@@ -213,7 +214,7 @@ export function createLinkedInAdapter(deps: LinkedInDeps = defaultDeps): Adapter
     const { companies, ledger } = ctx
     if (!companies) return
     const sydney = postings.flatMap((p) => {
-      const ref = isSydneyRecord(p.raw) ? companyRef(p.raw) : null
+      const ref = needsEmployerSize(p.raw) ? companyRef(p.raw) : null
       return ref ? [{ posting: p, ref }] : []
     })
 

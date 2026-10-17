@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canonicalCompanyUrl, companyRef, employeesMin, isSydneyRecord, toCompanySizes } from './linkedin-companies'
+import { canonicalCompanyUrl, companyRef, employeesMin, isSydneyRecord, needsEmployerSize, toCompanySizes } from './linkedin-companies'
 
 describe('canonicalCompanyUrl', () => {
   it('strips the country subdomain, tracking query and case', () => {
@@ -42,6 +42,14 @@ describe('companyRef / isSydneyRecord', () => {
   it('places a record in Sydney from its job location', () => {
     expect(isSydneyRecord({ job_location: 'Sydney, New South Wales, Australia' })).toBe(true)
     expect(isSydneyRecord({ job_location: 'Melbourne, Victoria, Australia' })).toBe(false)
+  })
+})
+
+describe('needsEmployerSize', () => {
+  it('covers Sydney jobs, and blue-collar industries in any city', () => {
+    expect(needsEmployerSize({ job_location: 'Sydney, New South Wales, Australia', job_industries: 'Retail' })).toBe(true)
+    expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Wholesale Building Materials' })).toBe(true)
+    expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Retail' })).toBe(false)
   })
 })
 

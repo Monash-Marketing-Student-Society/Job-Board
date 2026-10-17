@@ -15,6 +15,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveCity } from './location'
+import { isBlueCollarIndustry } from './target'
 import type { CompanyRef, CompanySize, CompanyStore } from './adapters/types'
 
 export const COMPANY_DATASET_ID = 'gd_l1vikfnt1wgvvqz95w'
@@ -55,6 +56,15 @@ export function companyRef(raw: Record<string, unknown>): CompanyRef | null {
 /** True for a job record placed in Sydney -- the only city the size rule applies to. */
 export function isSydneyRecord(raw: Record<string, unknown>): boolean {
   return resolveCity(typeof raw.job_location === 'string' ? raw.job_location : null) === 'sydney'
+}
+
+/**
+ * The jobs whose employer size a rule reads: every Sydney job (the Sydney
+ * size rule) and, in any city, a job in a blue-collar industry (blocked
+ * only for employers under 1,000).
+ */
+export function needsEmployerSize(raw: Record<string, unknown>): boolean {
+  return isSydneyRecord(raw) || isBlueCollarIndustry(typeof raw.job_industries === 'string' ? raw.job_industries : null)
 }
 
 export interface CompanyRecord {
@@ -132,7 +142,7 @@ export function companyStore(db: SupabaseClient): CompanyStore {
       const refs = new Map<string, CompanyRef>()
       for (const row of data ?? []) {
         const raw = (row.raw ?? {}) as Record<string, unknown>
-        const ref = isSydneyRecord(raw) ? companyRef(raw) : null
+        const ref = needsEmployerSize(raw) ? companyRef(raw) : null
         if (ref) refs.set(ref.companyId, ref)
       }
       const known = await this.sizes([...refs.keys()])
