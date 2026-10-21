@@ -56,6 +56,7 @@ export type TargetRule =
   | 'employer_rule'
   | 'industry'
   | 'employer_size'
+  | 'sydney_entry_only'
   | 'closing_soon'
 
 /** Admin-facing wording for each rule, shown on /admin/filters. */
@@ -69,6 +70,7 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   employer_rule: 'Employer rule',
   industry: 'Industry',
   employer_size: 'Small employer (Sydney)',
+  sydney_entry_only: 'Sydney: not a grad program or internship',
   closing_soon: 'Closes within 2 weeks',
 }
 
@@ -238,21 +240,38 @@ function smallBlueCollarEmployer(job: TargetInput): string | null {
   return `${job.industries}; LinkedIn size band starts at ${job.employerSize.toLocaleString('en-AU')} (under ${LARGE_EMPLOYER_MIN.toLocaleString('en-AU')})`
 }
 
-// Sydney employer size (12 Oct 2026): a Melbourne student rarely moves for a
-// small firm, least of all for an internship. Measured on the trial's Sydney
-// LinkedIn decisions: 1,000+ for internships kept 6 of 7 approved and removed
-// all 4 rejected; 51+ for other roles drops the 2-50 person firms while
-// keeping the 51-200 agencies admins approved (Digivizer, One Green Bean).
-// Only applied when the size is known -- an unknown one goes to review.
-export const SYDNEY_INTERNSHIP_MIN_EMPLOYEES = 1000
-export const SYDNEY_ROLE_MIN_EMPLOYEES = 51
+// Sydney (21 Oct 2026): a Melbourne student moves to Sydney only for a
+// graduate program or an internship at one of the biggest employers in
+// Australia or internationally. Every other Sydney job is removed, whoever
+// posts it.
+//
+// "Biggest" is LinkedIn's size band at 1,000+, the line set on 12 Oct (it
+// kept Amazon, TikTok, Ferrero and We Are Social and removed the small
+// firms). Only LinkedIn carries a size: a job from one of MMSS's own employer
+// career sites counts as a big employer, since those were chosen by MMSS,
+// and a LinkedIn job whose size couldn't be found goes to review.
+export const SYDNEY_MIN_EMPLOYEES = 1000
+const ENTRY_ROUTE_KEYWORDS = [
+  'intern', 'internship', 'graduate', 'grad', 'vacationer', 'vacation', 'cadet', 'cadetship', 'trainee',
+]
 
-function smallSydneyEmployer(job: TargetInput, city: string): string | null {
-  if (city !== 'sydney' || typeof job.employerSize !== 'number') return null
-  const internship = job.jobType === 'internship' || matchesAny(job.title, ['intern', 'internship', 'vacationer'])
-  const min = internship ? SYDNEY_INTERNSHIP_MIN_EMPLOYEES : SYDNEY_ROLE_MIN_EMPLOYEES
-  if (job.employerSize >= min) return null
-  return `LinkedIn size band starts at ${job.employerSize.toLocaleString('en-AU')}; a Sydney ${internship ? 'internship' : 'role'} needs ${min.toLocaleString('en-AU')}+`
+/** A graduate program or internship, from the job type or the title. */
+export function isEntryRoute(title: string, jobType: JobType | null | undefined): boolean {
+  return jobType === 'internship' || jobType === 'graduate' || matchesAny(title, ENTRY_ROUTE_KEYWORDS)
+}
+
+function sydneyRule(job: TargetInput, city: string): Pick<TargetResult, 'rule' | 'evidence'> | null {
+  if (city !== 'sydney') return null
+  if (!isEntryRoute(job.title, job.jobType)) {
+    return { rule: 'sydney_entry_only', evidence: 'Sydney jobs are limited to graduate programs and internships' }
+  }
+  if (typeof job.employerSize === 'number' && job.employerSize < SYDNEY_MIN_EMPLOYEES) {
+    return {
+      rule: 'employer_size',
+      evidence: `LinkedIn size band starts at ${job.employerSize.toLocaleString('en-AU')}; a Sydney program needs ${SYDNEY_MIN_EMPLOYEES.toLocaleString('en-AU')}+`,
+    }
+  }
+  return null
 }
 
 // Admins review once a week (12 Oct 2026), so a job has to stay open for at
@@ -334,8 +353,8 @@ export function assessTarget(job: TargetInput): TargetResult {
   const industry = smallBlueCollarEmployer(job)
   if (industry) return { verdict: 'reject', rule: 'industry', evidence: industry }
 
-  const small = smallSydneyEmployer(job, city)
-  if (small) return { verdict: 'reject', rule: 'employer_size', evidence: small }
+  const sydney = sydneyRule(job, city)
+  if (sydney) return { verdict: 'reject', ...sydney }
 
   const level = levelGate(job)
   if (level === 'no' || midLevelTitle(job)) return { verdict: 'reject', rule: 'too_senior_title', evidence: job.title }

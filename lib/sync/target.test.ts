@@ -59,7 +59,7 @@ describe('targets — the named TDD cases', () => {
 
   it('does not let "programme" alone stand in for a graduate program', () => {
     // No "graduate" anywhere: neither gate should treat a bare programme as one.
-    expect(targets(job({ title: 'Leadership Programme', jobType: null, location: 'Sydney', tags: [] }))).toBe('unsure')
+    expect(targets(job({ title: 'Leadership Programme', jobType: null, location: 'Melbourne', tags: [] }))).toBe('unsure')
   })
 
   it('"Remote - Australia" returns unsure, even though level and function both pass', () => {
@@ -283,19 +283,29 @@ describe('assessTarget — description-first rules (12 Oct 2026)', () => {
   })
 })
 
-describe('assessTarget — Sydney employer size', () => {
+// 21 Oct 2026: in Sydney, only graduate programs and internships at the
+// biggest employers.
+describe('assessTarget — Sydney: graduate programs and internships at big employers only', () => {
   const sydney = (title: string, employerSize: number | null, jobType: TargetInput['jobType'] = null) =>
     assessTarget(job({ title, jobType, location: 'Sydney, New South Wales, Australia', employerSize }))
 
-  it('needs 1,000+ employees for a Sydney internship', () => {
-    expect(sydney('Social Media Intern', 2)).toMatchObject({ verdict: 'reject', rule: 'employer_size' })
-    expect(sydney('Marketing Internship', 201, 'internship').rule).toBe('employer_size')
-    expect(sydney('Marketing Internship', 1001, 'internship').verdict).toBe('pass')
+  it('removes every other Sydney job, whatever the employer size', () => {
+    expect(sydney('Marketing Coordinator', 10001)).toMatchObject({ verdict: 'reject', rule: 'sydney_entry_only' })
+    expect(sydney('Account Coordinator', null).rule).toBe('sydney_entry_only')
+    expect(sydney('Consumer Insights Analyst', 10001).rule).toBe('sydney_entry_only')
   })
 
-  it('needs 51+ employees for any other Sydney role', () => {
-    expect(sydney('Marketing Coordinator', 11).rule).toBe('employer_size')
-    expect(sydney('Marketing Coordinator', 51).verdict).not.toBe('reject')
+  it('keeps graduate programs, internships, vacationer and cadet roles at 1,000+', () => {
+    expect(sydney('Marketing Internship', 1001, 'internship').verdict).toBe('pass')
+    expect(sydney('2027 Marketing Graduate Program', 10001).verdict).toBe('pass')
+    expect(sydney('Summer Vacationer Program', 5001).verdict).toBe('pass')
+    expect(sydney('Trainee Journalist, The Sydney Morning Herald', 1001).verdict).not.toBe('reject')
+  })
+
+  it('removes a Sydney program at an employer under 1,000', () => {
+    expect(sydney('Social Media Intern', 2)).toMatchObject({ verdict: 'reject', rule: 'employer_size' })
+    expect(sydney('Graduate Digital Marketing Associate', 51).rule).toBe('employer_size')
+    expect(sydney('Marketing Internship', 999, 'internship').rule).toBe('employer_size')
   })
 
   it('leaves Melbourne and unknown sizes alone', () => {

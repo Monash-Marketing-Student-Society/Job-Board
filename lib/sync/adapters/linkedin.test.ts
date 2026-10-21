@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import snapshot from './__fixtures__/linkedin-snapshot.json'
 import {
   affordableLimit,
@@ -231,8 +231,9 @@ describe('LinkedIn postings through the existing filter', () => {
     expect(verdictFor('4400000003').verdict).toBe('pass')
   })
 
-  it('removes a Senior title', () => {
-    expect(verdictFor('4400000004')).toMatchObject({ verdict: 'reject', rule: 'too_senior_title' })
+  // In Sydney, so the Sydney rule (21 Oct 2026) fires before the title check.
+  it('removes a Senior title in Sydney', () => {
+    expect(verdictFor('4400000004')).toMatchObject({ verdict: 'reject', rule: 'sydney_entry_only' })
   })
 
   it('removes a Perth job', () => {
@@ -280,6 +281,12 @@ function memoryDeps() {
 }
 
 describe('the same snapshot delivered twice', () => {
+  // The fixture was posted 30 Sep 2026 and LinkedIn closing dates are inferred
+  // as posted + 30 days; pin the clock so the two-week closing rule doesn't
+  // remove everything once the fixture ages.
+  beforeEach(() => vi.setSystemTime(new Date('2026-10-01T00:00:00Z')))
+  afterEach(() => vi.useRealTimers())
+
   it('stages each posting once and dedups the repeat', async () => {
     const { rows, deps } = memoryDeps()
     const adapter = { kind: 'aggregator' as const, fetch: async () => toPostings(RECORDS) }
@@ -289,7 +296,7 @@ describe('the same snapshot delivered twice', () => {
     const first = await processSource(SOURCE, adapter, normalise, deps)
     const second = await processSource(SOURCE, adapter, normalise, deps)
 
-    // 7 postings: Senior, Specialist, Perth and 3+ years rejected; 3 held for review.
+    // 7 postings: Specialist, Senior (Sydney), Perth and 3+ years rejected; 3 held for review.
     expect(first).toEqual({ ...emptyCounts(), seen: 7, rejected: 4, held: 3 })
     expect(second).toEqual({ ...emptyCounts(), seen: 7, rejected: 4, deduped: 3 })
     expect(rows).toHaveLength(3)
@@ -302,6 +309,7 @@ describe('linkedin adapter: Sydney employer sizes', () => {
     ({
       ...RECORDS[0],
       job_posting_id: id,
+      job_title: 'Marketing Intern',
       job_location: 'Sydney, New South Wales, Australia',
       company_id: `c-${slug}`,
       company_url: `https://au.linkedin.com/company/${slug}?trk=public_jobs_topcard-org-name`,
