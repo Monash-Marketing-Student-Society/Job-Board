@@ -201,8 +201,8 @@ describe('parseRejectComment', () => {
 describe('recheckPending', () => {
   const pending = [
     { id: 'keep', normalised: { ...NORMALISED, title: 'Marketing Graduate Program', description: '<p>No experience needed</p>' } },
-    { id: 'senior', normalised: { ...NORMALISED, title: 'Assistant Brand Manager', job_type: null } },
-    { id: 'exp', normalised: { ...NORMALISED, description: '<p>You bring 3+ years’ experience in brand.</p>' } },
+    { id: 'senior', normalised: { ...NORMALISED, location: 'Melbourne', title: 'Assistant Brand Manager', job_type: null } },
+    { id: 'exp', normalised: { ...NORMALISED, location: 'Melbourne', description: '<p>You bring 3+ years’ experience in brand.</p>' } },
   ]
   const queue: Handler = (table, ops) => {
     if (table === 'staged_jobs' && has(ops, 'select') && !has(ops, 'update')) return { data: pending }

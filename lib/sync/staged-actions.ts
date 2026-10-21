@@ -290,6 +290,7 @@ const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
   employer_rule: 'irrelevant',
   industry: 'irrelevant',
   employer_size: 'irrelevant',
+  sydney_entry_only: 'irrelevant',
   closing_soon: 'expired',
 }
 

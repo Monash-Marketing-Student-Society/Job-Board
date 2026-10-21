@@ -46,8 +46,11 @@ describe('companyRef / isSydneyRecord', () => {
 })
 
 describe('needsEmployerSize', () => {
-  it('covers Sydney jobs, and blue-collar industries in any city', () => {
-    expect(needsEmployerSize({ job_location: 'Sydney, New South Wales, Australia', job_industries: 'Retail' })).toBe(true)
+  it('covers Sydney programs, and blue-collar industries in any city', () => {
+    expect(needsEmployerSize({ job_title: 'Marketing Intern', job_location: 'Sydney, New South Wales, Australia', job_industries: 'Retail' })).toBe(true)
+    expect(needsEmployerSize({ job_title: 'Brand Assistant', job_employment_type: 'Internship', job_location: 'Sydney, NSW', job_industries: 'Retail' })).toBe(true)
+    // Removed by the Sydney rule whatever the size: not worth a lookup.
+    expect(needsEmployerSize({ job_title: 'Marketing Coordinator', job_location: 'Sydney, New South Wales, Australia', job_industries: 'Retail' })).toBe(false)
     expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Wholesale Building Materials' })).toBe(true)
     expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Retail' })).toBe(false)
   })

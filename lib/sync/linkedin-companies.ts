@@ -1,5 +1,5 @@
 /**
- * LinkedIn employer sizes, for the Sydney size rule in target.ts.
+ * LinkedIn employer sizes, for the Sydney and blue-collar size rules in target.ts.
  *
  * LinkedIn's job feed names the employer (company_id, company_url) but not
  * its size, so the LinkedIn run looks each new Sydney employer up once in
@@ -15,7 +15,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveCity } from './location'
-import { isBlueCollarIndustry } from './target'
+import { isBlueCollarIndustry, isEntryRoute } from './target'
 import type { CompanyRef, CompanySize, CompanyStore } from './adapters/types'
 
 export const COMPANY_DATASET_ID = 'gd_l1vikfnt1wgvvqz95w'
@@ -59,12 +59,16 @@ export function isSydneyRecord(raw: Record<string, unknown>): boolean {
 }
 
 /**
- * The jobs whose employer size a rule reads: every Sydney job (the Sydney
- * size rule) and, in any city, a job in a blue-collar industry (blocked
- * only for employers under 1,000).
+ * The jobs whose employer size a rule reads: a Sydney graduate program or
+ * internship (every other Sydney job is removed whatever the size, so it
+ * isn't worth a lookup) and, in any city, a job in a blue-collar industry
+ * (blocked only for employers under 1,000).
  */
 export function needsEmployerSize(raw: Record<string, unknown>): boolean {
-  return isSydneyRecord(raw) || isBlueCollarIndustry(typeof raw.job_industries === 'string' ? raw.job_industries : null)
+  const title = typeof raw.job_title === 'string' ? raw.job_title : ''
+  const internship = typeof raw.job_employment_type === 'string' && /intern/i.test(raw.job_employment_type)
+  const sydneyProgram = isSydneyRecord(raw) && isEntryRoute(title, internship ? 'internship' : null)
+  return sydneyProgram || isBlueCollarIndustry(typeof raw.job_industries === 'string' ? raw.job_industries : null)
 }
 
 export interface CompanyRecord {
