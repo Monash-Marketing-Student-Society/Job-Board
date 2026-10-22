@@ -18,6 +18,7 @@
 
 import { statedSeniority, welcomesStudents } from './description-signals'
 import { requiredExperience } from './experience'
+import { nonMarketingDegree, technicalSkills } from './role-fit'
 import { resolveCity } from './location'
 import { matchesAny } from './text-match'
 import { JOB_FUNCTIONS, type JobFunction } from '../tags'
@@ -59,6 +60,8 @@ export type TargetRule =
   | 'industry'
   | 'employer_size'
   | 'sydney_entry_only'
+  | 'degree_mismatch'
+  | 'technical_role'
   | 'closing_soon'
 
 /** Admin-facing wording for each rule, shown on /admin/filters. */
@@ -73,6 +76,8 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   industry: 'Industry',
   employer_size: 'Small employer (Sydney)',
   sydney_entry_only: 'Sydney: not a grad program or internship',
+  degree_mismatch: 'Degree: not a marketing field',
+  technical_role: 'Technical skills required',
   closing_soon: 'Closes within 2 weeks',
 }
 
@@ -379,6 +384,14 @@ export function assessTarget(job: TargetInput): TargetResult {
   if (seniority && !welcomesStudents(job.description)) {
     return { verdict: 'reject', rule: 'too_senior_description', evidence: seniority }
   }
+
+  // What the description says the role is for (23 Oct 2026): the degree it
+  // asks for, and the technical skills it needs -- tech graduate programs
+  // otherwise pass on a generic title. role-fit.ts.
+  const degree = nonMarketingDegree(job.description)
+  if (degree) return { verdict: 'reject', rule: 'degree_mismatch', evidence: degree }
+  const tech = technicalSkills(job.description)
+  if (tech) return { verdict: 'reject', rule: 'technical_role', evidence: `Asks for ${tech.join(', ')}` }
 
   if (closesTooSoon(job.closingAt, job.now ?? new Date())) {
     return { verdict: 'reject', rule: 'closing_soon', evidence: `Closes ${job.closingAt!.slice(0, 10)}` }
