@@ -76,8 +76,10 @@ const NOT_A_REQUIREMENT = [
   // One route in among others: "tertiary qualifications, or 3–5 years'
   // experience" (Deloitte, 3 Oct 2026) -- a graduate qualifies by the degree.
   /\bor\s*$/i,
-  // A preference, not a requirement: "Ideally: around 1-3 years'".
-  /\b(?:ideally|preferably|desirable|desired)\b[^.;!?]{0,30}$/i,
+  // A preference, not a requirement: "Ideally: around 1-3 years'", "Nice to
+  // have: 2+ years in agency" (23 Oct 2026: a student can still be
+  // shortlisted for those, so the job stays).
+  /\b(?:ideally|preferably|desirable|desired|nice[- ]to[- ]haves?|bonus(?:\s+points)?|not\s+essential|optional)\b[^.;!?]{0,30}$/i,
 ]
 
 /**
@@ -94,7 +96,63 @@ const GRADUATE_ALTERNATIVE =
   /\b(?:graduates?|degree|qualifications?|diploma)\b[^.;!?]{0,80}?\b(?:or|and\s+(?:those|people|candidates|anyone))\s+(?:[\w’'-]+\s+){0,4}$/i
 
 /** Straight after the phrase: "1 year experience preferred", "is an advantage". */
-const PREFERENCE_AFTER = /^[^.;!?]{0,40}?\b(?:preferred|desirable|an advantage|a plus|advantageous|nice to have|beneficial)\b/i
+const PREFERENCE_AFTER =
+  /^[^.;!?]{0,40}?\b(?:preferred|desirable|an advantage|a plus|advantageous|nice[- ]to[- ]have|beneficial|not essential|not required|optional|a bonus|highly regarded|well regarded)\b/i
+
+/**
+ * Section headings that make everything under them a preference: "Nice to
+ * have", "Preferred qualifications:", "Desirable", "Bonus points",
+ * "Ideally you will bring:" (Colliers, 23 Oct 2026 -- its "1-2 years" sits in
+ * that list). Not "The ideal candidate", which heads the requirements.
+ */
+const PREFERENCE_HEADING =
+  /\b(?:nice[- ]to[- ]haves?|preferred|desirable|bonus(?:\s+points)?|advantageous|ideally|not\s+essential|would\s+be\s+(?:great|nice|a\s+bonus)|great\s+if|optional)\b/i
+
+// Where one block of a description ends: list items, paragraphs, headings, line breaks.
+const BLOCK_BREAK = /<\s*(?:\/(?:p|div|li|h[1-6]|tr|ul|ol|section)|br\s*\/?|h[1-6]\b[^>]*)\s*>/gi
+
+/**
+ * A short line on its own reads as a heading: one ending in a colon, one in
+ * capitals, or a short one that is a preference phrase ("Ideally, You'll
+ * Bring", "Nice to have").
+ */
+function isHeading(text: string): boolean {
+  if (text.length === 0 || text.length > 70) return false
+  if (text.endsWith(':')) return true
+  if (/[A-Z]/.test(text) && text === text.toUpperCase()) return true
+  if (text.length > 40 || /[.!?]$/.test(text)) return false
+  // "Experience And Education", "About You": short, title case, no full stop.
+  return text.split(/\s+/).every((word) => /^[A-Z&(]/.test(word) || /^(?:and|or|of|the|to|you|you'll|a|an|in|for|with)$/i.test(word))
+}
+
+/** A heading that opens a preference section: it starts with the preference word. */
+function isPreferenceHeading(text: string): boolean {
+  return new RegExp(`^\\W*${PREFERENCE_HEADING.source}`, 'i').test(text)
+}
+
+/**
+ * The description with every preference section taken out. A section runs
+ * from its heading to the next heading; a line that opens with a preference
+ * label ("Nice to have: 2+ years in agency") is dropped on its own.
+ */
+function requirementText(html: string): string {
+  const kept: string[] = []
+  let inPreference = false
+  for (const block of html.split(BLOCK_BREAK)) {
+    const text = descriptionText(block)
+    if (!text) continue
+    if (isHeading(text)) {
+      inPreference = isPreferenceHeading(text)
+      if (!inPreference) kept.push(text)
+      continue
+    }
+    if (inPreference) continue
+    const label = text.match(/^([^:]{1,40}):/)
+    if (label && isPreferenceHeading(label[1])) continue
+    kept.push(text)
+  }
+  return kept.join(' ')
+}
 
 function toNumber(token: string): number {
   return NUMBER_WORDS[token.toLowerCase()] ?? Number(token)
@@ -118,7 +176,7 @@ export interface ExperienceRequirement {
  * later sentence may still say "minimum 3 years".
  */
 export function requiredExperience(description: string | null | undefined): ExperienceRequirement | null {
-  const text = descriptionText(description)
+  const text = description ? requirementText(description) : ''
   if (!text) return null
 
   const requirement = (phrase: string, index: number, low: string, unit: string): ExperienceRequirement | null => {

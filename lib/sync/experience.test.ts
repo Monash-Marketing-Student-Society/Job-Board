@@ -104,3 +104,41 @@ describe('descriptionText', () => {
     expect(descriptionText('<p>3&#43; years&#8217;<br/>experience</p>')).toBe('3+ years’ experience')
   })
 })
+
+// 23 Oct 2026: years under a "nice to have" style heading are a preference --
+// a student can still be shortlisted, so the job stays.
+describe('requiredExperience — preference sections', () => {
+  const kept = [
+    // Colliers, Graphic Design & Marketing Assistant
+    '<p><strong>Ideally you will bring:</strong></p><ul><li>Recent completion of a Graphic Design or Marketing course</li><li>1-2 years of experience in a similar role</li></ul>',
+    // AICD, Enterprise Markets Coordinator (heading with no colon)
+    "<p>Ideally, You'll Bring</p><ul><li>Approximately 1–2 years of professional experience in marketing</li></ul>",
+    '<h3>Preferred Qualifications:</h3><ul><li>2–5 years of experience in B2B marketing</li></ul>',
+    '<p>Nice to have</p><ul><li>2+ years in a creative agency</li></ul>',
+    '<ul><li>Nice to have: 2+ years of experience in agency</li></ul>',
+    '<p>Bonus points:</p><ul><li>3 years of experience with Salesforce</li></ul>',
+    "<ul><li>2+ years' experience in social media is not essential</li></ul>",
+    "<ul><li>Agency experience (1+ years' experience) highly regarded</li></ul>",
+  ]
+  for (const html of kept) {
+    it(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80), () => {
+      expect(requiredExperience(html)).toBeNull()
+    })
+  }
+
+  const removed: Array<[string, number]> = [
+    // A requirements heading, not a preference
+    ["<p>THE IDEAL CANDIDATE:</p><ul><li>Minimum 3+ years' experience in production</li></ul>", 3],
+    // A preference section ends at the next heading
+    ["<p>Nice to have:</p><ul><li>Canva skills</li></ul><p>Essential:</p><ul><li>2+ years' experience in marketing</li></ul>", 2],
+    // "preferred" in a sentence doesn't make the next section a preference (SantaFe)
+    ['<p>Immediate Joiners preferred.</p><p>Experience And Education</p><p>Minimum 3 years of experience in PR</p>', 3],
+    // Describing who the role is for is still a requirement
+    ["<p>This role is ideal for someone with around 3+ years' experience in retail marketing.</p>", 3],
+  ]
+  for (const [html, years] of removed) {
+    it(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80), () => {
+      expect(requiredExperience(html)?.years).toBe(years)
+    })
+  }
+})
