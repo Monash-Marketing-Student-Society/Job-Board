@@ -136,9 +136,11 @@ export default function AdminUsersPage() {
       const text =
         body.outcome === 'granted'
           ? `${body.email} already had an account — admin access granted immediately.`
-          : body.outcome === 'invited-no-email'
-            ? `${body.email} can now sign in with Google. The invite email could not be sent (Supabase rate-limits these), so send them the link yourself if they need a password.`
-            : `Invitation sent to ${body.email}.`
+          : body.outcome === 'granted-link-sent'
+            ? `${body.email} already had an account — admin access granted, and a link to set their password has been emailed.`
+            : body.outcome === 'invited-no-email'
+              ? `${body.email} is invited, but the email could not be sent. Try again shortly, or they can sign in with Google if they're on MMSS's Google Workspace.`
+              : `Invitation sent to ${body.email}.`
 
       toast.success(text)
       setEmail('')
@@ -243,7 +245,7 @@ export default function AdminUsersPage() {
         <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-base font-semibold text-slate-700 font-heading">Invite an admin</h2>
           <p className="text-sm text-slate-500 mt-1 mb-4">
-            They can sign in with Google straight away, or set a password from the email link.
+            They get an email to set a password. MMSS Google Workspace accounts can also sign in with Google.
           </p>
 
           <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-3">

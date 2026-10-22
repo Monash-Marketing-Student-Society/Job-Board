@@ -329,6 +329,42 @@ export function rejectionEmail(data: SubmissionData, adminNote?: string | null):
   `)
 }
 
+// ─── Template: Admin invite / password reset ────────────────────────────────
+
+/**
+ * The one-time link that lets a committee member set their admin password.
+ * `link` is built by lib/admin-auth-links.ts and goes to our /admin/confirm
+ * page, never straight to Supabase.
+ */
+export function adminAccessEmail(type: 'invite' | 'recovery', link: string): string {
+  const invite = type === 'invite'
+
+  return wrap(`
+    ${emailHeader(
+      invite ? "You're Invited to the Admin" : 'Reset Your Password',
+      invite
+        ? "You've been given access to the MMSS Job Board admin dashboard. Set a password to sign in."
+        : 'Someone asked to reset the password on your MMSS Job Board admin account.'
+    )}
+
+    <tr>
+      <td style="background:#ffffff;padding:32px 40px 36px;">
+        <p style="margin:0 0 20px;font-size:14px;color:#3a3a5c;font-family:'Roboto',Arial,sans-serif;line-height:1.6;">
+          ${invite
+            ? 'Choose your password with the button below. After that, sign in at the admin login with this email address and your new password.'
+            : 'Choose a new password with the button below. If you did not ask for this, you can ignore this email and your password stays the same.'}
+        </p>
+        ${ctaButton(link, invite ? 'Set My Password' : 'Reset My Password')}
+        <p style="margin:24px 0 0;font-size:13px;color:#6b6b8a;font-family:'Roboto',Arial,sans-serif;line-height:1.55;">
+          This link works once. If it has expired, ask another admin to send a new one.
+        </p>
+      </td>
+    </tr>
+
+    ${emailFooter()}
+  `)
+}
+
 // ─── Template 4: Sync run digest (internal, to partnerships@) ───────────────
 
 /**

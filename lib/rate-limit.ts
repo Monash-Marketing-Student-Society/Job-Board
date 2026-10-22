@@ -93,3 +93,26 @@ export async function allowSubmission(
 
   return data !== false
 }
+
+/**
+ * Per-IP limit for "Forgot password?" on the admin login page, which sends an
+ * email to whatever address it is given. Shares submit-job's counter table
+ * under its own key prefix, so the two budgets never mix.
+ */
+export async function allowPasswordResetRequest(
+  client: SupabaseClient,
+  request: Request
+): Promise<boolean> {
+  const { data, error } = await client.rpc('check_submission_rate_limit', {
+    p_ip_hash: hashIp(`password-reset:${clientIp(request)}`),
+    p_max: MAX_ATTEMPTS,
+    p_window: WINDOW,
+  })
+
+  if (error) {
+    console.error('Rate-limit check failed; allowing the reset request:', error)
+    return true
+  }
+
+  return data !== false
+}
