@@ -27,6 +27,7 @@ import { resolveCity } from './location'
 import type { NormalisedJob, NormaliseConfidence, NormaliseResult } from './normalise'
 import { assessRisk, type RiskReason } from './risk'
 import { assessTarget, type TargetRule } from './target'
+import { isListEmployer } from './list-employers'
 import type { Adapter, AdapterContext, RawPosting, SourceRow } from './adapters/types'
 
 /** A job or staged job already known under one of the three identity checks. */
@@ -140,6 +141,8 @@ export async function processPosting(
     company: job.company,
     industries: typeof posting.raw.job_industries === 'string' ? posting.raw.job_industries : null,
     employerSize: typeof posting.raw.company_employees_min === 'number' ? posting.raw.company_employees_min : null,
+    // Every employer career site the sync reads is on the list; LinkedIn is matched by name.
+    listEmployer: source.slug !== 'linkedin' || isListEmployer(job.company),
     closingAt: job.closing_at,
   })
   const applyUrlHash = computeApplyUrlHash(job.url)
