@@ -333,7 +333,7 @@ export function rejectionEmail(data: SubmissionData, adminNote?: string | null):
 
 /**
  * The one-time link that lets a committee member set their admin password.
- * `link` is built by lib/admin-auth-links.ts and goes to our /auth/confirm
+ * `link` is built by lib/admin-auth-links.ts and goes to our /admin/confirm
  * page, never straight to Supabase.
  */
 export function adminAccessEmail(type: 'invite' | 'recovery', link: string): string {

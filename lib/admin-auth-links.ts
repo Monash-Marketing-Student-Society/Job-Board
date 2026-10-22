@@ -15,7 +15,7 @@ import { adminAccessEmail } from '@/lib/email-templates'
  * at all.
  *
  * So the link is generated here, without sending, and points at our own
- * /auth/confirm page with the hashed token. The server verifies that token,
+ * /admin/confirm page with the hashed token. The server verifies that token,
  * which replaces whatever session the browser held with the invitee's own.
  * Sending through Resend also takes Supabase's mailer rate limit out of the
  * picture.
@@ -35,7 +35,7 @@ export function buildAuthConfirmUrl(
   tokenHash: string,
   type: AdminAuthLinkType
 ): string {
-  const url = new URL('/auth/confirm', appUrl)
+  const url = new URL('/admin/confirm', appUrl)
   url.searchParams.set('token_hash', tokenHash)
   url.searchParams.set('type', type)
   return url.toString()

@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui'
 import { AuthBackdrop } from '@/components/admin/auth-backdrop'
+import { AuthConfirmForm } from '@/components/admin/auth-confirm-form'
 import { parseAdminAuthLinkType } from '@/lib/admin-auth-links'
 
 /**
- * /auth/confirm — where admin invite and password-reset emails land.
+ * /admin/confirm — where admin invite and password-reset emails land.
  *
  * The token is not used on arrival. Mail scanners (Outlook's Safe Links among
  * them) open every link in an email before the person does, and a one-time
@@ -37,14 +38,8 @@ export default async function AuthConfirmPage({
             </p>
           </div>
 
-          {valid ? (
-            <form action="/api/auth/confirm" method="post">
-              <input type="hidden" name="token_hash" value={tokenHash} />
-              <input type="hidden" name="type" value={type ?? ''} />
-              <Button type="submit" variant="primary" className="w-full">
-                Continue
-              </Button>
-            </form>
+          {tokenHash && type ? (
+            <AuthConfirmForm tokenHash={tokenHash} type={type} />
           ) : (
             <Link href="/admin/login">
               <Button variant="primary" className="w-full">Back to Login</Button>

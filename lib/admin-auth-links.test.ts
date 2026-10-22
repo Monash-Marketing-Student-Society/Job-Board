@@ -15,7 +15,7 @@ describe('buildAuthConfirmUrl', () => {
   it('points at our own confirm page with the token in the query, not a fragment', () => {
     const url = new URL(buildAuthConfirmUrl('https://jobs.monashmss.com', 'abc123', 'invite'))
     expect(url.origin).toBe('https://jobs.monashmss.com')
-    expect(url.pathname).toBe('/auth/confirm')
+    expect(url.pathname).toBe('/admin/confirm')
     expect(url.searchParams.get('token_hash')).toBe('abc123')
     expect(url.searchParams.get('type')).toBe('invite')
     expect(url.hash).toBe('')
@@ -23,7 +23,7 @@ describe('buildAuthConfirmUrl', () => {
 
   it('ignores a trailing slash on the app URL', () => {
     expect(buildAuthConfirmUrl('https://jobs.monashmss.com/', 'x', 'recovery')).toBe(
-      'https://jobs.monashmss.com/auth/confirm?token_hash=x&type=recovery'
+      'https://jobs.monashmss.com/admin/confirm?token_hash=x&type=recovery'
     )
   })
 })

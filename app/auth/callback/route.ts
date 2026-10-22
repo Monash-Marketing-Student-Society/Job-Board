@@ -32,13 +32,6 @@ export async function GET(request: Request) {
   const origin = baseUrl(request)
   const next = safeAdminRedirectPath(url.searchParams.get('next'))
 
-  // "Forgot password?" on the login page comes through here too, on its way to
-  // the reset page. A dead link on that path is an expired email, not a failed
-  // Google sign-in, so it gets the reset page's own message.
-  const failure = next.startsWith('/admin/reset-password')
-    ? `${origin}/admin/reset-password?link=invalid`
-    : `${origin}/admin/login?error=oauth`
-
   // Google can return with a denial rather than a code — the user closing the
   // consent screen is the common one, and it is not an error worth a stack
   // trace, just a trip back to the login page.
@@ -52,13 +45,13 @@ export async function GET(request: Request) {
 
   const code = url.searchParams.get('code')
   if (!code) {
-    return NextResponse.redirect(failure)
+    return NextResponse.redirect(`${origin}/admin/login?error=oauth`)
   }
 
   const supabase = await createServerClient()
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
   if (exchangeError) {
-    return NextResponse.redirect(failure)
+    return NextResponse.redirect(`${origin}/admin/login?error=oauth`)
   }
 
   const {
@@ -66,7 +59,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.redirect(failure)
+    return NextResponse.redirect(`${origin}/admin/login?error=oauth`)
   }
 
   const access = await ensureAdminAccess(createAdminClient(), user)

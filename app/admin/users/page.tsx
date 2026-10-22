@@ -245,7 +245,7 @@ export default function AdminUsersPage() {
         <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-base font-semibold text-slate-700 font-heading">Invite an admin</h2>
           <p className="text-sm text-slate-500 mt-1 mb-4">
-            They can sign in with Google straight away, or set a password from the email link.
+            They get an email to set a password. MMSS Google Workspace accounts can also sign in with Google.
           </p>
 
           <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-3">

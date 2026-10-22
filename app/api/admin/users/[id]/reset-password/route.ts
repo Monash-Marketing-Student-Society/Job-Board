@@ -11,7 +11,7 @@ import { sendAdminAuthLink } from '@/lib/admin-auth-links'
  * the new password in the account holder's hands, where a password typed into
  * this dashboard and relayed over chat never is.
  *
- * The link goes through /auth/confirm to /admin/reset-password, the page the
+ * The link goes through /admin/confirm to /admin/reset-password, the page the
  * self-serve "Forgot password?" flow on the login screen also ends on.
  */
 export async function POST(

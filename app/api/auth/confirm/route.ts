@@ -8,7 +8,7 @@ import { parseAdminAuthLinkType } from '@/lib/admin-auth-links'
  * POST /api/auth/confirm
  *
  * Spends the one-time token from an admin invite or reset email (posted by the
- * /auth/confirm page) and signs the browser in as that account.
+ * /admin/confirm page) and signs the browser in as that account.
  *
  * verifyOtp writes the new session over whatever cookies were already there,
  * which is the point: the browser may already be signed in as a different
