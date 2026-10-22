@@ -38,6 +38,8 @@ export interface TargetInput {
   industries?: string | null
   /** Lower bound of the employer's LinkedIn size band; absent when unknown (career sites, failed lookups). */
   employerSize?: number | null
+  /** On MMSS's employer list (lib/sync/list-employers.ts): keeps all its Sydney roles. */
+  listEmployer?: boolean
   /** ISO closing date, if the posting states one. */
   closingAt?: string | null
   /** Injected for tests; defaults to the current time. */
@@ -266,7 +268,9 @@ export function isEntryRoute(title: string, jobType: JobType | null | undefined)
 }
 
 function sydneyRule(job: TargetInput, city: string): Pick<TargetResult, 'rule' | 'evidence'> | null {
-  if (city !== 'sydney') return null
+  // An employer on MMSS's list keeps all its Sydney roles (22 Oct 2026); the
+  // other rules still apply to them.
+  if (city !== 'sydney' || job.listEmployer) return null
   if (!isEntryRoute(job.title, job.jobType)) {
     return { rule: 'sydney_entry_only', evidence: 'Sydney jobs are limited to graduate programs and internships' }
   }

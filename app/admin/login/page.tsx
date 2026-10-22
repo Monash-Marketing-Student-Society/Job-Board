@@ -176,11 +176,17 @@ export default function AdminLoginPage() {
     }
     setIsSendingReset(true)
     try {
-      const supabase = createClient()
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/admin/reset-password`,
+      // Sent by the server, so the link works on any device rather than only
+      // in this browser. See app/api/auth/forgot-password/route.ts.
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
-      if (resetError) throw resetError
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Could not send the reset email.')
+      }
       toast.success('Reset link sent, if that account exists.')
     } catch (err) {
       toast.error(shortMessage(err, 'Could not send the reset email.'))

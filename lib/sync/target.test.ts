@@ -314,6 +314,24 @@ describe('assessTarget — Sydney: graduate programs and internships at big empl
   })
 })
 
+// 22 Oct 2026: an employer on MMSS's list keeps all its Sydney roles.
+describe('assessTarget — listed employers keep their Sydney roles', () => {
+  const sydney = (title: string, listEmployer: boolean, employerSize: number | null = null) =>
+    assessTarget(job({ title, jobType: null, location: 'Sydney, New South Wales, Australia', listEmployer, employerSize }))
+
+  it('keeps a listed employer’s non-program Sydney role', () => {
+    expect(sydney('Account Coordinator', true).verdict).toBe('pass')
+  })
+
+  it('still removes the same role from an employer not on the list', () => {
+    expect(sydney('Account Coordinator', false).rule).toBe('sydney_entry_only')
+  })
+
+  it('still applies the other rules to listed employers', () => {
+    expect(sydney('Senior Account Manager', true).rule).toBe('too_senior_title')
+  })
+})
+
 // 23 Oct 2026: the description decides what a role is for.
 describe('assessTarget — degree and technical skills', () => {
   it('removes a tech graduate program on its degree line', () => {

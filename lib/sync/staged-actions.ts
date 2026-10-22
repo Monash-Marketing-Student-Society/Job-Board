@@ -25,6 +25,7 @@ import type { NormalisedJob } from './normalise'
 import type { RiskReason } from './risk'
 import { assessTarget, type TargetRule } from './target'
 import type { DraftEdit } from '../draft-edit'
+import { isListEmployer } from './list-employers'
 
 export const REJECT_REASONS = [
   'irrelevant',
@@ -305,6 +306,12 @@ export interface RecheckRemoval {
   result: ActionResult
 }
 
+/** A joined `sources(slug)` comes back as an object or a one-element array. */
+function sourceSlug(sources: { slug?: string } | Array<{ slug?: string }> | null | undefined): string | null {
+  const src = Array.isArray(sources) ? sources[0] : sources
+  return src?.slug ?? null
+}
+
 /**
  * Runs the current targeting gate over every pending staged job and rejects
  * what it would now remove. The gate only sees new postings, so without this
@@ -319,10 +326,15 @@ export async function recheckPending(
   reviewerId: string,
   { apply }: { apply: boolean }
 ): Promise<RecheckRemoval[] | { error: string }> {
-  const { data, error } = await db.from('staged_jobs').select('id, normalised, raw').eq('status', 'pending')
+  const { data, error } = await db.from('staged_jobs').select('id, normalised, raw, sources(slug)').eq('status', 'pending')
   if (error) return { error: error.message }
 
-  const rows = (data ?? []) as Array<{ id: string; normalised: NormalisedJob; raw: Record<string, unknown> | null }>
+  const rows = (data ?? []) as Array<{
+    id: string
+    normalised: NormalisedJob
+    raw: Record<string, unknown> | null
+    sources?: { slug?: string } | Array<{ slug?: string }> | null
+  }>
   // LinkedIn employer sizes come from the cache, not the stored record: the
   // lookup may have run after the job was staged.
   const companyIds = rows.map((r) => r.raw?.company_id).filter((id) => typeof id === 'string' || typeof id === 'number').map(String)
@@ -346,6 +358,7 @@ export async function recheckPending(
       company: j.company,
       industries: typeof industries === 'string' ? industries : null,
       employerSize: companyId == null ? null : (sizes.get(String(companyId)) ?? null),
+      listEmployer: sourceSlug(row.sources) !== 'linkedin' || isListEmployer(j.company),
       closingAt: j.closing_at,
     })
     if (verdict.verdict !== 'reject' || !verdict.rule) continue
