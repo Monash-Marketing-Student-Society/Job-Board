@@ -17,41 +17,38 @@ export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [accountEmail, setAccountEmail] = useState('')
+  const [isInvite, setIsInvite] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
+    // Every way here is a server redirect that has just signed the browser in
+    // as the account the email was sent to, and says so with ?link=:
+    // /api/auth/confirm for invite and admin-sent reset emails, /auth/callback
+    // for "Forgot password?". Without that marker the page does not offer a
+    // reset at all. It used to accept any existing session, and that is how an
+    // invite for a student address ended up offering to set the password of
+    // mmss@monashclubs.org, the account the browser happened to be signed in to.
+    const link = new URLSearchParams(window.location.search).get('link')
+    setIsInvite(link === 'invite')
 
-    // supabase-js parses the #access_token=...&type=recovery fragment on load
-    // and fires PASSWORD_RECOVERY once the recovery session is established.
-    // Which account this link belongs to. A committee often has several
-    // mailboxes in play at once -- a personal address, the club's, the
-    // partnerships one -- and a recovery link carries no visible clue which it
-    // was issued for. Naming it here means nobody sets a password on the wrong
-    // account and then cannot explain why the old one still will not sign in.
-    const captureEmail = (session: { user?: { email?: string } } | null) => {
-      const email = session?.user?.email
-      if (email) setAccountEmail(email)
+    if (link !== 'invite' && link !== 'recovery') {
+      setStatus('invalid')
+      return
     }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    createClient()
+      .auth.getSession()
+      .then(({ data: { session } }) => {
+        const email = session?.user?.email
+        if (!email) {
+          setStatus('invalid')
+          return
+        }
+        // Which account this is. A committee often has several mailboxes in
+        // play at once -- a personal address, the club's, the partnerships
+        // one -- so the page names it rather than leaving it to be guessed.
+        setAccountEmail(email)
         setStatus('ready')
-        captureEmail(session)
-      }
-    })
-
-    // Fallback: if a session already exists by the time this runs (e.g. the
-    // auth event fired before the listener was attached), allow reset too.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setStatus((s) => (s === 'checking' ? 'ready' : s))
-        captureEmail(session)
-      } else {
-        setTimeout(() => setStatus((s) => (s === 'checking' ? 'invalid' : s)), 2000)
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
+      })
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,9 +86,11 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md relative z-10">
         <div className="auth-card">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold">Reset Password</h1>
+            <h1 className="text-2xl font-bold">{isInvite ? 'Set Your Password' : 'Reset Password'}</h1>
             <p className="text-muted-foreground mt-1">
-              Choose a new password for your admin account
+              {isInvite
+                ? 'Choose a password for your new admin account'
+                : 'Choose a new password for your admin account'}
             </p>
             {accountEmail && (
               <p className="mt-3 text-sm">
@@ -110,7 +109,7 @@ export default function ResetPasswordPage() {
           {status === 'invalid' && (
             <>
               <p className="text-sm text-muted-foreground text-center mb-6">
-                This password reset link is invalid or has expired. Please request a new one.
+                This link is invalid, has expired or has already been used. Please request a new one.
               </p>
               <Link href="/admin/login">
                 <Button variant="primary" className="w-full">Back to Login</Button>

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isCurrentUserAdmin } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+import { sendAdminAuthLink } from '@/lib/admin-auth-links'
 
 /**
  * POST /api/admin/users/[id]/reset-password
@@ -12,8 +11,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
  * the new password in the account holder's hands, where a password typed into
  * this dashboard and relayed over chat never is.
  *
- * The link lands on /admin/reset-password, the same page the self-serve
- * "Forgot password?" flow on the login screen uses.
+ * The link goes through /admin/confirm to /admin/reset-password, the page the
+ * self-serve "Forgot password?" flow on the login screen also ends on.
  */
 export async function POST(
   _request: Request,
@@ -33,15 +32,11 @@ export async function POST(
     return NextResponse.json({ error: 'That account has no email address' }, { status: 400 })
   }
 
-  const { error } = await adminClient.auth.resetPasswordForEmail(email, {
-    redirectTo: `${APP_URL}/admin/reset-password`,
-  })
+  const sent = await sendAdminAuthLink(adminClient, email, 'recovery')
 
-  if (error) {
-    // Supabase's own mailer is rate-limited, and that is the usual cause here.
-    // Say so: "try again later" is actionable in a way that "failed" is not.
+  if (!sent.ok) {
     return NextResponse.json(
-      { error: 'Could not send the reset email. Supabase rate-limits these — try again shortly.' },
+      { error: 'Could not send the reset email. Try again shortly.' },
       { status: 502 }
     )
   }

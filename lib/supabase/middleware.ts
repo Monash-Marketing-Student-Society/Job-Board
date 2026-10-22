@@ -43,13 +43,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Routes reachable while signed out: the login page itself, and the
-  // password-reset page (its recovery token arrives as a URL fragment,
-  // which the server never sees — the client-side Supabase SDK exchanges
-  // it for a session after the page loads, so this request looks
-  // unauthenticated even on a valid recovery link).
+  // Routes reachable without admin access: the login page itself, the page
+  // invite and reset emails land on, and the password-reset page, which a
+  // newly invited admin reaches signed in but before anything else, and which
+  // shows its own "invalid link" message when nobody is signed in.
   const isPublicAdminRoute =
     request.nextUrl.pathname.startsWith('/admin/login') ||
+    request.nextUrl.pathname.startsWith('/admin/confirm') ||
     request.nextUrl.pathname.startsWith('/admin/reset-password')
 
   // Protect admin routes - redirect to login if not authenticated
