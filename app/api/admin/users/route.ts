@@ -8,8 +8,7 @@ import {
   emailMatchesAutoApprovedDomain,
   recoveryAdminEmail,
 } from '@/lib/admin-access'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+import { sendAdminAuthLink } from '@/lib/admin-auth-links'
 
 /**
  * Nobody paginates a committee. Supabase's listUsers caps a page at 1000, and
@@ -167,8 +166,8 @@ export async function GET() {
  *
  * The grant is written to admin_invites before the email is sent, and the
  * response distinguishes the two, because the grant is what actually matters:
- * if Supabase's mailer is rate-limited the invitee can still sign in with
- * Google, and the admin needs to be told that rather than shown a failure.
+ * if the email fails a Workspace member can still sign in with Google, and the
+ * admin needs to be told that rather than shown a failure.
  */
 export async function POST(request: Request) {
   if (!(await isCurrentUserAdmin())) {
@@ -219,16 +218,27 @@ export async function POST(request: Request) {
       .eq('email', email)
       .is('claimed_at', null)
 
+    // An account that has only ever used a password -- typically someone whose
+    // earlier invite link never worked -- may not know that password, so it
+    // gets a link to set one. Google accounts just sign in with Google.
+    const passwordOnly = !providersOf(existing).includes('google')
+    if (passwordOnly) {
+      const sent = await sendAdminAuthLink(adminClient, email, 'recovery')
+      return NextResponse.json({
+        success: true,
+        outcome: sent.ok ? 'granted-link-sent' : 'granted',
+        email,
+      })
+    }
+
     return NextResponse.json({ success: true, outcome: 'granted', email })
   }
 
-  const { error: mailError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${APP_URL}/admin/reset-password`,
-  })
+  const sent = await sendAdminAuthLink(adminClient, email, 'invite')
 
   return NextResponse.json({
     success: true,
-    outcome: mailError ? 'invited-no-email' : 'invited',
+    outcome: sent.ok ? 'invited' : 'invited-no-email',
     email,
   })
 }

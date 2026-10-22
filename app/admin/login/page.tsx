@@ -177,8 +177,11 @@ export default function AdminLoginPage() {
     setIsSendingReset(true)
     try {
       const supabase = createClient()
+      // Through /auth/callback, which exchanges the PKCE code on the server
+      // and then hands over to the reset page signed in as this account.
+      const next = encodeURIComponent('/admin/reset-password?link=recovery')
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/admin/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
       })
       if (resetError) throw resetError
       toast.success('Reset link sent, if that account exists.')
