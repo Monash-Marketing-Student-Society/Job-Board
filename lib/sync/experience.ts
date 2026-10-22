@@ -9,8 +9,10 @@
  * -- graduate-friendly ads that mention a year loosely -- is handled
  * directly instead: a requirement offered as an alternative to a degree or to
  * graduating ("graduates or emerging professionals with 1-4 years", "degree
- * or minimum 1 year") or stated as a preference ("Ideally 1-3 years",
- * "1 year preferred") doesn't count. Only an explicit requirement counts --
+ * or minimum 1 year"), stated as a preference ("1 year preferred", "nice to
+ * have"), or met by internships ("1+ years, including internships") doesn't
+ * count. "Ideally 1+ years" DOES count (admin rule, 23 Oct 2026): employers
+ * who write it shortlist on it. Only an explicit requirement counts --
  * nothing is inferred from tone or seniority words here (target.ts does
  * titles).
  *
@@ -76,10 +78,10 @@ const NOT_A_REQUIREMENT = [
   // One route in among others: "tertiary qualifications, or 3–5 years'
   // experience" (Deloitte, 3 Oct 2026) -- a graduate qualifies by the degree.
   /\bor\s*$/i,
-  // A preference, not a requirement: "Ideally: around 1-3 years'", "Nice to
-  // have: 2+ years in agency" (23 Oct 2026: a student can still be
-  // shortlisted for those, so the job stays).
-  /\b(?:ideally|preferably|desirable|desired|nice[- ]to[- ]haves?|bonus(?:\s+points)?|not\s+essential|optional)\b[^.;!?]{0,30}$/i,
+  // A preference, not a requirement: "Nice to have: 2+ years in agency",
+  // "Preferably 1 year" (23 Oct 2026: a student can still be shortlisted, so
+  // the job stays). Not "Ideally": admins read "Ideally 1+ years" as a no.
+  /\b(?:preferably|desirable|desired|nice[- ]to[- ]haves?|bonus(?:\s+points)?|not\s+essential|optional)\b[^.;!?]{0,30}$/i,
 ]
 
 /**
@@ -101,20 +103,28 @@ const PREFERENCE_AFTER =
 
 /**
  * Section headings that make everything under them a preference: "Nice to
- * have", "Preferred qualifications:", "Desirable", "Bonus points",
- * "Ideally you will bring:" (Colliers, 23 Oct 2026 -- its "1-2 years" sits in
- * that list). Not "The ideal candidate", which heads the requirements.
+ * have", "Preferred qualifications:", "Desirable", "Bonus points". Not
+ * "Ideally you'll bring" (admin rule, 23 Oct 2026: still a no) nor "The ideal
+ * candidate", which head the requirements.
  */
 const PREFERENCE_HEADING =
-  /\b(?:nice[- ]to[- ]haves?|preferred|desirable|bonus(?:\s+points)?|advantageous|ideally|not\s+essential|would\s+be\s+(?:great|nice|a\s+bonus)|great\s+if|optional)\b/i
+  /\b(?:nice[- ]to[- ]haves?|preferred|desirable|bonus(?:\s+points)?|advantageous|not\s+essential|would\s+be\s+(?:great|nice|a\s+bonus)|great\s+if|optional)\b/i
+
+/**
+ * Experience a student can have: "1+ years' experience, including
+ * internships", "(internships count)", "inclusive of placements" (admin rule,
+ * 23 Oct 2026). Read in the same sentence, just after the years.
+ */
+const INTERNSHIPS_COUNT =
+  /^[^.;!?]{0,60}?(?:\b(?:includ(?:ing|es)|incl\.?|inclusive\s+of|counting|through|via|such\s+as|e\.g\.?)\s+(?:\w+\s+){0,3}?(?:internships?|placements?|vacation(?:er)?\s+programs?|work\s+experience)\b|\b(?:internships?|placements?)\b[^.;!?]{0,20}\b(?:count|included|welcome|accepted|considered)\b)/i
 
 // Where one block of a description ends: list items, paragraphs, headings, line breaks.
 const BLOCK_BREAK = /<\s*(?:\/(?:p|div|li|h[1-6]|tr|ul|ol|section)|br\s*\/?|h[1-6]\b[^>]*)\s*>/gi
 
 /**
  * A short line on its own reads as a heading: one ending in a colon, one in
- * capitals, or a short one that is a preference phrase ("Ideally, You'll
- * Bring", "Nice to have").
+ * capitals, or a short title-case line with no full stop ("Nice To Have",
+ * "Experience And Education").
  */
 function isHeading(text: string): boolean {
   if (text.length === 0 || text.length > 70) return false
@@ -186,6 +196,7 @@ export function requiredExperience(description: string | null | undefined): Expe
     if (NOT_A_REQUIREMENT.some((pattern) => pattern.test(before))) return null
     if (GRADUATE_ALTERNATIVE.test(text.slice(Math.max(0, index - 120), index))) return null
     if (PREFERENCE_AFTER.test(text.slice(index + phrase.length))) return null
+    if (INTERNSHIPS_COUNT.test(text.slice(index + phrase.length))) return null
     return { years, evidence: phrase.trim() }
   }
 

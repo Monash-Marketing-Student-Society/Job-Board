@@ -5,6 +5,14 @@ import { descriptionText, requiredExperience } from './experience'
 // in step when either changes.
 describe('requiredExperience — removes a stated 1+ year', () => {
   const removed: Array<[string, number]> = [
+    // "Ideally" is a no (admin rule, 23 Oct 2026)
+    ["What you can bring Ideally: Around 1-3 years' experience in copywriting, social content", 1],
+    // Colliers, Graphic Design & Marketing Assistant
+    ['<p><strong>Ideally you will bring:</strong></p><ul><li>Recent completion of a Graphic Design or Marketing course</li><li>1-2 years of experience in a similar role</li></ul>', 1],
+    // AICD, Enterprise Markets Coordinator
+    ["<p>Ideally, You'll Bring</p><ul><li>Approximately 1–2 years of professional experience in marketing</li></ul>", 1],
+    // Internships mentioned elsewhere don't make the years optional
+    ["<ul><li>2+ years' experience in a marketing role.</li><li>Our internship program runs every summer.</li></ul>", 2],
     ["3+ years' experience in brand marketing", 3],
     ['minimum of 2 years agency experience', 2],
     ['at least two years of relevant experience', 2],
@@ -73,7 +81,6 @@ describe('requiredExperience — keeps everything else', () => {
     'Graduate or early career professional with 1–4 years’ relevant experience',
     'Bachelor’s degree in Marketing or related field or minimum 1 year experience in a similar role.',
     // A preference, not a requirement
-    "What you can bring Ideally: Around 1-3 years' experience in copywriting, social content",
     "1 year of experience in social media preferred",
     "2+ years' agency experience is an advantage",
     'Experience through internships, university projects, or 1-2 years in market research',
@@ -109,10 +116,11 @@ describe('descriptionText', () => {
 // a student can still be shortlisted, so the job stays.
 describe('requiredExperience — preference sections', () => {
   const kept = [
-    // Colliers, Graphic Design & Marketing Assistant
-    '<p><strong>Ideally you will bring:</strong></p><ul><li>Recent completion of a Graphic Design or Marketing course</li><li>1-2 years of experience in a similar role</li></ul>',
-    // AICD, Enterprise Markets Coordinator (heading with no colon)
-    "<p>Ideally, You'll Bring</p><ul><li>Approximately 1–2 years of professional experience in marketing</li></ul>",
+    // Experience a student can have (23 Oct 2026)
+    "<ul><li>1+ years' experience in marketing, including internships</li></ul>",
+    "<ul><li>1-2 years of experience (internships count)</li></ul>",
+    "<ul><li>At least 1 year of experience, inclusive of placements or internships</li></ul>",
+    "<ul><li>1+ years' experience in social media, e.g. through internships or freelance work</li></ul>",
     '<h3>Preferred Qualifications:</h3><ul><li>2–5 years of experience in B2B marketing</li></ul>',
     '<p>Nice to have</p><ul><li>2+ years in a creative agency</li></ul>',
     '<ul><li>Nice to have: 2+ years of experience in agency</li></ul>',
