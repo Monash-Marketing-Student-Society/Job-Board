@@ -331,3 +331,18 @@ describe('assessTarget — listed employers keep their Sydney roles', () => {
     expect(sydney('Senior Account Manager', true).rule).toBe('too_senior_title')
   })
 })
+
+// 23 Oct 2026: the description decides what a role is for.
+describe('assessTarget — degree and technical skills', () => {
+  it('removes a tech graduate program on its degree line', () => {
+    const result = assessTarget(job({ title: 'Summer Internship', jobType: 'internship', description: '<li>Currently studying Software Engineering or Computer Science</li>' }))
+    expect(result).toMatchObject({ verdict: 'reject', rule: 'degree_mismatch' })
+  })
+  it('removes a role that needs programming skills', () => {
+    const result = assessTarget(job({ title: 'Graduate Analyst', description: '<li>Python and Linux</li>' }))
+    expect(result).toMatchObject({ verdict: 'reject', rule: 'technical_role', evidence: 'Asks for Python, Linux' })
+  })
+  it('keeps a program open to business and marketing students', () => {
+    expect(assessTarget(job({ description: '<li>Degree in business, marketing or engineering</li>' })).verdict).toBe('pass')
+  })
+})

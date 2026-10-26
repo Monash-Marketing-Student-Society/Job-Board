@@ -292,6 +292,8 @@ const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
   industry: 'irrelevant',
   employer_size: 'irrelevant',
   sydney_entry_only: 'irrelevant',
+  degree_mismatch: 'irrelevant',
+  technical_role: 'irrelevant',
   closing_soon: 'expired',
 }
 
