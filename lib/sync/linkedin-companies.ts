@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveCity } from './location'
 import { isListEmployer } from './list-employers'
+import { isSalesTitle } from './role-type'
 import { isBlueCollarIndustry, isEntryRoute } from './target'
 import type { CompanyRef, CompanySize, CompanyStore } from './adapters/types'
 
@@ -62,16 +63,19 @@ export function isSydneyRecord(raw: Record<string, unknown>): boolean {
 /**
  * The jobs whose employer size a rule reads: a Sydney graduate program or
  * internship (every other Sydney job is removed whatever the size, so it
- * isn't worth a lookup) and, in any city, a job in a blue-collar industry
- * (blocked only for employers under 1,000).
+ * isn't worth a lookup); outside Sydney, a sales role that isn't a program
+ * (kept only at an employer of 1,000+ that trains); and, in any city, a job
+ * in a blue-collar industry (blocked only for employers under 1,000).
  */
 export function needsEmployerSize(raw: Record<string, unknown>): boolean {
   const title = typeof raw.job_title === 'string' ? raw.job_title : ''
   const internship = typeof raw.job_employment_type === 'string' && /intern/i.test(raw.job_employment_type)
   // A listed employer keeps its Sydney roles whatever its size: no lookup needed.
   const listed = isListEmployer(typeof raw.company_name === 'string' ? raw.company_name : null)
-  const sydneyProgram = isSydneyRecord(raw) && !listed && isEntryRoute(title, internship ? 'internship' : null)
-  return sydneyProgram || isBlueCollarIndustry(typeof raw.job_industries === 'string' ? raw.job_industries : null)
+  const entryRoute = isEntryRoute(title, internship ? 'internship' : null)
+  const sydneyProgram = isSydneyRecord(raw) && !listed && entryRoute
+  const salesRole = !isSydneyRecord(raw) && !listed && !entryRoute && isSalesTitle(title)
+  return sydneyProgram || salesRole || isBlueCollarIndustry(typeof raw.job_industries === 'string' ? raw.job_industries : null)
 }
 
 export interface CompanyRecord {

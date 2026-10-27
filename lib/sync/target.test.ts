@@ -200,8 +200,10 @@ describe('assessTarget — the reason for a reject', () => {
 
 // The admin decisions of 12 Oct 2026, from the trial's comments.
 describe('assessTarget — description-first rules (12 Oct 2026)', () => {
+  // Descriptions carry enough marketing words that the thin-marketing rule
+  // (27 Oct 2026) stays out of these cases.
   const mid = (title: string, description: string | null = null) =>
-    assessTarget(job({ title, jobType: null, tags: ['Brand'], description }))
+    assessTarget(job({ title, jobType: null, tags: ['Brand'], description: description && `${description}<p>Marketing, brand and content.</p>` }))
 
   it('removes mid-level titles: executive, specialist, owner, consultant, partner, strategist', () => {
     for (const title of ['Digital Brand Specialist', 'Account Executive', 'Product Owner', 'Travel Sales Consultant', 'People Partner', 'Content Strategist']) {

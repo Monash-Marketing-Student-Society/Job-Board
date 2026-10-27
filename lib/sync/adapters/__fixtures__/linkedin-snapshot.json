@@ -69,7 +69,7 @@
     "company_name": "Example Retail",
     "company_id": "2717954",
     "job_location": "Melbourne, Victoria, Australia",
-    "job_summary": "Three days a week creating content for our social media channels.",
+    "job_summary": "Three days a week creating content for our social media channels and brand campaigns.",
     "job_seniority_level": "Entry level",
     "job_employment_type": "Part-time",
     "job_industries": "Hospitality",
@@ -79,7 +79,7 @@
     "company_logo": null,
     "job_posted_date": "2026-09-30T05:20:00.820Z",
     "application_availability": true,
-    "job_description_formatted": "<section class=\"show-more-less-html\" data-max-lines=\"20\">\n        <div class=\"show-more-less-html__markup show-more-less-html__markup--clamp-after-20\n            relative overflow-hidden\">\n          <p>Three days a week creating content for our social media channels.</p>\n        </div>\n        <button class=\"show-more-less-html__button show-more-less-button\" aria-label=\"Show more\">\n            Show more\n        </button>\n    </section>",
+    "job_description_formatted": "<section class=\"show-more-less-html\" data-max-lines=\"20\">\n        <div class=\"show-more-less-html__markup show-more-less-html__markup--clamp-after-20\n            relative overflow-hidden\">\n          <p>Three days a week creating content for our social media channels and brand campaigns.</p>\n        </div>\n        <button class=\"show-more-less-html__button show-more-less-button\" aria-label=\"Show more\">\n            Show more\n        </button>\n    </section>",
     "base_salary": null,
     "is_easy_apply": false
   },
