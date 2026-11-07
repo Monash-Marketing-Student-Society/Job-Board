@@ -2,6 +2,10 @@
  * Location gate: does a posting's location string put it in Melbourne or
  * Sydney metro.
  *
+ * Changed 7 Nov 2026: a string that names no Australian place at all is now
+ * 'other', not 'unknown' -- global employers' career sites (Unilever,
+ * Uniqlo) list roles in every country, and those went to review.
+ *
  * Cheapest of the three targeting gates and run first (see target.ts), so a
  * Brisbane or Auckland posting is rejected before either the level or
  * function gate does any work. Matches against a data list of names and
@@ -12,6 +16,7 @@
  */
 
 import { matchesAny } from './text-match'
+import { AUSTRALIA_SIGNALS, COUNTRIES, NAMESAKE_REGIONS, PLACELESS, WORLD_CITIES } from './places'
 
 export type CityResolution = 'melbourne' | 'sydney' | 'other' | 'unknown'
 
@@ -105,6 +110,12 @@ export function resolveCity(locationText: string | null | undefined): CityResolu
   if (matchesPostcode(text, MELBOURNE_POSTCODES)) return 'melbourne'
   if (matchesPostcode(text, SYDNEY_POSTCODES)) return 'sydney'
 
+  // Overseas roles are never wanted (7 Nov 2026). "Melbourne, FL, USA" is the
+  // namesake, not ours -- unless the string also names Australia, as a
+  // multi-country listing does.
+  const australian = matchesAny(text, AUSTRALIA_SIGNALS)
+  if (!australian && matchesAny(text, NAMESAKE_REGIONS)) return 'other'
+
   // Order doesn't affect correctness for a multi-city posting -- either match
   // returns a non-reject, non-unknown result, which is all `targets()` reads
   // off this. Melbourne checked first purely for determinism, and only
@@ -113,6 +124,12 @@ export function resolveCity(locationText: string | null | undefined): CityResolu
   if (matchesAny(text, MELBOURNE_ALIASES) || matchesAny(text, MELBOURNE_SUBURBS)) return 'melbourne'
   if (matchesAny(text, SYDNEY_ALIASES) || matchesAny(text, SYDNEY_SUBURBS)) return 'sydney'
   if (matchesAny(text, OTHER_AU_PLACE_SIGNALS) || matchesAny(text, OVERSEAS_SIGNALS)) return 'other'
+  if (matchesAny(text, COUNTRIES) || matchesAny(text, WORLD_CITIES)) return 'other'
 
-  return 'unknown'
+  // Nothing placed it. "Remote", "National" or a string that names Australia
+  // could still be Melbourne or Sydney, so it goes to review. A place name
+  // with nothing Australian about it ("Cuenca", "Lyon") is somewhere else:
+  // the career sites of global employers list every country's roles.
+  if (australian || matchesAny(text, PLACELESS)) return 'unknown'
+  return 'other'
 }
