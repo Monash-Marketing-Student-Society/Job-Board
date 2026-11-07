@@ -19,6 +19,7 @@
 import { statedSeniority, welcomesStudents } from './description-signals'
 import { requiredExperience } from './experience'
 import { nonMarketingDegree, technicalSkills } from './role-fit'
+import { roleTypeRule, thinMarketing } from './role-type'
 import { resolveCity } from './location'
 import { matchesAny } from './text-match'
 import { JOB_FUNCTIONS, type JobFunction } from '../tags'
@@ -62,6 +63,13 @@ export type TargetRule =
   | 'sydney_entry_only'
   | 'degree_mismatch'
   | 'technical_role'
+  | 'admin_role'
+  | 'tech_title'
+  | 'sales_role'
+  | 'blocked_poster'
+  | 'public_sector'
+  | 'gambling'
+  | 'thin_marketing'
   | 'closing_soon'
 
 /** Admin-facing wording for each rule, shown on /admin/filters. */
@@ -78,6 +86,13 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   sydney_entry_only: 'Sydney: not a grad program or internship',
   degree_mismatch: 'Degree: not a marketing field',
   technical_role: 'Technical skills required',
+  admin_role: 'Admin or support role',
+  tech_title: 'Product or tech role',
+  sales_role: 'Sales: no program or training',
+  blocked_poster: 'Blocked poster',
+  public_sector: 'Public sector or university',
+  gambling: 'Gambling',
+  thin_marketing: 'Description barely mentions marketing',
   closing_soon: 'Closes within 2 weeks',
 }
 
@@ -372,6 +387,13 @@ export function assessTarget(job: TargetInput): TargetResult {
   const fn = functionGate(job)
   if (fn === 'no') return { verdict: 'reject', rule: 'not_marketing' }
 
+  // The kinds of role ruled out after three weeks of review (27 Oct 2026):
+  // admin, product/tech, untrained sales, blocked posters, public sector and
+  // gambling. role-type.ts.
+  const entryRoute = isEntryRoute(job.title, job.jobType)
+  const roleType = roleTypeRule({ ...job, entryRoute })
+  if (roleType) return { verdict: 'reject', ...roleType }
+
   // A graduate or intern title is no protection here: an explicit "3+ years'
   // experience" is the employer saying who they will actually hire.
   const experience = requiredExperience(job.description)
@@ -392,6 +414,11 @@ export function assessTarget(job: TargetInput): TargetResult {
   if (degree) return { verdict: 'reject', rule: 'degree_mismatch', evidence: degree }
   const tech = technicalSkills(job.description)
   if (tech) return { verdict: 'reject', rule: 'technical_role', evidence: `Asks for ${tech.join(', ')}` }
+
+  // Last of the description checks: a role that isn't a program and barely
+  // mentions marketing (27 Oct 2026).
+  const thin = thinMarketing({ title: job.title, description: job.description, entryRoute })
+  if (thin) return { verdict: 'reject', ...thin }
 
   if (closesTooSoon(job.closingAt, job.now ?? new Date())) {
     return { verdict: 'reject', rule: 'closing_soon', evidence: `Closes ${job.closingAt!.slice(0, 10)}` }

@@ -56,6 +56,11 @@ describe('needsEmployerSize', () => {
     expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Wholesale Building Materials' })).toBe(true)
     expect(needsEmployerSize({ job_location: 'Melbourne, Victoria, Australia', job_industries: 'Retail' })).toBe(false)
   })
+  it('covers Melbourne sales roles that are not programs', () => {
+    expect(needsEmployerSize({ job_title: 'Territory Sales Representative', job_location: 'Melbourne, Victoria, Australia' })).toBe(true)
+    expect(needsEmployerSize({ job_title: 'Sales Intern', job_location: 'Melbourne, Victoria, Australia' })).toBe(false)
+    expect(needsEmployerSize({ job_title: 'Sales & Marketing Coordinator', job_location: 'Melbourne, Victoria, Australia' })).toBe(false)
+  })
 })
 
 describe('toCompanySizes', () => {

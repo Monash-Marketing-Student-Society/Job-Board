@@ -294,6 +294,13 @@ const REASON_FOR_RULE: Record<TargetRule, RejectReason> = {
   sydney_entry_only: 'irrelevant',
   degree_mismatch: 'irrelevant',
   technical_role: 'irrelevant',
+  admin_role: 'irrelevant',
+  tech_title: 'irrelevant',
+  sales_role: 'irrelevant',
+  blocked_poster: 'irrelevant',
+  public_sector: 'irrelevant',
+  gambling: 'irrelevant',
+  thin_marketing: 'irrelevant',
   closing_soon: 'expired',
 }
 
