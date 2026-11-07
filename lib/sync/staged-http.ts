@@ -4,7 +4,9 @@
  */
 
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getUser, isCurrentUserAdmin } from '../supabase/server'
+import { checkPosting } from '../maintain/posting-check'
 import type { ActionResult } from './staged-actions'
 
 /** The reviewer's user id, or null if the caller is not an admin. */
@@ -44,4 +46,44 @@ export function toResponse(result: ActionResult) {
     ? 'Could not publish the job, and could not return it to the queue. It is marked approved with nothing on the board -- set it back to pending before retrying.'
     : 'Action failed'
   return NextResponse.json({ error }, { status: 500 })
+}
+
+/** How long approve waits on the employer's page before publishing anyway. */
+const APPROVE_CHECK_TIMEOUT_MS = 6_000
+
+/**
+ * Checked as an admin approves: has the role closed while it waited? Its
+ * closing date passing, or its page saying so (404, an expired redirect, a
+ * closed notice). A closed one is rejected as expired and its reason
+ * returned; null publishes as normal. An unreadable page -- LinkedIn's bot
+ * wall from Vercel -- never blocks an approval; the maintain run reads
+ * LinkedIn through Bright Data instead.
+ */
+export async function closedOnApprove(db: SupabaseClient, id: string, reviewerId: string): Promise<string | null> {
+  const { data } = await db.from('staged_jobs').select('normalised').eq('id', id).eq('status', 'pending').maybeSingle()
+  const j = (data?.normalised ?? null) as { url?: string | null; closing_at?: string | null } | null
+  if (!j) return null
+
+  let reason: string | null = null
+  const closing = j.closing_at ? Date.parse(j.closing_at) : NaN
+  if (!Number.isNaN(closing) && closing < Date.now()) reason = `its closing date (${j.closing_at!.slice(0, 10)}) has passed`
+  else if (j.url) {
+    const check = await checkPosting(j.url, APPROVE_CHECK_TIMEOUT_MS)
+    if (check.state === 'closed') reason = `the posting says it has closed (${check.reason})`
+  }
+  if (!reason) return null
+
+  await db
+    .from('staged_jobs')
+    .update({ status: 'rejected', reject_reason: 'expired', reject_comment: `Expired on approve: ${reason}`.slice(0, 500), reviewed_by: reviewerId, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'pending')
+  return reason
+}
+
+export function expiredResponse(reason: string) {
+  return NextResponse.json(
+    { error: `This role has closed: ${reason}. It was removed from the queue instead of being published.`, code: 'expired' },
+    { status: 410 }
+  )
 }

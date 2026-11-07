@@ -41,7 +41,7 @@ export interface SnapshotLedger {
   /** Posting ids already bought recently -- kept and rejected alike -- so the next search skips them. */
   recentPostingIds(limit: number): Promise<string[]>
   /** `kind` defaults to 'jobs'; company lookups share the budget but are never resumed as a job search. */
-  triggered(entry: { snapshotId: string; inputs: unknown[]; maxRecords: number; dryRun: boolean; kind?: 'jobs' | 'companies' }): Promise<void>
+  triggered(entry: { snapshotId: string; inputs: unknown[]; maxRecords: number; dryRun: boolean; kind?: 'jobs' | 'companies' | 'availability' }): Promise<void>
   finished(
     snapshotId: string,
     outcome: { status: 'collected'; records: number; postingIds: string[] } | { status: 'failed'; error: string }
