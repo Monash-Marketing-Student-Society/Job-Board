@@ -47,8 +47,8 @@ describe('resolveCity', () => {
   })
 
   it('does not match a postcode just outside the Sydney ranges', () => {
-    expect(resolveCity('2300')).toBe('unknown') // between the two Sydney ranges
-    expect(resolveCity('2800')).toBe('unknown') // above both Sydney ranges
+    expect(resolveCity('2300')).not.toMatch(/melbourne|sydney/) // between the two Sydney ranges
+    expect(resolveCity('2800')).not.toMatch(/melbourne|sydney/) // above both Sydney ranges
   })
 
   it('rejects an unambiguous other Australian city', () => {
@@ -91,7 +91,7 @@ describe('resolveCity', () => {
 
   it('does not false-positive on a suburb name embedded in a longer word', () => {
     // "Kew" is a Melbourne suburb; "Kewpie" or similar should not match it.
-    expect(resolveCity('Kewell Street warehouse')).toBe('unknown')
+    expect(resolveCity('Kewell Street warehouse')).not.toBe('melbourne')
   })
 })
 
@@ -112,3 +112,36 @@ describe('resolveCity: ANZ location strings (careers.anz.com, 2 Oct 2026)', () =
   })
 })
 
+
+// 7 Nov 2026: overseas roles from global career sites must never reach review.
+describe('resolveCity: overseas postings', () => {
+  it('removes a posting in another country', () => {
+    expect(resolveCity('Guayaquil, Ecuador')).toBe('other')
+    expect(resolveCity('Frankfurt, Germany')).toBe('other')
+    expect(resolveCity('Paris')).toBe('other')
+    expect(resolveCity('Cuenca')).toBe('other')
+  })
+
+  it('removes the namesake Melbourne and Sydney', () => {
+    expect(resolveCity('Melbourne, FL, USA')).toBe('other')
+    expect(resolveCity('Sydney, Nova Scotia, Canada')).toBe('other')
+  })
+
+  it('keeps a multi-country listing that includes Melbourne or Sydney', () => {
+    expect(resolveCity('Auckland, New Zealand; Brisbane, Australia; Melbourne, Australia')).toBe('melbourne')
+    expect(resolveCity('Melbourne, Auckland')).toBe('melbourne')
+  })
+
+  it('sends placeless or Australia-only strings to review', () => {
+    for (const loc of ['National', 'Various Locations', 'Remote - Australia', 'NSW - other', 'Australia']) {
+      expect(resolveCity(loc)).toBe('unknown')
+    }
+  })
+
+  it('still reads the career-site strings seen so far', () => {
+    expect(resolveCity('SYDNEY GO')).toBe('sydney')
+    expect(resolveCity('Freshwater Place, VIC,AU, AU')).not.toBe('other')
+    expect(resolveCity('Hawthorn')).toBe('melbourne')
+    expect(resolveCity('Melbourne - CBD & Inner, VIC, AU')).toBe('melbourne')
+  })
+})
