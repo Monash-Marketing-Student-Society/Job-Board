@@ -3,7 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SUBMISSIONS_TAG } from '@/lib/admin-data'
 import { bulkAction, isRejectReason, parseRejectComment, REJECT_COMMENT_MAX, type RejectReason } from '@/lib/sync/staged-actions'
-import { requireAdminId, unauthorized } from '@/lib/sync/staged-http'
+import { closedOnApprove, requireAdminId, unauthorized } from '@/lib/sync/staged-http'
 
 /** Enough for a whole run's worth of held jobs; bounds how long one request can run. */
 const MAX_IDS = 100
@@ -32,13 +32,24 @@ export async function POST(request: Request) {
   else if (body.action === 'reject' && isRejectReason(body.reason)) action = { type: 'reject', reason: body.reason, comment }
   else return NextResponse.json({ error: 'action must be approve, or reject with a valid reason' }, { status: 400 })
 
-  const outcomes = await bulkAction(createAdminClient(), ids as string[], action, reviewerId)
+  const db = createAdminClient()
+  // On approve, a role that closed while waiting is rejected as expired instead.
+  let toAction = ids as string[]
+  const expired: string[] = []
+  if (action.type === 'approve') {
+    const closed = await Promise.all(toAction.map(async (id) => ((await closedOnApprove(db, id, reviewerId)) ? id : null)))
+    for (const id of closed) if (id) expired.push(id)
+    toAction = toAction.filter((id) => !expired.includes(id))
+  }
+
+  const outcomes = await bulkAction(db, toAction, action, reviewerId)
   revalidateTag(SUBMISSIONS_TAG)
 
   const succeeded = outcomes.filter((o) => o.result.ok).map((o) => o.id)
-  const failed = outcomes
-    .filter((o) => !o.result.ok)
-    .map((o) => ({ id: o.id, reason: o.result.ok ? null : o.result.kind }))
+  const failed = [
+    ...expired.map((id) => ({ id, reason: 'expired' as const })),
+    ...outcomes.filter((o) => !o.result.ok).map((o) => ({ id: o.id, reason: o.result.ok ? null : o.result.kind })),
+  ]
   for (const o of outcomes) if (!o.result.ok && o.result.kind === 'error') console.error('Bulk staged action failed:', o.id, o.result.message)
 
   return NextResponse.json({ succeeded, failed })

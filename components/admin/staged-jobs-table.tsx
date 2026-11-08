@@ -357,8 +357,9 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
         const payload = await res.json().catch(() => ({}))
         if (!res.ok) {
           toast.error(payload.error || 'Action failed')
-          // 409: someone else already actioned it, so it stays gone.
-          if (res.status === 409) router.refresh()
+          // 409: someone else already actioned it; 410: it had closed and was
+          // removed from the queue. Either way it stays gone.
+          if (res.status === 409 || res.status === 410) router.refresh()
           else unhide(ids)
           return
         }
@@ -372,10 +373,16 @@ export function StagedJobsTable({ rows }: { rows: StagedJobRow[] }) {
           return
         }
         const failedRows: Array<{ id: string; reason: string }> = payload.failed ?? []
-        // A conflict was actioned by someone else and stays gone; an error comes back.
-        unhide(failedRows.filter((f) => f.reason !== 'conflict').map((f) => f.id))
-        const failed = failedRows.length
-        if (failed > 0) {
+        // A conflict was actioned by someone else, and an expired one was
+        // removed from the queue: both stay gone. An error comes back.
+        unhide(failedRows.filter((f) => f.reason !== 'conflict' && f.reason !== 'expired').map((f) => f.id))
+        const expired = failedRows.filter((f) => f.reason === 'expired').length
+        const failed = failedRows.length - expired
+        if (expired > 0) {
+          toast.warning(`${payload.succeeded.length} ${successText}; ${expired} had closed and were removed instead`, {
+            description: failed > 0 ? `${failed} more were already actioned or hit an error.` : undefined,
+          })
+        } else if (failed > 0) {
           toast.warning(`${payload.succeeded.length} ${successText}, ${failed} failed`, {
             description: 'The failed ones were already actioned or hit an error — the list has been refreshed.',
           })
