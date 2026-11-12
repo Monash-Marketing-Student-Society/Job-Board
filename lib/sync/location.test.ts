@@ -23,22 +23,18 @@ describe('resolveCity', () => {
     expect(resolveCity('Parramatta')).toBe('sydney')
   })
 
-  // Sydney has both a Cremorne (a Sydney North Shore suburb) and Melbourne's
-  // Cremorne (inner-city, near Richmond) -- a genuine same-name collision
-  // between the two target cities. Not resolved here: the suburb lists don't
-  // parse a state qualifier, so 'Cremorne' always reads as Melbourne
-  // (checked first), even when "NSW" appears right next to it. Documented
-  // rather than silently wrong -- a location string this ambiguous should
-  // really carry a postcode too, which this gate would resolve correctly.
-  it('cannot disambiguate a suburb name that exists in both cities, even with a state qualifier', () => {
+  // Since 12 Nov 2026 the state qualifier decides: "Cremorne, NSW" is
+  // Sydney's. A bare name still reads as Melbourne (checked first).
+  it('disambiguates a suburb name that exists in both cities by its state', () => {
     expect(resolveCity('Cremorne')).toBe('melbourne')
-    expect(resolveCity('Cremorne, NSW')).toBe('melbourne')
+    expect(resolveCity('Cremorne, NSW')).toBe('sydney')
     expect(resolveCity('Cremorne, NSW 2090')).toBe('sydney') // the postcode does resolve it
   })
 
   it('resolves Melbourne by postcode', () => {
     expect(resolveCity('VIC 3000')).toBe('melbourne')
-    expect(resolveCity('3211')).toBe('melbourne')
+    expect(resolveCity('3207')).toBe('melbourne')
+    expect(resolveCity('3211')).not.toBe('melbourne') // Little River: past the metropolitan line
   })
 
   it('resolves Sydney by postcode, including the second range', () => {
@@ -143,5 +139,49 @@ describe('resolveCity: overseas postings', () => {
     expect(resolveCity('Freshwater Place, VIC,AU, AU')).not.toBe('other')
     expect(resolveCity('Hawthorn')).toBe('melbourne')
     expect(resolveCity('Melbourne - CBD & Inner, VIC, AU')).toBe('melbourne')
+  })
+})
+
+// 12 Nov 2026: Melbourne means metropolitan Melbourne -- within commuting
+// distance of Monash. Every Victorian string the sync had seen, by outcome.
+describe('resolveCity: metropolitan Melbourne only', () => {
+  it('keeps metropolitan suburbs, inner to outer', () => {
+    for (const loc of [
+      'Clayton, Victoria', 'Mount Waverley, Victoria', 'Bulleen, Victoria', 'Tullamarine, Victoria', 'Bayswater, Victoria',
+      'Derrimut, Victoria', 'Rowville, Victoria', 'Lilydale, Victoria', 'Officer, Victoria', 'Truganina, Victoria',
+      'Werribee, Victoria', 'Somerton, Victoria', 'Knoxfield, Victoria', 'Freshwater Place, VIC,AU, AU',
+      'VIC - SBK HWT Tower 40 City Road Southbank', 'Hawthorn East   Melbourne, Victoria, Australia', 'Greater Melbourne Area',
+      'Support Office - Docklands, VIC, AU', 'Windsor, Melbourne', 'Frankston VIC 3199', 'Pakenham VIC 3810',
+    ]) {
+      expect(resolveCity(loc), loc).toBe('melbourne')
+    }
+  })
+
+  it('removes Victorian towns outside it', () => {
+    for (const loc of [
+      'Geelong, Victoria', 'South Geelong, Victoria', 'Corio, Victoria', 'Ballarat, Victoria', 'Wodonga, Victoria',
+      'Cowes, Victoria', 'Mornington, Victoria', 'Coldstream, VIC, Australia', 'Pakenham Upper, Victoria',
+      'Horsham, Mildura & Surrounds, Vict, AU', 'Regional Victoria',
+    ]) {
+      expect(resolveCity(loc), loc).toBe('other')
+    }
+  })
+
+  it('sends a Victorian string naming no town to review', () => {
+    expect(resolveCity('Victoria, Australia')).toBe('unknown')
+    expect(resolveCity('VIC - other')).toBe('unknown')
+  })
+
+  it('reads a suburb name both cities share by its state', () => {
+    expect(resolveCity('Burwood, Victoria')).toBe('melbourne')
+    expect(resolveCity('Burwood, New South Wales')).toBe('sydney')
+    expect(resolveCity('Richmond, New South Wales')).not.toBe('melbourne')
+    expect(resolveCity('Sydney CBD Area')).toBe('sydney')
+  })
+
+  it('reads an unlisted Sydney suburb as Australian, not as Wales', () => {
+    expect(resolveCity('Artarmon, New South Wales')).toBe('sydney')
+    expect(resolveCity('Kogarah, New South Wales')).toBe('unknown')
+    expect(resolveCity('Central Coast, New South Wales')).toBe('other')
   })
 })
