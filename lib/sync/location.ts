@@ -17,6 +17,7 @@
 
 import { matchesAny } from './text-match'
 import { AUSTRALIA_SIGNALS, COUNTRIES, NAMESAKE_REGIONS, PLACELESS, WORLD_CITIES } from './places'
+import { MELBOURNE_METRO_SUBURBS, OUTSIDE_METRO } from './melbourne-suburbs'
 
 export type CityResolution = 'melbourne' | 'sydney' | 'other' | 'unknown'
 
@@ -24,20 +25,6 @@ export type CityResolution = 'melbourne' | 'sydney' | 'other' | 'unknown'
 // Adel, Brisb, Perth, AU" -- without them it read as Perth and was rejected.
 const MELBOURNE_ALIASES = ['melbourne', 'naarm', 'mel', 'melb']
 const SYDNEY_ALIASES = ['sydney', 'syd']
-
-// Deliberately not exhaustive -- the postcode ranges below are the complete
-// fallback for a suburb this list doesn't happen to name. This only needs to
-// catch the suburbs an employer's own location string is likely to actually
-// use.
-const MELBOURNE_SUBURBS = [
-  'docklands', 'southbank', 'south yarra', 'richmond', 'fitzroy', 'collingwood',
-  'carlton', 'parkville', 'st kilda', 'prahran', 'windsor', 'toorak', 'hawthorn',
-  'camberwell', 'box hill', 'glen waverley', 'mulgrave', 'notting hill', 'clayton',
-  'dandenong', 'footscray', 'sunshine', 'essendon', 'brunswick', 'coburg',
-  'preston', 'northcote', 'thornbury', 'ringwood', 'croydon', 'bundoora',
-  'reservoir', 'werribee', 'point cook', 'cremorne', 'abbotsford', 'kew',
-  'malvern', 'caulfield', 'bentleigh', 'moorabbin', 'cheltenham', 'mentone',
-]
 
 const SYDNEY_SUBURBS = [
   'north sydney', 'chatswood', 'parramatta', 'macquarie park', 'ryde', 'bondi',
@@ -47,9 +34,26 @@ const SYDNEY_SUBURBS = [
   'chippendale', 'newtown', 'marrickville', 'bankstown', 'liverpool', 'penrith',
   'blacktown', 'hornsby', 'epping', 'castle hill', 'baulkham hills',
   'olympic park', 'homebush',
+  // Seen in synced postings since (Nov 2026).
+  'artarmon', 'ashfield', 'asquith', 'balmain', 'bella vista', 'belrose', 'burwood', 'cabarita', 'camperdown',
+  'caringbah', 'caringbah south', 'cecil park', 'chipping norton', 'concord', 'concord west', 'cremorne',
+  'cronulla', 'eveleigh', 'frenchs forest', 'lidcombe', 'millers point', 'mona vale', 'moore park',
+  'mount pritchard', 'merrylands', 'newington', 'north rocks', 'north ryde', 'north strathfield', 'rhodes',
+  'rockdale', 'rooty hill', 'rydalmere', 'silverwater', 'strathfield', 'westmead', 'wetherill park',
+  'wolli creek', 'campbelltown',
 ]
 
-const MELBOURNE_POSTCODES: Array<[number, number]> = [[3000, 3211]]
+// Metropolitan Melbourne's postcodes, to the same line as melbourne-suburbs.ts:
+// 3000-3207 (CBD to Port Melbourne), Sunbury, South Morang-Mernda-Doreen,
+// Endeavour Hills-Pakenham, Langwarrin, Lynbrook-Cranbourne.
+const MELBOURNE_POSTCODES: Array<[number, number]> = [
+  [3000, 3207], [3427, 3429], [3752, 3754], [3802, 3810], [3910, 3910], [3975, 3978],
+]
+const VICTORIA_SIGNALS = ['vic', 'vict', 'victoria']
+const NSW_SIGNALS = ['nsw', 'new south wales']
+// Words left once state, country and placeless words are taken out: none
+// means the string named no town ("Victoria", "VIC - other").
+const NOT_A_PLACE = [...AUSTRALIA_SIGNALS, ...VICTORIA_SIGNALS, ...PLACELESS, 'area', 'greater', 'office']
 const SYDNEY_POSTCODES: Array<[number, number]> = [[2000, 2249], [2555, 2770]]
 
 // Unambiguous non-Melbourne, non-Sydney signals. Kept short and specific
@@ -63,7 +67,7 @@ const SYDNEY_POSTCODES: Array<[number, number]> = [[2000, 2249], [2555, 2770]]
 const OTHER_AU_PLACE_SIGNALS = [
   'brisbane', 'gold coast', 'sunshine coast', 'cairns', 'townsville',
   'perth', 'adelaide', 'canberra', 'hobart', 'darwin',
-  'newcastle', 'wollongong', 'geelong', 'ballarat', 'bendigo',
+  'newcastle', 'wollongong', 'geelong', 'ballarat', 'bendigo', 'central coast', 'wyong', 'gosford',
   'queensland', 'qld', 'western australia', 'wa', 'south australia', 'sa',
   'tasmania', 'tas', 'northern territory', 'nt',
 ]
@@ -90,6 +94,14 @@ function extractPostcodes(text: string): number[] {
 function matchesPostcode(text: string, ranges: Array<[number, number]>): boolean {
   const postcodes = extractPostcodes(text)
   return postcodes.some((pc) => ranges.some(([lo, hi]) => pc >= lo && pc <= hi))
+}
+
+function namesATown(text: string): boolean {
+  let rest = text
+  for (const word of NOT_A_PLACE) {
+    rest = rest.replace(new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), ' ')
+  }
+  return /[a-z]{3,}/.test(rest.replace(/[^a-z]+/g, ' '))
 }
 
 export function resolveCity(locationText: string | null | undefined): CityResolution {
@@ -121,10 +133,24 @@ export function resolveCity(locationText: string | null | undefined): CityResolu
   // off this. Melbourne checked first purely for determinism, and only
   // matters at all for an unqualified same-name collision like bare
   // "Cremorne" (no postcode to break the tie either way).
-  if (matchesAny(text, MELBOURNE_ALIASES) || matchesAny(text, MELBOURNE_SUBURBS)) return 'melbourne'
-  if (matchesAny(text, SYDNEY_ALIASES) || matchesAny(text, SYDNEY_SUBURBS)) return 'sydney'
-  if (matchesAny(text, OTHER_AU_PLACE_SIGNALS) || matchesAny(text, OVERSEAS_SIGNALS)) return 'other'
-  if (matchesAny(text, COUNTRIES) || matchesAny(text, WORLD_CITIES)) return 'other'
+  // The state decides which city's suburbs a name can be: Burwood,
+  // Richmond, Croydon and Carlton are suburbs of both.
+  const victoria = matchesAny(text, VICTORIA_SIGNALS)
+  const nsw = matchesAny(text, NSW_SIGNALS)
+  if (matchesAny(text, MELBOURNE_ALIASES)) return 'melbourne'
+  if (victoria && matchesAny(text, OUTSIDE_METRO)) return 'other'
+  if ((!nsw || victoria) && matchesAny(text, MELBOURNE_METRO_SUBURBS)) return 'melbourne'
+  if ((!victoria || nsw) && (matchesAny(text, SYDNEY_ALIASES) || matchesAny(text, SYDNEY_SUBURBS))) return 'sydney'
+  if (matchesAny(text, OTHER_AU_PLACE_SIGNALS)) return 'other'
+  // "New South Wales" is not Wales: an unlisted Sydney suburb read as
+  // overseas before this was taken out.
+  const abroad = text.replace(/new south wales/g, ' ')
+  if (matchesAny(abroad, OVERSEAS_SIGNALS) || matchesAny(abroad, COUNTRIES) || matchesAny(abroad, WORLD_CITIES)) return 'other'
+
+  // Melbourne only means metropolitan Melbourne (12 Nov 2026): a Victorian
+  // town outside it -- Wodonga, Cowes, Mornington -- is too far to commute
+  // to from Monash. A string naming no town at all still goes to review.
+  if (victoria && !nsw && namesATown(text)) return 'other'
 
   // Nothing placed it. "Remote", "National" or a string that names Australia
   // could still be Melbourne or Sydney, so it goes to review. A place name
